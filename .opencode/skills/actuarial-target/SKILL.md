@@ -6,7 +6,10 @@ description: Use when building the prediction target, claim-to-row attribution, 
 # Actuarial Target, Development & Trend
 
 Canonical sources: `docs/data_findings.md` §2/§5/§6, `docs/decisions.md` D-002…D-009.
-Use this when constructing labels or extrapolating to 2025.
+Use this when constructing labels or extrapolating to 2025. External method
+justification (chain ladder, Bornhuetter-Ferguson, Cape Cod) is in
+`docs/references.md` R-01 and the `actuarial-methods` skill — this skill holds
+*our* numbers.
 
 ## Target definition
 
