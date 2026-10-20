@@ -309,3 +309,26 @@ should load a skill rather than the PDFs; the three CAS links are the sources.
 **Output.** `docs/references.md`, `docs/decisions.md` D-032, `actuarial-methods`
 skill. No model change, no submission — leaderboard unchanged at **0.12113**,
 1 quota slot still reserved.
+
+## Session 10 — 2026-10-20 (late) · Reviewer subagent
+
+**Asked.** Create a reviewer subagent on `deepseek-v4-pro` that reviews the
+repo's programs and has access to the project skills.
+
+**AI did.** Added `.opencode/agent/reviewer.md`: read-only subagent
+(`edit: deny`, `bash: ask`) on `litellm/deepseek-v4-pro` (the model is
+registered under the `litellm` provider in the global config). Its prompt
+requires loading `data-facts`, `actuarial-target`, `actuarial-methods` and
+`kaggle-submit` before judging, and reviews against AGENTS.md hard rules
+(leakage, deny-list, exposure recompute, metric floor) first, then correctness,
+actuarial soundness, guardrails and style — citing `D-xxx`/`R-xxx` IDs. Output
+is a verdict + severity table, same posture as the `data-audit`/`model-audit`
+agents.
+
+**Verified.** Frontmatter fields match the documented agent schema (`description`,
+`mode`, `model`, `permission`); model ID confirmed against the live provider
+config; file placed in the auto-discovered `.opencode/agent/` directory. Takes
+effect on the next opencode restart.
+
+**Human decided.** Second-opinion code review as a standing workflow step, on a
+different model family than the primary agent.
