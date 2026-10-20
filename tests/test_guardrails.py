@@ -139,6 +139,66 @@ def test_no_2025_claims_in_data():
     assert pd.to_datetime(claims["loss_date"]).dt.year.max() <= 2024
 
 
+
+def test_attach_attributes_joins_rating_columns():
+    """D-030: address/customer rating factors must be joined onto policy rows.
+
+    Regression guard: before this join existed, `region`, `flood_zone`, `soil_type`,
+    `property_type`, `roof_type`, `energy_rating`, `urban_density`, `basement`,
+    `trees_within_5m`, `solar_panels` and `prior_claims_5y` were listed as model
+    features but silently dropped from every model matrix.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from src.dataset import ADDRESS_COLS, CUSTOMER_COLS, attach_attributes, load_policies
+
+    pol = load_policies("contents", "test")
+    out = attach_attributes(pol)
+    assert len(out) == len(pol), "attribute join must not change row count"
+    for col in ADDRESS_COLS + CUSTOMER_COLS:
+        assert col in out.columns, f"{col} missing after attribute join"
+
+
+def test_requested_features_exist_in_frame():
+    """No feature listed in the experiment runner may be absent from the frame.
+
+    The bug class this guards: a name in BASE/CAT/FLAGS that no builder supplies
+    is silently dropped by `align`, so the model trains without it and the
+    experiment log attributes the result to the wrong feature set.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import (
+        ADDRESS_NUMERIC, BASE_FEATURES, CAT_FEATURES, CUSTOMER_NUMERIC,
+        EXPERIENCE, FLAGS, WEATHER, add_derived, add_weather,
+    )
+    from src.dataset import build_frame
+
+    frame = add_weather(add_derived(build_frame("train")))
+    listed = (
+        BASE_FEATURES + CAT_FEATURES + CUSTOMER_NUMERIC + EXPERIENCE
+        + WEATHER + FLAGS + ADDRESS_NUMERIC
+    )
+    # relativity features are generated on demand, everything else must exist
+    required = [c for c in listed if not c.endswith(("_hist_rate", "_hist_freq"))]
+    missing = [c for c in required if c not in frame.columns]
+    assert not missing, f"listed features absent from the built frame: {missing}"
+
+
+def test_align_refuses_missing_features():
+    """`align` must fail loudly when a requested feature is not in the frame,
+    not silently drop it (that is how the address/customer block went missing)."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    import pandas as pd
+    import pytest
+    from scripts.run_experiment import align
+
+    tr = pd.DataFrame({"a": [1.0], "c": ["x"]})
+    te = pd.DataFrame({"a": [2.0], "c": ["y"]})
+    with pytest.raises(SystemExit):
+        align(tr, te, ["a", "ghost_feature"], ["c"])
+
 def validate_submission_csv(path: Path) -> None:
     """Shared gate used by tests and by any generated CSV."""
     import numpy as np

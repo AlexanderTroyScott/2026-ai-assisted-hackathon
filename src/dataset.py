@@ -155,12 +155,41 @@ def experience_features(policies: pd.DataFrame, claims: pd.DataFrame) -> pd.Data
     )
 
 
+# Static rating attributes from the dimension tables. Never claim-derived, so
+# no lag is required (AGENTS.md rule 6 applies to claims-derived quantities).
+# `prior_claims_5y` is the customer's declared history as quoted at pricing time.
+ADDRESS_COLS = [
+    "region", "urban_density", "flood_zone", "distance_to_river_km", "elevation_m",
+    "soil_type", "year_built", "property_type", "roof_type", "basement",
+    "trees_within_5m", "listed_building", "bedrooms", "energy_rating", "solar_panels",
+]
+CUSTOMER_COLS = [
+    "occupation", "marital_status", "household_size", "credit_band",
+    "prior_claims_5y", "licence_points", "years_at_address", "customer_since_year",
+]
+
+
+def attach_attributes(df: pd.DataFrame) -> pd.DataFrame:
+    """Join address and customer rating attributes onto a policy frame.
+
+    The policy tables carry `address_id` / `customer_id` but not the attribute
+    columns themselves; without this join every property-geo and demographic
+    rating factor is silently absent from the model matrix (D-030).
+    """
+    addr = pd.read_parquet(DATA / "addresses.parquet", columns=["address_id"] + ADDRESS_COLS)
+    cust = pd.read_parquet(DATA / "customers.parquet", columns=["customer_id"] + CUSTOMER_COLS)
+    n = len(df)
+    out = df.merge(addr, on="address_id", how="left").merge(cust, on="customer_id", how="left")
+    assert len(out) == n, "attribute join must not duplicate policy rows"
+    return out
+
+
 def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
     """Full modelling frame for one split, all LOBs concatenated."""
     claims = load_claims()
     frames = []
     for ln in LINES:
-        pol = canonicalise(load_policies(ln, split))
+        pol = attach_attributes(canonicalise(load_policies(ln, split)))
         feats = experience_features(pol, claims) if split == "train" else experience_features(pol, claims)
         df = pol.merge(feats, on="row_id", how="left")
         if split == "train":

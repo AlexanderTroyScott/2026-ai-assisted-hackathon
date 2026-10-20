@@ -50,6 +50,17 @@ CAT_FEATURES = [
     "transmission", "overnight_parking", "vehicle_use", "construction_type",
     "occupancy", "tenure", "security_level", "urban_density", "soil_type",
     "property_type", "roof_type", "energy_rating", "region", "flood_zone",
+    "occupation", "marital_status", "credit_band",
+]
+# Address/customer rating attributes (D-030): joined from the dimension tables,
+# absent from every model before exp-010. DGP findings: flood_zone 1->5 RR 190x,
+# elevation_m ~330x, distance_to_river_km 36x for flood; region/urban_density in
+# the premium formula.
+ADDRESS_NUMERIC = [
+    "distance_to_river_km", "elevation_m", "year_built", "bedrooms",
+]
+CUSTOMER_NUMERIC = [
+    "household_size", "licence_points", "years_at_address", "customer_since_year",
 ]
 EXPERIENCE = [
     "cust_claims_1y", "cust_cost_1y", "cust_claims_2y", "cust_cost_2y",
@@ -99,6 +110,10 @@ def add_derived(df: pd.DataFrame) -> pd.DataFrame:
 
 def feature_cols(groups: str) -> list[str]:
     cols = list(BASE_FEATURES)
+    if "address" in groups:
+        cols += ADDRESS_NUMERIC + ["listed_building"]
+    if "customer" in groups:
+        cols += CUSTOMER_NUMERIC
     if "experience" in groups:
         cols += EXPERIENCE
     if "weather" in groups:
@@ -128,6 +143,13 @@ def prepare(groups: str, development: str = "lob", weather_lag: bool = False):
 def align(train: pd.DataFrame, test: pd.DataFrame, cols: list[str], cats: list[str]):
     train = train.copy()
     test = test.copy()
+    missing = [c for c in cols + cats if c not in train.columns or c not in test.columns]
+    if missing:
+        raise SystemExit(
+            f"FATAL: requested features absent from the frame: {missing}. "
+            "Fix the frame builder (build_frame / add_derived / add_weather), "
+            "not the feature list silently."
+        )
     cats = [c for c in cats if c in train.columns]
     for c in cats:
         train[c] = train[c].astype(str).fillna("other")
