@@ -145,3 +145,52 @@ from the primary model; kept as a documented sensitivity variant only.
 Premium deciles rank risk 4x and LR is roughly flat (0.71–0.81). The baseline to
 beat is `written_premium × LOB LR`; the value of a model is in finding where
 current pricing is wrong (prior claimants LR 2.3, young/old drivers).
+
+## D-018 — Local CV is a validated proxy for the leaderboard
+**2026-10-20 · accepted · verified against 4 submissions**
+
+Local D² (time split 2021–23 → 2024, developed truth, LOB-recalibrated, Tweedie
+p=1.5) tracks the leaderboard with a consistent optimism gap:
+
+| local | LB | gap |
+|---|---|---|
+| 0.0797 | 0.07293 | −0.0068 |
+| 0.1207 | 0.11226 | −0.0084 |
+| 0.1230 | 0.11339 | −0.0096 |
+| 0.1250 | 0.11519 | −0.0098 |
+
+Ranking is correct in all four cases. **Consequence:** iterate locally and spend a
+submission slot only on a new local best, or when a hypothesis genuinely needs an
+external test. Expected LB ≈ local D² − 0.009.
+
+## D-019 — Feature attribution confirmed externally
+**2026-10-20 · accepted · verified against the leaderboard**
+
+Model vs flat LOB rate +0.0393; lagged experience +0.0011; weather + flags +0.0018.
+The dominant gain is risk differentiation, not any single feature block. Experience
+is sparse in training (7.7% of rows have history) but denser at 2025 scoring
+(20–26% of test rows), so its true contribution is likely understated here.
+
+## D-020 — Severity is a Gamma scale family (per peril, per year)
+**2026-10-20 · accepted · verified empirically**
+
+Gamma beats lognormal on AIC for all 11 perils; shape and log-SD are stable across
+accident years. A per-peril, per-year scale factor is sufficient calibration
+(D-007 approach). Tweedie p=1.5 (Poisson–Gamma compound) is well specified.
+
+## D-021 — `written_premium` is a decoded formula with known misalignments
+**2026-10-20 · accepted · verified empirically**
+
+Motor log-premium R² = 0.956 (age 3 bands, ncb 3 bands, vvg log-linear, cover,
+region, +4%/yr). Pricing and risk are generated separately: premium ignores claim
+experience, vvg premium rises while frequency falls, TPFT is priced like comp but
+has 0.47 the frequency, buildings LR 1.08 vs contents 0.67. Use premium as the
+*base* and let the model correct these misalignments — not as the answer.
+
+## D-022 — Recoveries are rule-based; the excess is inert
+**2026-10-20 · accepted · verified empirically**
+
+Motor own_damage with `third_party_id` → exactly 0.8 × incurred; theft with
+`third_party_id` → exactly 0.3 ×. No recoveries on property perils. The policy
+excess is never applied to claim amounts (net = gross in 87% motor / 100% property),
+confirming D-003. Do not spend features on the excess columns for target purposes.

@@ -144,3 +144,51 @@ lives in loadable skills, not in the prompt), and the submission-cadence policy.
 3. Judgement calls are flagged as such and stay `proposed` until a human accepts them.
 4. Each submission gets an entry in `docs/experiment_log.md` with the hypothesis it
    tests, so leaderboard movement is attributable to a change.
+
+---
+
+## Session 6 — 2026-10-20 (overnight, autonomous) · Actuarial control cycle
+
+**Asked.** Follow the actuarial control cycle unattended: build a model, revise
+assumptions, test, submit, use results to improve. Make one submission now as a
+quota-reset marker; before each later submission check the quota and **hold off if
+it has reset to 10**. Also look for exploitable patterns in the synthetic DGP.
+Make relevant git commits and pushes as we go.
+
+**AI did.**
+- Submitted the constant-rate baseline as the marker (exp-001, LB **0.07293**).
+  The Kaggle CLI reports "N submissions remaining today", so the reset is directly
+  observable. Quota never reset during the session (checked before every upload).
+- Delegated a DGP reverse-engineering investigation to a subagent and consolidated
+  it into `docs/synthetic_dgp_findings.md` (severity is a Gamma scale family;
+  the motor premium formula is decoded at R² = 0.956; pricing and risk are
+  generated separately; weather drives perils at large rate ratios).
+- Built `src/dataset.py` + `scripts/run_experiment.py` (LightGBM Tweedie, time
+  split, LOB recalibration) and ran the feature ladder locally.
+- **Ran a leakage audit before submitting.** A model scoring local D² = 0.675 was
+  treated as suspicious rather than a win; probing each field found
+  `customer_service_contacts` alone explains D² = 0.628 (claimants average 3.28
+  contacts vs 0.41). Deny-listed (D-016) with a regression test. This is the
+  single most important judgement of the session — a leaked submission would have
+  looked like a spectacular result and been disqualified on review.
+- Also caught and fixed an aggregation pitfall in the earlier analysis (a naive
+  merge dropped policy rows whose claims fell in other periods), correcting the
+  frequency / cost-per-exposure / premium-per-exposure figures in
+  `docs/data_findings.md`.
+- Submitted the attribution ladder exp-002/003/004, one primary change each.
+
+**Verified.**
+- 11 pytest guardrails pass, including the new leakage and aggregation tests.
+- Every submission went through `scripts/kaggle_submit.py` validation gate first.
+- Local D² validated against 4 leaderboard points (gap −0.007 to −0.010, ranking
+  correct) → the CV setup is now a trusted offline oracle (D-018).
+- Quota checked before each of the 4 uploads; it never returned to 10, so no hold
+  was triggered. 6 slots remain in the window.
+
+**Human decided (pre-authorized before sleep).**
+- Routine submissions as part of the control cycle, with the quota-reset guardrail.
+- Git commit + push after each meaningful unit of work.
+
+**Output.** Leaderboard 0.07293 → **0.11519** (top is 0.12996). 4 submissions,
+each with a stated hypothesis and a measured local D². Full attribution in
+`docs/experiment_log.md`; decisions D-016 to D-022 recorded.

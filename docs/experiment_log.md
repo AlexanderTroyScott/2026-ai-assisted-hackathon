@@ -20,17 +20,36 @@ negative results are as valuable as positive ones.
 
 ## Submissions
 
-| 2026-10-20 05:03 UTC | exp-004 | exp-003 + weather and property flags (D-012); LOB recalibration (D-009) | 0.1250 | 0.12996 | posted | 3c9cf1621af2 | Best local model. Weather adds +0.0020, LOB recal +0.0010 |
+| # | timestamp | tag | change | hypothesis | local D² | LB score | Δ vs prev | attribution | sha256 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2026-10-20 03:01 | exp-001 | `exposure ×` developed cost rate per LOB (D-005) | establishes the metric scale and a quota-reset marker | 0.0797 | **0.07293** | — | baseline | `7e1b0082099b` |
+| 2 | 2026-10-20 05:02 | exp-002 | LGBM Tweedie on rating factors + premium, leakage removed (D-016) | a real risk model should beat a flat LOB rate substantially | 0.1207 | **0.11226** | **+0.0393** | clean | `12da874d8ce1` |
+| 3 | 2026-10-20 05:02 | exp-003 | exp-002 + lagged claim experience block (D-014) | experience is missing from price, so it is pure signal | 0.1230 | **0.11339** | **+0.0011** | clean | `fdff74e6ab85` |
+| 4 | 2026-10-20 05:03 | exp-004 | exp-003 + weather + property flags (D-012) + LOB recalibration (D-009) | weather drives property perils (see DGP findings §5) | 0.1250 | **0.11519** | **+0.0018** | clean | `3c9cf1621af2` |
 
-| 2026-10-20 05:02 UTC | exp-003 | exp-002 + lagged claim experience features (D-014) | 0.1230 | 0.12996 | posted | fdff74e6ab85 | Tests experience block: +0.0023 local D2 over exp-002 |
+**Leaderboard at time of writing:** top 0.12996 (22 teams). Our best 0.11519.
 
-| 2026-10-20 05:02 UTC | exp-002 | LGBM Tweedie base model (rating factors + premium); D-016 leakage removed | 0.1207 | 0.12996 | posted | 12da874d8ce1 | Tests model vs constant_rate. Local D2 0.1207 vs 0.0797 baseline |
+### Metric validation — local D² is a reliable proxy
 
-| 2026-10-20 03:01 UTC | exp-001 | Baseline: exposure x developed cost rate per LOB (D-005 LDFs applied) | n/a - no holdout truth | 0.12996 | posted | 7e1b0082099b | Marker submission to track quota reset; constant-rate baseline per D-015 |
+| experiment | local D² | LB score | gap |
+|---|---|---|---|
+| exp-001 | 0.0797 | 0.07293 | −0.0068 |
+| exp-002 | 0.1207 | 0.11226 | −0.0084 |
+| exp-003 | 0.1230 | 0.11339 | −0.0096 |
+| exp-004 | 0.1250 | 0.11519 | −0.0098 |
 
-| # | timestamp | tag | message | change | hypothesis | local D² | LB score | LB rank | Δ | attribution | notes |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| — | 2026-10-20 | — | — | no submissions made prior to this log | — | — | — | — | — | — | Verified via `kaggle competitions submissions` → "No submissions found" |
+Local D² is consistently **optimistic by 0.007–0.010** and ranks models correctly.
+That validates the whole CV setup (time split 2021–23 → 2024, developed truth,
+Tweedie p=1.5, LOB recalibration) as a trustworthy offline oracle. Going forward
+we can iterate locally and spend a slot only on a new best.
+
+### Feature attribution (measured on the leaderboard)
+
+| block | Δ LB | verdict |
+|---|---|---|
+| Model vs flat LOB rate | **+0.0393** | the dominant gain — risk differentiation is where the score is |
+| Lagged claim experience | +0.0011 | real but modest; sparse in training (7.7% of rows) and it will be denser at 2025 scoring (20–26% of test rows have history) |
+| Weather + property flags | +0.0018 | real; weather features rank highly for property lines |
 
 ---
 
@@ -49,6 +68,16 @@ negative results are as valuable as positive ones.
 | 2026-10-20 | experience feature deciles | freq 0.083 → 0.486; cost/exp 323 → 1,750 | D-014 top priority |
 | 2026-10-20 | premium deciles | LR flat 0.71–0.81; freq 4x across deciles | D-015 premium as benchmark |
 | 2026-10-20 | sklearn deviance with y_pred=0 | raises for power=1.5 | D-010 floor at 1e-3 |
+| 2026-10-20 | **leakage probe on policy-period fields** | `customer_service_contacts` alone → D² 0.628; claimants 3.28 contacts vs 0.41 | **D-016 deny-list** |
+| 2026-10-20 | exposure aggregation pitfall | naive merge+filter dropped policy rows with claims in other periods; exposure understated 787k→636k on motor | D-001 note + regression test |
+| 2026-10-20 | DGP: severity family | Gamma beats lognormal on AIC for all 11 perils; log-SD constant across years (Levene p 0.098–0.96) | per-peril scale index is sufficient |
+| 2026-10-20 | DGP: premium formula | motor log-premium R² = 0.956, fully decoded (age 3 bands, ncb 3 bands, vvg log-linear, cover, region, +4%/yr) | use premium as base, correct its misalignments |
+| 2026-10-20 | DGP: price vs risk misalignment | premium ignores claim experience entirely; vvg premium ↑ while freq ↓; TPFT ≈ comp price but freq 0.47 | experience block is pure signal |
+| 2026-10-20 | DGP: weather→peril links | hail→glass RR 2.35; flood_zone 1→5 RR 190×; freezing→water 2.02; dry_summer→subsidence 3.03 | add weather features by peril |
+| 2026-10-20 | DGP: recoveries / excess | recoveries rule-based (OD+TP = 0.8×incurred, theft+TP = 0.3×); excess never applied to claim amounts | confirms D-003; no excess feature needed |
+| 2026-10-20 | LOB recalibration | model underpredicts buildings by 15% before recalibration | D-009 apply per-LOB scale |
+| 2026-10-20 | forward-factor sensitivity | D² flat for factors 0.98–1.03, declines beyond 1.05 | level is close; keep factor modest |
+| 2026-10-20 | **local D² vs leaderboard** | gap −0.0068 / −0.0084 / −0.0096 / −0.0098 across 4 submissions | local CV is a validated proxy (D-018) |
 
 ---
 
