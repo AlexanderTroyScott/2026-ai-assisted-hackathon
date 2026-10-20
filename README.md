@@ -17,6 +17,7 @@ Judged on four axes: pricing performance & adaptation (40%), effective use of AI
 | Path | Purpose |
 |---|---|
 | `docs/data_findings.md` | **Authoritative empirical findings.** Read before modelling |
+| `docs/references.md` | Actuarial bibliography (R-01…) + method candidates (C-1…) |
 | `docs/decisions.md` | Decision log (D-001 …). Judgement calls flagged, nothing unverified |
 | `docs/ai_workflow_log.md` | AI interaction evidence trail for the judging panel |
 | `docs/submission_protocol.md` | Format rules, metric notes, submission cadence |

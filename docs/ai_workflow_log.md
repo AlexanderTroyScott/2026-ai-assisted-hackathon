@@ -277,3 +277,35 @@ quota, and proceed with everything except spending the last submission slot
 
 **Output.** State fully recovered and documented. Leaderboard unchanged at
 **0.12113** (exp-010, rank 20/22). 1 quota slot reserved.
+
+## Session 9 — 2026-10-20 (late) · Actuarial references layer (R-01…R-03)
+
+**Asked.** Human proposed incorporating actuarial links/references into the
+development, for documentation credibility *and* method influence; agreed the
+links would be pasted and that agents should get a distilled skill.
+
+**AI did.**
+- Downloaded the three CAS PDFs and identified each from metadata + contents:
+  Friedland, *Estimating Unpaid Claims Using Basic Techniques* (R-01); Anderson
+  et al., *A Practitioner's Guide to GLMs* (R-02); Goldburd et al., *GLMs for
+  Insurance Rating*, CAS Monograph 5 (R-03).
+- Extracted the method-relevant sections (triangles/dev technique/BF/Cape Cod +
+  ASOP 9; Tweedie App. C and freq/sev App. J; train-test splitting, weights vs
+  offsets, validation, documentation chapters) and wrote `docs/references.md`
+  with annotations, an R→D mapping, method candidates C-1…C-5, and an honest
+  reconciliation of the one place the literature and our measurement differ
+  (freq/sev vs Tweedie).
+- Distilled an `actuarial-methods` skill for agents; cross-linked from
+  `actuarial-target`; added the README table row; logged D-032.
+
+**Verified.** Every claim about the sources is traceable to a section/appendix
+read in the PDFs this session (TOC + page extracts); no source number was
+merged into our findings; frozen decisions untouched. Candidate queue is
+explicitly `proposed` and gated by the D-025 tie band before any quota spend.
+
+**Human decided.** References serve both documentation and modelling; agents
+should load a skill rather than the PDFs; the three CAS links are the sources.
+
+**Output.** `docs/references.md`, `docs/decisions.md` D-032, `actuarial-methods`
+skill. No model change, no submission — leaderboard unchanged at **0.12113**,
+1 quota slot still reserved.

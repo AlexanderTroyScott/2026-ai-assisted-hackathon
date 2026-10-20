@@ -341,3 +341,23 @@ on a local near-tie — D-025/D-029 show the leaderboard cannot resolve it. The
 block stays implemented and tested but opt-in; promote it into the primary stack
 only with evidence outside the tie band. Quota slot reserved for the next change
 that clears the band.
+
+## D-032 — Actuarial references layer; candidates gated like everything else
+**2026-10-20 · accepted · human-provided sources, transcribed and verified**
+
+Human supplied three CAS sources (Friedland reserving study note; Anderson et al.
+GLM guide; Goldburd et al. GLM rating monograph) for two purposes: actuarial
+credibility in the write-up and actionable method ideas before the deadline.
+Recorded in `docs/references.md` as **R-01…R-03** with an R→D mapping, and
+distilled into the `actuarial-methods` skill so agents apply the standard
+practice without loading the PDFs.
+
+Standing rule adopted with them: references justify **methods**, never numbers
+(AGENTS.md rule 1 stands). Ideas from the sources enter the queue as **C-1…C-5**
+(`proposed`), and each one that we act on goes through the normal flow — local
+experiment → `D-xxx` → experiment-log row → quota slot only if it clears the
+D-025 tie band or is explicitly accepted as a credibility play. Nothing in the
+bibliography changes a frozen decision (D-005 LDFs, Tweedie p=1.5, freq/sev
+result) without a new measurement. Sources that bear on existing findings are
+reconciled in `docs/references.md` "Notes" (e.g. R-02 App. J says freq/sev and
+Tweedie are often similar — our exp-005 measured it worse here; both recorded).
