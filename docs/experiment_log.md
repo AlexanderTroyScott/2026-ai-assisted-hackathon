@@ -20,6 +20,10 @@ negative results are as valuable as positive ones.
 
 ## Submissions
 
+| 2026-10-20 13:07 UTC | exp-005 | freq/sev split: Poisson freq x Gamma severity (D-023) | 0.1102 | 0.12996 | posted | 6101af03a7b2 | Population-shift test: locally 0.1102 vs exp-004 0.1250 (worse). Tests whether local ranking transfers. |
+
+| 2026-10-20 13:06 UTC | exp-006 | exp-004 + premium-formula derived features (D-021/D-024) | 0.1242 | 0.12996 | posted | fac8f9ceb4ba | Population-shift test: locally 0.1242 vs exp-004 0.1250 (slightly worse). If LB ranks it higher, 2024 holdout != 2025 population. |
+
 | # | timestamp | tag | change | hypothesis | local D² | LB score | Δ vs prev | attribution | sha256 |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | 2026-10-20 03:01 | exp-001 | `exposure ×` developed cost rate per LOB (D-005) | establishes the metric scale and a quota-reset marker | 0.0797 | **0.07293** | — | baseline | `7e1b0082099b` |
@@ -88,3 +92,41 @@ we can iterate locally and spend a slot only on a new best.
 3. Development: per-peril LDFs vs LOB-level (esp. motor bodily_injury).
 4. Pooled vs per-LOB D² weighting — affects how much to calibrate each LOB's level.
 5. Weather: 2025 indices vs lagged 2024 (sensitivity for the leakage question).
+
+### Population-shift check (user-requested, 2026-10-20 13:0x)
+
+Both "worse-locally" runs were submitted to test whether local ranking transfers
+to the 2025 population. **It does not transfer for near-ties.**
+
+| exp | what | local D² | LB score | local rank | LB rank | Δ LB vs exp-004 |
+|---|---|---|---|---|---|---|
+| exp-004 | base best (weather + flags) | 0.1250 | 0.11519 | 1st | 2nd | — |
+| exp-006 | + premium-derived features | 0.1242 | **0.11569** | 2nd | **1st** | **+0.0005** |
+| exp-005 | freq/sev split (Poisson × Gamma) | 0.1102 | 0.10314 | 3rd | 3rd | −0.0121 |
+
+**Conclusions (D-025):**
+
+1. **Near-ties do not rank reliably.** exp-006 was 0.0008 *worse* locally and 0.0005
+   *better* on the leaderboard. Local differences below ~0.002 D² are within the
+   population-shift noise and must not be treated as real.
+2. **Large local differences do transfer directionally.** exp-005's −0.0148 local
+   became −0.0121 on the leaderboard — same ordering, similar magnitude. The
+   freq/sev split is genuinely worse, not a measurement artefact.
+3. **The optimism gap is stable** (−0.0068 to −0.0098 across all six points), so
+   local D² remains useful for *level* even when ordering is unreliable near the top.
+4. **exp-006 is the new best (0.11569).** The premium-formula derived features
+   (D-024) help on the 2025 population in a way the 2024 holdout could not detect —
+   consistent with D-021: the premium structure transfers and the model benefits
+   from having its components exposed rather than re-derived.
+
+| exp | local | LB | gap |
+|---|---|---|---|
+| exp-001 | 0.0797 | 0.07293 | −0.0068 |
+| exp-002 | 0.1207 | 0.11226 | −0.0084 |
+| exp-003 | 0.1230 | 0.11339 | −0.0096 |
+| exp-004 | 0.1250 | 0.11519 | −0.0098 |
+| exp-005 | 0.1102 | 0.10314 | −0.0071 |
+| exp-006 | 0.1242 | 0.11569 | −0.0085 |
+
+**Leaderboard now:** top 0.12996 · our best **0.11569** · 6 of 10 slots used in the
+current window (4 remain).

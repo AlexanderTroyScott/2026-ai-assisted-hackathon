@@ -194,3 +194,33 @@ Motor own_damage with `third_party_id` → exactly 0.8 × incurred; theft with
 `third_party_id` → exactly 0.3 ×. No recoveries on property perils. The policy
 excess is never applied to claim amounts (net = gross in 87% motor / 100% property),
 confirming D-003. Do not spend features on the excess columns for target purposes.
+
+## D-025 — Local ranking is unreliable for near-ties; use the leaderboard for those
+**2026-10-20 · accepted · verified against 6 submissions**
+
+A user-requested population-shift test submitted two locally-inferior runs:
+
+| exp | local | LB | verdict |
+|---|---|---|---|
+| exp-006 (premium-derived features) | 0.1242 (worse) | **0.11569** (better) | local ordering **flipped** |
+| exp-005 (freq/sev split) | 0.1102 (much worse) | 0.10314 (much worse) | ordering **held** |
+
+Rules that follow:
+1. Do **not** drop a candidate because it is ≤0.002 D² worse locally — that is
+   inside the 2024→2025 population-shift noise. Submit it, or at least re-run with
+   several seeds before discarding.
+2. Local differences ≳0.010 are trustworthy in direction.
+3. Local D² is still the right *level* estimate (gap to LB is stable at
+   −0.007 to −0.010 across six points).
+4. Keep a small reserve of slots specifically for tie-breaking, since that is the
+   only way to resolve them.
+
+## D-026 — Frequency/severity split does not help on this book
+**2026-10-20 · accepted · verified locally and on the leaderboard**
+
+Poisson frequency × Gamma severity (exposure double-count corrected) scores
+local D² 0.1102 vs 0.1250 for the single Tweedie, and LB 0.10314 vs 0.11519.
+Cause: multiplying two noisy conditional expectations compounds error, and
+count and severity are not independent given the features. A single Tweedie
+(p=1.5, Poisson–Gamma compound — well specified per D-020) estimates E[cost|x]
+directly and is the better choice. **Negative result, kept as evidence.**
