@@ -290,3 +290,30 @@ near-tie flip (this time against the ensemble). Consequence: seed averaging is
 free robustness for a production model but is **not a scoring lever** here; do
 not spend slots on ensembling again. The 2024→2025 population shift dominates
 everything below the ~0.002 D² scale.
+
+## D-030 — Join address and customer dimension tables; never drop features silently
+**2026-10-20 · accepted · verified on the leaderboard (exp-010)**
+
+`build_frame` never joined `addresses` or `customers`. The policy tables carry
+only `address_id` / `customer_id`, so every property-geo and demographic rating
+factor was **listed in the feature sets but silently absent from the model
+matrix** (`align` dropped unknown names): `region`, `flood_zone`, `soil_type`,
+`property_type`, `roof_type`, `energy_rating`, `urban_density`, `basement`,
+`trees_within_5m`, `solar_panels`, `listed_building`, `elevation_m`,
+`distance_to_river_km`, `year_built`, `bedrooms`, `prior_claims_5y`, and the
+customer demographics. All models exp-002…exp-009 trained without them.
+
+Fix: `attach_attributes` joins `ADDRESS_COLS` + `CUSTOMER_COLS` (static rating
+attributes, never claim-derived, so no lag is required under AGENTS.md rule 6);
+`align` now **raises** on any requested feature missing from the frame; guardrail
+tests assert every listed feature exists in the built frame.
+
+Result (exp-010 = exp-007 stack + the block): local D² 0.1248 → **0.1342**
+(+0.0094, well outside the D-025 tie band), LB 0.11637 → **0.12113**
+(**+0.00476**) — largest single gain since the model itself. Importances led by
+`occupation`, `region`, `elevation_m`, `energy_rating`, `year_built`, matching
+the DGP findings (flood_zone 1→5 RR 190×, elevation ≈330×, distance_to_river 36×
+for flood; region/urban_density inside the decoded premium formula).
+
+Gap note: local−LB widened from −0.0084 to −0.0131 — the block appears even more
+informative on the 2025 population than the 2024 holdout, consistent with D-025.

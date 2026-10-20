@@ -30,6 +30,7 @@ negative results are as valuable as positive ones.
 | 6 | 2026-10-20 13:07 | exp-005 | freq/sev split: Poisson freq × Gamma severity (D-023) | population-shift test: locally 0.1102 vs exp-004 0.1250 (worse); tests whether local ranking transfers | 0.1102 | **0.10314** | **−0.0121** | clean | `6101af03a7b2` |
 | 7 | 2026-10-20 14:56 | exp-007 | exp-006 + time-safe historical relativity features (D-027) | historical level relativities (cost rate + freq) strictly lagged (pe < ps) expose price/risk misalignment | 0.1248 | **0.11637** | **+0.00068** | clean | `44af51f7b6c3` |
 | 8 | 2026-10-20 15:47 | exp-009 | exp-007 averaged over 3 seeds (D-025/D-029) | seed averaging reduces the variance behind local/LB rank flips | 0.1250 | **0.11632** | **−0.00005** | clean | `5a16b2b2d1ad` |
+| 9 | 2026-10-20 16:57 | exp-010 | exp-007 + address/customer rating attributes (D-030) | the dimension tables were never joined, so the property-geo and demographic rating factors were listed but silently absent from every model — restoring them should help substantially, especially property lines | 0.1342 | **0.12113** | **+0.00476** | clean | `0b06b8e14c23` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -46,6 +47,7 @@ negative results are as valuable as positive ones.
 | exp-005 | 0.1102 | 0.10314 | −0.0071 |
 | exp-007 | 0.1248 | 0.11637 | −0.0084 |
 | exp-009 | 0.1250 | 0.11632 | −0.0087 |
+| exp-010 | 0.1342 | 0.12113 | −0.0131 |
 
 Local D² is consistently **optimistic by 0.007–0.010** and ranks models correctly
 in direction (D-018, now 8 points). That validates the whole CV setup (time split
@@ -62,6 +64,7 @@ trustworthy offline oracle — with the near-tie caveat of D-025.
 | Premium-formula derived features | +0.0005 | modest, but it *ranked above* exp-004 despite being locally worse (D-025) |
 | Historical relativities (D-027) | **+0.00068** | real; strictly-lagged target encodings expose price/risk misalignment |
 | 3-seed ensemble (D-029) | −0.00005 | **nothing at tie-level** — variance reduction does not move the board (kept as evidence) |
+| Address/customer attributes (D-030) | **+0.00476** | largest single block since the model itself; occupation/region/elevation_m/energy_rating were absent from every prior model |
 
 ---
 
@@ -95,6 +98,9 @@ trustworthy offline oracle — with the near-tie caveat of D-025.
 | 2026-10-20 | per-peril development (D-028) | level-neutral; D² 0.1223 vs 0.1242 but skill-vs-baseline gap identical (0.0444 vs 0.0445) — truth redefined, not skill changed | open Q3 answered locally as a tie; LB tie-break still open |
 | 2026-10-20 | weather lagged-2024 sensitivity (D-012) | D² 0.1243 (lagged) vs 0.1242 (same-year) | weather value does **not** depend on same-year indices — leakage/availability question closed |
 | 2026-10-20 | 3-seed ensemble on exp-007 stack | local 0.1250 vs best single 0.1248 / mean 0.1242 | submitted as exp-009 → LB 0.11632 vs exp-007 0.11637 — a tie; see D-029 |
+| 2026-10-20 | categorical code-drift probe (align train vs test level sets) | no drift across all 13 frame categoricals | latent bug, no score effect; align level sets stay consistent |
+| 2026-10-20 | **feature-presence audit of the built frame** | 7 listed categoricals + 4 flags + 4 geo numerics + prior_claims_5y absent — `addresses`/`customers` never joined | **D-030** — biggest single fix of the session |
+| 2026-10-20 | exp-010: exp-007 + address/customer block | local 0.1342 vs 0.1248 (+0.0094); occupation/region/elevation_m/energy_rating lead importance | submitted → LB 0.12113 (+0.00476) — new best |
 | 2026-10-20 | per-peril age→ultimate triangles (re-derived) | motor BI age0→ult 1.535, buildings subsidence 1.306 vs short-tail 1.01–1.05; LOB re-derivation 1.18/1.06/1.03 vs documented 1.22/1.09/1.04 (different weighting window) | D-028 factors frozen from `scripts/build_development.py`; level kept on the accepted D-005 table |
 
 ---
@@ -146,6 +152,7 @@ to the 2025 population. **It does not transfer for near-ties.**
 | exp-006 | 0.1242 | 0.11569 | −0.0085 |
 | exp-007 | 0.1248 | 0.11637 | −0.0084 |
 | exp-009 | 0.1250 | 0.11632 | −0.0087 |
+| exp-010 | 0.1342 | 0.12113 | −0.0131 |
 
 ### Second population-shift pair: exp-007 vs exp-009 (2026-10-20 15:0x)
 
@@ -161,5 +168,33 @@ but not a scoring lever on this book (D-029). Real gains still come from feature
 blocks (D-027 delivered +0.00068; premium-derived +0.0005; experience +0.0011;
 weather +0.0018) and, by far, from risk differentiation over flat rates (+0.0393).
 
-**Leaderboard now:** top 0.12996 · our best **0.11637** (exp-007) · 8 of 10 slots
-used in the current window (2 reserved for tie-breaks / best re-submission).
+**Leaderboard now:** top 0.12996 · our best **0.12113** (exp-010) · 9 of 10 slots
+used in the current window (1 reserved). Rank 20/22 → gap to top −0.0088.
+
+### D-030 — the attribute-join bug (exp-010, 2026-10-20 16:5x)
+
+`build_frame` never joined `addresses` or `customers`, so 7 categoricals
+(`region`, `flood_zone`, `soil_type`, `property_type`, `roof_type`,
+`energy_rating`, `urban_density`), 4 property flags (`basement`,
+`trees_within_5m`, `solar_panels`, `listed_building`), the geo numerics
+(`elevation_m`, `distance_to_river_km`, `year_built`, `bedrooms`) and
+`prior_claims_5y` were **listed as features but silently dropped** by `align`
+(drop-if-absent). Every model exp-002…exp-009 trained without them.
+
+| | exp-007 | exp-010 | |
+|---|---|---|---|
+| local D² | 0.1248 | **0.1342** | +0.0094 |
+| LB | 0.11637 | **0.12113** | **+0.00476** |
+| gap | −0.0084 | −0.0131 | |
+
+Top-10 importances in exp-010 are led by `occupation` (1264) and `region` (492)
+with `elevation_m` (295), `energy_rating` (197), `year_built` (168) — exactly
+the recovered block. The DGP findings predicted this (flood_zone RR 190×,
+elevation ≈330×, distance_to_river 36× for flood; region/urban_density inside
+the premium formula). The gap widening to −0.0131 is consistent with the block
+being *more* informative on the 2025 population than on the 2024 holdout —
+same direction as the D-025 shift, larger scale.
+
+Guardrail added: `align` now raises on any requested feature absent from the
+frame (was: silent drop), and `tests/test_guardrails.py` asserts every listed
+feature exists in the built frame.
