@@ -1,0 +1,33 @@
+{
+  "name": "exp-006-seed1",
+  "features": "base,premium,experience,weather,flags",
+  "mode": "tweedie",
+  "seed": 1,
+  "d2_constant": 0.07965445426972007,
+  "d2_premium_lr": 0.07595456172131332,
+  "d2_model": 0.12331203592607942,
+  "d2_model_raw": 0.12222569851959408,
+  "n_iter": 114,
+  "top_features": {
+    "written_premium": 629,
+    "exposure": 614,
+    "premium_per_exposure": 448,
+    "rainfall_mm": 419,
+    "sum_insured": 334,
+    "dry_summer_index": 310,
+    "wildfire_index": 303,
+    "wind_exposure_index": 300,
+    "mean_temperature_c": 288,
+    "policyholder_age": 267,
+    "annual_mileage": 253,
+    "freezing_days": 233,
+    "construction_type": 207,
+    "voluntary_excess": 196,
+    "driver_age": 176,
+    "days_quote_to_inception": 167,
+    "renewal_count": 160,
+    "years_licensed": 159,
+    "hail_days": 142,
+    "cover_type": 128
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "exp-005",
+  "features": "base,premium,experience,weather,flags",
+  "mode": "freq_sev",
+  "d2_constant": 0.07965445426972007,
+  "d2_premium_lr": 0.07595456172131332,
+  "d2_model": 0.11015901451653476,
+  "n_iter": 497,
+  "top_features": {
+    "rainfall_mm": 1936,
+    "written_premium": 1692,
+    "wind_exposure_index": 1655,
+    "dry_summer_index": 1564,
+    "mean_temperature_c": 1460,
+    "wildfire_index": 1405,
+    "annual_mileage": 1295,
+    "premium_per_exposure": 1274,
+    "exposure": 1194,
+    "freezing_days": 1192,
+    "days_quote_to_inception": 1145,
+    "driver_age": 1115,
+    "hail_days": 1060,
+    "renewal_count": 933,
+    "voluntary_excess": 885,
+    "years_licensed": 828,
+    "policyholder_age": 790,
+    "sum_insured": 730,
+    "vehicle_age": 654,
+    "ncb_years": 598
+  }
+}

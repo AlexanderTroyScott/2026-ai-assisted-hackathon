@@ -1,0 +1,30 @@
+{
+  "name": "exp-003",
+  "features": "base,premium,experience",
+  "d2_constant": 0.07965445426972007,
+  "d2_premium_lr": 0.07595456172131332,
+  "d2_model": 0.1229772207121993,
+  "n_iter": 82,
+  "top_features": {
+    "written_premium": 769,
+    "exposure": 622,
+    "sum_insured": 404,
+    "policyholder_age": 304,
+    "annual_mileage": 253,
+    "renewal_count": 238,
+    "days_quote_to_inception": 214,
+    "driver_age": 210,
+    "years_licensed": 208,
+    "voluntary_excess": 198,
+    "construction_type": 192,
+    "cover_type": 153,
+    "ncb_years": 135,
+    "missed_payments_12m": 130,
+    "vehicle_age": 125,
+    "channel": 111,
+    "payment_method": 102,
+    "cust_cost_2y": 81,
+    "vehicle_use": 76,
+    "occupancy": 69
+  }
+}
