@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.dataset import build_frame, LINES, FORWARD_FACTOR  # noqa: E402
+from src.features import historical_relativities  # noqa: E402
 from sklearn.metrics import d2_tweedie_score  # noqa: E402
 
 OUT = ROOT / "outputs" / "submissions"
@@ -64,11 +65,17 @@ FLAGS = ["driver_assist", "named_young_driver", "accidental_damage_cover", "mort
          "bicycle_cover", "smoke_alarms"]
 
 
-def add_weather(df: pd.DataFrame) -> pd.DataFrame:
+def add_weather(df: pd.DataFrame, lag: bool = False) -> pd.DataFrame:
     w = pd.read_parquet(ROOT / "data_raw" / "weather.parquet")
     w["year"] = w["year"].astype(int)
     df = df.copy()
-    df["weather_year"] = np.where(df["is_test"], 2025, df["acc_year"])
+    if lag:
+        # sensitivity for the D-012 leakage question: use the *previous* year's
+        # climate indices instead of the same year's (test rows use 2024).
+        df["weather_year"] = np.where(df["is_test"], 2024,
+                                      np.maximum(df["acc_year"] - 1, w["year"].min()))
+    else:
+        df["weather_year"] = np.where(df["is_test"], 2025, df["acc_year"])
     df = df.merge(w, left_on=["address_id", "weather_year"], right_on=["address_id", "year"], how="left")
     return df
 
@@ -98,19 +105,23 @@ def feature_cols(groups: str) -> list[str]:
         cols += WEATHER
     if "flags" in groups:
         cols += FLAGS
+    if "relativity" in groups:
+        cols += [f"{c}_hist_{k}" for c in CAT_FEATURES for k in ("rate", "freq")]
     bad = [c for c in cols if c in DENYLIST]
     if bad:
         raise SystemExit(f"FATAL: deny-listed features requested: {bad}")
     return cols
 
 
-def prepare(groups: str):
-    df = add_derived(build_frame("train"))
+def prepare(groups: str, development: str = "lob", weather_lag: bool = False):
+    df = add_derived(build_frame("train", development=development))
     if "weather" in groups:
-        df = add_weather(df)
+        df = add_weather(df, lag=weather_lag)
     te = add_derived(build_frame("test"))
     if "weather" in groups:
-        te = add_weather(te)
+        te = add_weather(te, lag=weather_lag)
+    if "relativity" in groups:
+        df, te = historical_relativities(df, te, CAT_FEATURES)
     return df, te
 
 
@@ -210,12 +221,16 @@ def main() -> int:
     ap.add_argument("--name", required=True)
     ap.add_argument("--features", default="base,premium")
     ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev"])
+    ap.add_argument("--development", default="lob", choices=["lob", "peril"])
+    ap.add_argument("--weather-lag", action="store_true")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--save-val-pred", action="store_true")
     ap.add_argument("--no-submit", action="store_true")
     args = ap.parse_args()
     groups = set(args.features.split(","))
 
-    print(f"=== {args.name}  features={args.features} ===")
-    train, test = prepare(args.features)
+    print(f"=== {args.name}  features={args.features}  development={args.development} ===")
+    train, test = prepare(args.features, development=args.development, weather_lag=args.weather_lag)
     print(f"train rows {len(train):,}  test rows {len(test):,}")
 
     # ---- baselines on the same holdout (developed truth) ----
@@ -249,10 +264,10 @@ def main() -> int:
         objective="tweedie", tweedie_variance_power=1.5,
         n_estimators=2500, learning_rate=0.04, num_leaves=64,
         min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
-        bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=0,
+        bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
     )
     if args.mode == "freq_sev":
-        p_raw, fmodel, smodel, use, cats = fit_freq_sev(tr, va, cols, CAT_FEATURES)
+        p_raw, fmodel, smodel, use, cats = fit_freq_sev(tr, va, cols, CAT_FEATURES, seed=args.seed)
         model = smodel
         best_iter = int(fmodel.best_iteration_)
         imp = pd.Series(fmodel.feature_importances_, index=use).sort_values(ascending=False)
@@ -301,14 +316,18 @@ def main() -> int:
     assert len(sub) == 626_639, len(sub)
     OUT.mkdir(parents=True, exist_ok=True)
     MET.mkdir(parents=True, exist_ok=True)
+    if args.save_val_pred:
+        pd.DataFrame({"row_id": va["row_id"].to_numpy(), "y_true": yv, "pred": p_va}).to_parquet(
+            MET / f"{args.name}_valpred.parquet", index=False)
     path = OUT / f"{args.name}.csv"
     sub.to_csv(path, index=False)
     print(f"wrote {path}  mean={sub.prediction.mean():.2f}  p50={sub.prediction.median():.2f}")
 
     (MET / f"{args.name}.json").write_text(json.dumps({
-        "name": args.name, "features": args.features, "mode": args.mode,
+        "name": args.name, "features": args.features, "mode": args.mode, "seed": args.seed,
+        "development": args.development,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),
-        "d2_model": float(d2(p_va)), "n_iter": best_iter,
+        "d2_model": float(d2(p_va)), "d2_model_raw": float(d2(p_raw)), "n_iter": best_iter,
         "top_features": imp.head(20).to_dict(),
     }, indent=2))
     return 0

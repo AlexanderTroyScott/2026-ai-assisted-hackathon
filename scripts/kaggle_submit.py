@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import io
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -79,28 +80,68 @@ def log_submission(tag: str, message: str, local_d2: str, digest: str, lb_score:
 
     if LOG_MD.exists():
         text = LOG_MD.read_text()
-        marker = "\n## Submissions\n"
-        line = (f"| {ts} | {tag} | {message} | {local_d2} | {lb_score} | {lb_rank} | "
-                f"{digest[:12]} | {notes} |\n")
-        if marker in text:
-            text = text.replace(marker, marker + "\n" + line, 1)
-            LOG_MD.write_text(text)
+        lines = text.splitlines(keepends=True)
+        hdr = next((i for i, ln in enumerate(lines) if ln.startswith("| # | timestamp |")), None)
+        if hdr is not None:
+            # next row number = highest existing | n | in the table
+            n = 0
+            i = hdr + 1
+            while i < len(lines) and lines[i].lstrip().startswith("|"):
+                first = lines[i].strip().lstrip("|").split("|")[0].strip()
+                if first.isdigit():
+                    n = max(n, int(first))
+                i += 1
+            row10 = (f"| {n + 1} | {ts} | {tag} | {message} | {notes} | {local_d2} | "
+                     f"{lb_score} | — | clean | `{digest[:12]}` |\n")
+            lines.insert(i, row10)
+            LOG_MD.write_text("".join(lines))
+        else:
+            marker = "\n## Submissions\n"
+            line = (f"| {ts} | {tag} | {message} | {local_d2} | {lb_score} | {lb_rank} | "
+                    f"{digest[:12]} | {notes} |\n")
+            if marker in text:
+                LOG_MD.write_text(text.replace(marker, marker + "\n" + line, 1))
 
 
-def fetch_leaderboard() -> tuple[str, str]:
-    """Return (our best score, our best rank) if visible, else ('-','-')."""
+def fetch_our_score() -> tuple[str, str]:
+    """Return (score of our latest submission, 'posted') from our own submission
+    list. Never take the board maximum — that is another team's score."""
     try:
         out = subprocess.run(
-            ["kaggle", "competitions", "leaderboard", "-c", COMP, "--show"],
+            ["kaggle", "competitions", "submissions", "-c", COMP, "--csv"],
             capture_output=True, text=True, timeout=60, check=False,
         ).stdout
     except Exception:  # noqa: BLE001
         return ("-", "-")
-    rows = [ln.split() for ln in out.splitlines() if ln.strip() and ln.split()[-1].replace(".", "").isdigit()]
+    rows = list(csv.DictReader(io.StringIO(out)))
     if not rows:
         return ("-", "-")
-    best = max(rows, key=lambda r: float(r[-1]))
-    return (best[-1], "posted")
+    rows.sort(key=lambda r: r.get("date", ""), reverse=True)
+    score = rows[0].get("publicScore") or "-"
+    return (score, "posted")
+
+
+def check_quota() -> int:
+    """Print the daily submission quota; return the number of slots left today.
+
+    User-directed hold rule: if the quota has reset to 10 (fresh window), do not
+    submit without explicit human confirmation.
+    """
+    try:
+        out = subprocess.run(
+            [sys.executable, "-c",
+             "from kaggle.api.kaggle_api_extended import KaggleApi;"
+             "a=KaggleApi(); a.authenticate();"
+             "l=a.competition_get_submission_limits(%r);"
+             "print(l.num_today, l.num_allowed_now)" % COMP],
+            capture_output=True, text=True, timeout=60, check=False,
+        ).stdout.split()
+        num_today, allowed = int(out[0]), int(out[1])
+        print(f"  quota           used today {num_today}/10, remaining {allowed}")
+        return allowed
+    except Exception as exc:  # noqa: BLE001
+        print(f"  quota           UNAVAILABLE ({exc}) — refuse to submit blind")
+        return -1
 
 
 def main() -> int:
@@ -112,6 +153,8 @@ def main() -> int:
     ap.add_argument("--notes", default="")
     ap.add_argument("--validate-only", action="store_true")
     ap.add_argument("--submit", action="store_true")
+    ap.add_argument("--ack-quota-reset", action="store_true",
+                    help="required to submit when the daily quota has reset to 10")
     args = ap.parse_args()
 
     if not args.input.exists():
@@ -127,6 +170,7 @@ def main() -> int:
         print(f"  {name:<{width}}  {'PASS' if passed else 'FAIL'}   {detail}")
     digest = sha256(args.input)
     print(f"  {'sha256':<{width}}  {digest}")
+    allowed = check_quota()
 
     if not ok:
         print("\nREFUSING TO SUBMIT — validation failed. Fix the generating code, not the CSV.")
@@ -135,6 +179,18 @@ def main() -> int:
     if args.validate_only or not args.submit:
         print("\nValidation passed. Not uploading (use --submit to upload).")
         return 0
+
+    if allowed == 0:
+        print("\nREFUSING TO SUBMIT — daily quota exhausted.")
+        return 1
+    if allowed < 0:
+        print("\nREFUSING TO SUBMIT — quota could not be verified.")
+        return 1
+    if allowed == 10 and not args.ack_quota_reset:
+        print("\nHOLD — the daily quota has reset to 10 (fresh window).")
+        print("User-directed policy: do not submit without explicit human confirmation.")
+        print("Re-run with --ack-quota-reset if a human has approved spending a fresh window.")
+        return 1
 
     print(f"\nUploading {args.input.name} to {COMP} with message: {args.message!r}")
     proc = subprocess.run(
@@ -147,7 +203,7 @@ def main() -> int:
         print("Upload failed — nothing logged.")
         return proc.returncode
 
-    score, rank = fetch_leaderboard()
+    score, rank = fetch_our_score()
     log_submission(args.tag, args.message, args.local_d2, digest, score, rank, args.notes)
     print(f"\nLogged to docs/experiment_log.md  (leaderboard: score={score} rank={rank})")
     print("Note: the leaderboard may take a few minutes to reflect a new submission.")

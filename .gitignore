@@ -4,6 +4,7 @@
 # generated submission payloads (recorded by sha256 in docs/experiment_log.md)
 outputs/submissions/
 outputs/experiment_log.csv
+outputs/metrics/*_valpred.parquet
 
 # python
 __pycache__/
