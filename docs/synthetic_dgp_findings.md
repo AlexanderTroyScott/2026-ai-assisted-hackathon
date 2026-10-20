@@ -95,13 +95,61 @@ four in a linear model uncritically.
 
 ## 6. Recoveries and excess
 
-- **Recoveries are rule-based and motor-only:** own_damage with `third_party_id`
-  present → **exactly 0.8 × incurred** (13,962 claims = 94.5% of all recoveries,
-  28.6% of OD claims); theft with `third_party_id` → **exactly 0.3 ×** (779 claims).
-  No recoveries on property or TP perils.
+- **Recoveries are rule-based and motor-only:** own_damage claims recover **exactly
+  0.8 × incurred** (13,997 claims, 28.6% of OD claims) and theft claims recover
+  **exactly 0.3 ×** (779 claims). Verified: `recoveries/incurred` has median = mean =
+  0.8 (OD) and 0.3 (theft), min 0.778 / max 1.0. No recoveries on property perils.
+- **Correction to an earlier draft:** `third_party_id` is *not* the trigger. It is
+  present only on `bodily_injury` and `third_party_prop` claims (100% of each) and on
+  **zero** recovering claims. The recovery trigger is not identifiable from any
+  available field (rate is a flat 28.8% of own_damage regardless of `repairer_id`
+  presence). Treat it as random from our point of view.
 - **Excess is never applied to claim amounts:** net = gross in 87% (motor) and 100%
   (property) of claims; 18,948 motor claims with gross < excess still have net > 0.
   Confirms D-003 — do not deduct the excess in target construction.
+
+## 6b. Accident size — what can and cannot be measured
+
+There is **no accident identifier** in the data. `loss_date` is a plain calendar date
+(1,473 distinct dates, ~110 claims per date), so claims cannot be clustered into
+accidents. `third_party_id` links only 242 ids across more than one claim (85 across
+more than one policy), so multi-claim accidents are not reconstructable.
+
+What *is* measurable is severity structure — and it answers the "how big can an
+accident get" question:
+
+| peril | top 1% of claims = share of cost | mean | median |
+|---|---|---|---|
+| **bodily_injury** | **18.3%** | 21,582 | 11,525 |
+| flood | 8.5% | 22,360 | 12,055 |
+| fire | 7.7% | 51,685 | 28,553 |
+| escape_of_water | 7.3% | 4,692 | 2,849 |
+| theft | 7.1% | 4,942 | 3,086 |
+| own_damage | 6.5% | 2,394 | 1,571 |
+| all others | 5.7–6.4% | | |
+
+**Bodily injury is uniquely catastrophic** — 18.3% of its cost sits in 1% of claims,
+against ~6% for every other peril.
+
+BI severity bands (motor):
+
+| band | share of claims | share of BI cost |
+|---|---|---|
+| < 5k | 26.4% | 2.8% |
+| 5–25k | 50.0% | 30.1% |
+| 25–100k | 21.5% | 42.9% |
+| **100k+** | **2.1%** | **24.2%** |
+
+The log-histogram is **unimodal** (single peak at ~10⁴ = 10k) with a thin catastrophic
+tail to 11.9M — so there is *no* separate "fatality = small fixed benefit" cluster
+in this data. The hypothesis is not supported, but the underlying actuarial point
+stands: BI is where accident *size* variance lives, and it dominates the Tweedie
+deviance. Since motor currently has our **weakest per-LOB D²**, improving BI
+handling is the highest-value modelling target.
+
+Implication: do **not** winsorise or cap large claims — the metric (D² p=1.5)
+rewards getting their expectation right. Model BI frequency and severity
+separately if the single Tweedie cannot resolve the tail.
 
 ## 7. NCB is a stochastic transition kernel (not deterministic)
 

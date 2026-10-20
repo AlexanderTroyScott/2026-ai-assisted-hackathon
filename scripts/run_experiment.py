@@ -38,7 +38,8 @@ DENYLIST = ["renewal_decision", "customer_service_contacts", "telematics_score",
 BASE_FEATURES = [
     "exposure", "voluntary_excess", "compulsory_excess", "missed_payments_12m",
     "renewal_count", "days_quote_to_inception", "discount_applied", "written_premium",
-    "new_business",
+    "new_business", "prior_claims_5y",
+    "premium_per_exposure", "age_band", "ncb_band", "vvg_log",
     "policyholder_age", "sum_insured", "driver_age", "years_licensed", "ncb_years",
     "vehicle_value_group", "vehicle_age", "engine_size_cc", "annual_mileage",
     "telematics_opt_in",
@@ -72,6 +73,23 @@ def add_weather(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_derived(df: pd.DataFrame) -> pd.DataFrame:
+    """D-021/D-024: expose the structure of the decoded premium formula so the
+    model can learn deviations rather than re-deriving the formula from scratch.
+
+    written_premium = base x theta_age x theta_ncb x theta_vvg x theta_cover
+                      x theta_region x theta_year x exp(-1.04 x discount) x noise
+    with sharp jumps at driver age 25 and 70 and 3 flat NCB bands.
+    """
+    df = df.copy()
+    df["premium_per_exposure"] = df["written_premium"] / df["exposure"].clip(lower=1e-3)
+    age = df["driver_age"].fillna(df["policyholder_age"]).fillna(50)
+    df["age_band"] = pd.cut(age, [0, 24, 69, 200], labels=[0, 1, 2]).astype(float)
+    df["ncb_band"] = pd.cut(df["ncb_years"].fillna(0), [-1, 0, 4, 200], labels=[0, 1, 2]).astype(float)
+    df["vvg_log"] = np.log1p(df["vehicle_value_group"].fillna(0))
+    return df
+
+
 def feature_cols(groups: str) -> list[str]:
     cols = list(BASE_FEATURES)
     if "experience" in groups:
@@ -87,10 +105,10 @@ def feature_cols(groups: str) -> list[str]:
 
 
 def prepare(groups: str):
-    df = build_frame("train")
+    df = add_derived(build_frame("train"))
     if "weather" in groups:
         df = add_weather(df)
-    te = build_frame("test")
+    te = add_derived(build_frame("test"))
     if "weather" in groups:
         te = add_weather(te)
     return df, te
@@ -145,10 +163,53 @@ def lob_recalibrate(pred: np.ndarray, lines: pd.Series, actual: np.ndarray | Non
     return out
 
 
+def fit_freq_sev(tr, va, cols, cats, seed=0):
+    """Frequency/severity split (D-023).
+
+    Frequency  : Poisson on claim counts, exposure-weighted
+    Severity   : Gamma on cost conditional on a claim occurring
+    Combined   : E[cost] = E[count] x E[cost per claim]
+
+    This is the actuarially standard way to handle a low-frequency, heavy-tailed
+    book, and it targets the tail directly (see docs/synthetic_dgp_findings.md 6b:
+    top 1% of bodily_injury claims carry 18.3% of BI cost).
+    """
+    import lightgbm as lgb
+
+    has = (tr["n_claims"] > 0) & (tr["y_ult"] > 0)
+    Xf_tr, Xf_va, use, cats2 = align(tr, va, cols, cats)
+    fmodel = lgb.LGBMRegressor(
+        objective="poisson", n_estimators=2000, learning_rate=0.05, num_leaves=64,
+        min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
+        bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=seed,
+    )
+    fmodel.fit(Xf_tr, tr["n_claims"], sample_weight=tr["exposure"],
+               eval_set=[(Xf_va, va["n_claims"])], eval_metric="poisson",
+               callbacks=[lgb.early_stopping(80, verbose=False), lgb.log_evaluation(0)],
+               categorical_feature=cats2)
+
+    Xs_tr, Xs_va, _, _ = align(tr[has], va, cols, cats)
+    smodel = lgb.LGBMRegressor(
+        objective="gamma", n_estimators=2000, learning_rate=0.05, num_leaves=64,
+        min_data_in_leaf=150, feature_fraction=0.8, bagging_fraction=0.8,
+        bagging_freq=1, lambda_l2=5.0, verbose=-1, random_state=seed,
+    )
+    smodel.fit(Xs_tr, tr.loc[has, "y_ult"],
+               callbacks=[lgb.log_evaluation(0)], categorical_feature=cats2)
+
+    # fmodel already predicts the expected CLAIM COUNT for the row (exposure is a
+    # feature and the loss is exposure-weighted), so do NOT multiply by exposure
+    # again — that was a double count and cost ~0.06 of D2.
+    p_freq = np.maximum(fmodel.predict(Xf_va), 1e-9)
+    p_sev = np.maximum(smodel.predict(Xs_va), 1e-3)
+    return p_freq * p_sev, fmodel, smodel, use, cats2
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True)
     ap.add_argument("--features", default="base,premium")
+    ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev"])
     ap.add_argument("--no-submit", action="store_true")
     args = ap.parse_args()
     groups = set(args.features.split(","))
@@ -183,7 +244,6 @@ def main() -> int:
 
     cols = feature_cols(args.features)
     X_tr, X_va, use, cats = align(tr, va, cols, CAT_FEATURES)
-    X_all, X_te, _, _ = align(train, test, cols, CAT_FEATURES)
 
     params = dict(
         objective="tweedie", tweedie_variance_power=1.5,
@@ -191,18 +251,26 @@ def main() -> int:
         min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
         bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=0,
     )
-    model = lgb.LGBMRegressor(**params)
-    model.fit(
-        X_tr, tr["y_ult"], eval_set=[(X_va, va["y_ult"])],
-        eval_metric="tweedie",
-        callbacks=[lgb.early_stopping(80, verbose=False), lgb.log_evaluation(0)],
-        categorical_feature=cats,
-    )
-    p_va = np.maximum(model.predict(X_va), 1e-3)
-    print(f"model (raw)            D2 = {d2(p_va):+.4f}   (n_iter={model.best_iteration_})")
+    if args.mode == "freq_sev":
+        p_raw, fmodel, smodel, use, cats = fit_freq_sev(tr, va, cols, CAT_FEATURES)
+        model = smodel
+        best_iter = int(fmodel.best_iteration_)
+        imp = pd.Series(fmodel.feature_importances_, index=use).sort_values(ascending=False)
+    else:
+        model = lgb.LGBMRegressor(**params)
+        model.fit(
+            X_tr, tr["y_ult"], eval_set=[(X_va, va["y_ult"])],
+            eval_metric="tweedie",
+            callbacks=[lgb.early_stopping(80, verbose=False), lgb.log_evaluation(0)],
+            categorical_feature=cats,
+        )
+        p_raw = np.maximum(model.predict(X_va), 1e-3)
+        best_iter = int(model.best_iteration_)
+        imp = pd.Series(model.feature_importances_, index=use).sort_values(ascending=False)
+    print(f"model ({args.mode}, raw)  D2 = {d2(p_raw):+.4f}   (n_iter={best_iter})")
 
     # D-009: recalibrate each LOB so predicted totals match expected totals.
-    p_va = lob_recalibrate(p_va, va["line"], actual=yv)
+    p_va = lob_recalibrate(p_raw, va["line"], actual=yv)
     print(f"model (LOB-recalibrated) D2 = {d2(p_va):+.4f}")
 
     for ln in LINES:
@@ -210,14 +278,21 @@ def main() -> int:
         if m.sum():
             print(f"   {ln:10s} D2 = {d2_tweedie_score(yv[m], p_va[m], power=1.5):+.4f}")
 
-    imp = pd.Series(model.feature_importances_, index=use).sort_values(ascending=False)
     print("top features:", ", ".join(f"{k}={v}" for k, v in imp.head(12).items()))
 
     # ---- score the test set ----
-    p_te = np.maximum(model.predict(X_te), 1e-3)
+    X_all, X_te, _, _ = align(train, test, cols, CAT_FEATURES)
+    if args.mode == "freq_sev":
+        p_te = (np.maximum(fmodel.predict(X_te), 1e-9)
+                * np.maximum(smodel.predict(X_te), 1e-3))
+        p_ref = (np.maximum(fmodel.predict(X_va), 1e-9)
+                 * np.maximum(smodel.predict(X_va), 1e-3))
+    else:
+        p_te = np.maximum(model.predict(X_te), 1e-3)
+        p_ref = np.maximum(model.predict(X_va), 1e-3)
     # carry the holdout LOB scales over to the test set
     p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
-                           ref_pred=np.maximum(model.predict(X_va), 1e-3), ref_actual=yv)
+                           ref_pred=p_ref, ref_actual=yv)
     fwd = test["line"].map(FORWARD_FACTOR).to_numpy()
     # forward factor is applied because labels are on an accident-year basis
     # and the model has learned the 2021-2024 average level (D-008).
@@ -231,9 +306,9 @@ def main() -> int:
     print(f"wrote {path}  mean={sub.prediction.mean():.2f}  p50={sub.prediction.median():.2f}")
 
     (MET / f"{args.name}.json").write_text(json.dumps({
-        "name": args.name, "features": args.features,
+        "name": args.name, "features": args.features, "mode": args.mode,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),
-        "d2_model": float(d2(p_va)), "n_iter": int(model.best_iteration_),
+        "d2_model": float(d2(p_va)), "n_iter": best_iter,
         "top_features": imp.head(20).to_dict(),
     }, indent=2))
     return 0
