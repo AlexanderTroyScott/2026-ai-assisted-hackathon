@@ -102,6 +102,7 @@ trustworthy offline oracle — with the near-tie caveat of D-025.
 | 2026-10-20 | **feature-presence audit of the built frame** | 7 listed categoricals + 4 flags + 4 geo numerics + prior_claims_5y absent — `addresses`/`customers` never joined | **D-030** — biggest single fix of the session |
 | 2026-10-20 | exp-010: exp-007 + address/customer block | local 0.1342 vs 0.1248 (+0.0094); occupation/region/elevation_m/energy_rating lead importance | submitted → LB 0.12113 (+0.00476) — new best |
 | 2026-10-20 | per-peril age→ultimate triangles (re-derived) | motor BI age0→ult 1.535, buildings subsidence 1.306 vs short-tail 1.01–1.05; LOB re-derivation 1.18/1.06/1.03 vs documented 1.22/1.09/1.04 (different weighting window) | D-028 factors frozen from `scripts/build_development.py`; level kept on the accepted D-005 table |
+| 2026-10-20 | **exp-011: exp-010 + denied-claim history (D-031)** | local 0.1339 vs exp-010 0.1342 (−0.0003, same seed/truth — inside the D-025 tie band) | **not submitted** — human held the last quota slot (1 of 10 left) for a change that clears the tie band; block stays opt-in |
 
 ---
 
@@ -198,3 +199,25 @@ same direction as the D-025 shift, larger scale.
 Guardrail added: `align` now raises on any requested feature absent from the
 frame (was: silent drop), and `tests/test_guardrails.py` asserts every listed
 feature exists in the built frame.
+
+### D-031 — denied-claim history (exp-011, local only, 2026-10-20 19:0x)
+
+Repudiated claims carry zero cost (D-004) but the refusal event is
+claim-occurrence information. `denial_features` adds `cust_denied_all`,
+`pol_denied_all`, `days_since_denied`, strictly lagged (`loss < ps`) under the
+same leakage rule as the experience block (D-014 / AGENTS.md rule 6) — own-period
+denials are invisible to their own row, asserted in `tests/test_features.py`.
+
+| | exp-010 | exp-011 | |
+|---|---|---|---|
+| local D² | **0.1342** | 0.1339 | −0.0003 |
+
+Same seed, same truth, single change: inside the D-025 tie band — no measurable
+gain. **Not submitted.** Human decided to hold the last quota slot (9 of 10 used)
+for a change outside the band rather than spend it confirming a local near-tie
+(D-025/D-029: local 4th-decimal movement does not rank on the leaderboard).
+The block remains implemented and tested but **opt-in** (`denied` feature group);
+promote it only with evidence outside the tie band.
+
+**Leaderboard at time of writing:** top 0.12996 · our best **0.12113** (exp-010) ·
+rank 20/22 · 9 of 10 slots used today (**1 remaining, deliberately unspent**).

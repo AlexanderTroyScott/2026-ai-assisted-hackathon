@@ -317,3 +317,27 @@ for flood; region/urban_density inside the decoded premium formula).
 
 Gap note: local−LB widened from −0.0084 to −0.0131 — the block appears even more
 informative on the 2025 population than the 2024 holdout, consistent with D-025.
+
+## D-031 — Denied-claim history as strictly lagged features; hold the last slot
+**2026-10-20 · accepted · verified by tests and local exp-011; human decided the slot call**
+
+Repudiated claims carry zero cost (D-004) but the *refusal event* is
+claim-occurrence information: a customer with a denied claim has demonstrably
+had a loss event, and the premium formula ignores claim experience entirely
+(D-022/DGP findings). `load_denied_claims` / `denial_features` in `src/dataset.py`
+add `cust_denied_all`, `pol_denied_all`, `days_since_denied`, strictly lagged
+(`loss < ps`) under the same leakage rule as the experience block (D-014,
+AGENTS.md rule 6) — a row never sees denials inside its own period. Counts
+default to 0; `days_since_denied` stays NaN for "no history" so the model can
+tell that apart from a recent denial. Opt-in `denied` feature group.
+
+Verification: 25 tests green, including two new ones asserting own-period
+exclusion and the clean-history zero-defaults. exp-011 (exp-010 stack + the
+block, same seed, same truth): local D² **0.1339 vs 0.1342** — −0.0003, inside
+the D-025 tie band. No measurable gain.
+
+Human decided (2026-10-20): do **not** spend the last quota slot (9 of 10 used)
+on a local near-tie — D-025/D-029 show the leaderboard cannot resolve it. The
+block stays implemented and tested but opt-in; promote it into the primary stack
+only with evidence outside the tie band. Quota slot reserved for the next change
+that clears the band.

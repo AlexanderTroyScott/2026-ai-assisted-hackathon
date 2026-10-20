@@ -244,3 +244,36 @@ check the Kaggle quota before any submission and hold if it has reset to 10.
 **Output.** Leaderboard 0.11569 → **0.11637**. Local evidence: seed-noise band,
 relativity gain, per-peril tie, weather-lag robustness, ensemble tie. Decisions
 D-023/D-024 gap-filled and D-027/D-028/D-029 recorded. 2 quota slots reserved.
+
+## Session 8 — 2026-10-20 (evening) · Crash recovery + denied-claim history (D-031)
+
+**Asked.** Session crashed; reconstruct where things stood, report the remaining
+quota, and proceed with everything except spending the last submission slot
+(the user judged exp-011's local near-tie not worth it).
+
+**AI did.**
+- Reconstructed state from git, `docs/experiment_log.md`, `docs/decisions.md`,
+  `outputs/metrics/` and the live quota check — reported it before touching
+  anything.
+- Found uncommitted D-031 work at the crash point: `denial_features` (strictly
+  lagged denied-claim history), the `denied` feature group, two leakage tests,
+  and a trained exp-011 (local D² 0.1339).
+- Re-ran the guardrail suite (pytest had dropped out of the venv; reinstalled,
+  then 25 tests green including the new own-period-exclusion assertions).
+- Logged D-031 in `docs/decisions.md`, exp-011 in `docs/experiment_log.md` and
+  `outputs/experiment_log.csv`, and this session entry. Committed and pushed.
+
+**Verified.**
+- Quota read live from the API: 9/10 used, 1 remaining — matches the nine
+  recorded submissions (exp-001…007, 009, 010).
+- exp-011 = exp-010 stack + denied block, same seed, same truth: 0.1339 vs
+  0.1342 (−0.0003, inside the D-025 tie band). No leaderboard claim made from it.
+- 25/25 tests pass after the change; nothing was uploaded to Kaggle.
+
+**Human decided.**
+- exp-011 is not worth the last quota slot (D-025/D-029: 4th-decimal local
+  movement does not rank). The slot is held for a change outside the tie band.
+- Otherwise proceed: document and commit the D-031 work as opt-in.
+
+**Output.** State fully recovered and documented. Leaderboard unchanged at
+**0.12113** (exp-010, rank 20/22). 1 quota slot reserved.
