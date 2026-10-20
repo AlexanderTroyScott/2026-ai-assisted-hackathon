@@ -70,11 +70,29 @@ def canonicalise(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def row_target(policies: pd.DataFrame, claims: pd.DataFrame, develop: bool = True) -> pd.DataFrame:
-    """Attribute claims to rows and (optionally) develop to ultimate."""
+def row_target(policies: pd.DataFrame, claims: pd.DataFrame, develop: bool = True,
+               development: str = "lob") -> pd.DataFrame:
+    """Attribute claims to rows and (optionally) develop to ultimate.
+
+    development='lob'   uniform factor per (LOB, accident year) — D-005
+    development='peril' level-preserving per-peril factors — src/development.py
+    """
     key = ["row_id", "policy_id", "ps", "pe", "acc_year", "line"]
-    merged = policies[key].merge(claims, on="policy_id", how="inner")
+    merged = policies[key].merge(claims.drop(columns=["line"]), on="policy_id", how="inner")
     merged = merged[(merged["loss"] >= merged["ps"]) & (merged["loss"] <= merged["pe"])]
+    if develop and development == "peril":
+        from src.development import claim_factors
+        merged = merged.copy()
+        merged["cost_dev"] = merged["cost"] * claim_factors(merged, LDF)
+        agg = merged.groupby("row_id").agg(
+            y=("cost", "sum"), y_ult=("cost_dev", "sum"),
+            n_claims=("claim_id", "count"),
+            n_theft=("peril", lambda s: int((s == "theft").sum())),
+            n_large=("cost", lambda s: int((s > 10_000).sum())),
+        )
+        out = policies[["row_id"]].join(agg, on="row_id").fillna(
+            {"y": 0.0, "y_ult": 0.0, "n_claims": 0, "n_theft": 0, "n_large": 0})
+        return out
     agg = merged.groupby("row_id").agg(
         y=("cost", "sum"), n_claims=("claim_id", "count"),
         n_theft=("peril", lambda s: int((s == "theft").sum())),
@@ -137,7 +155,7 @@ def experience_features(policies: pd.DataFrame, claims: pd.DataFrame) -> pd.Data
     )
 
 
-def build_frame(split: str = "train") -> pd.DataFrame:
+def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
     """Full modelling frame for one split, all LOBs concatenated."""
     claims = load_claims()
     frames = []
@@ -146,7 +164,7 @@ def build_frame(split: str = "train") -> pd.DataFrame:
         feats = experience_features(pol, claims) if split == "train" else experience_features(pol, claims)
         df = pol.merge(feats, on="row_id", how="left")
         if split == "train":
-            tgt = row_target(pol, claims, develop=True)
+            tgt = row_target(pol, claims, develop=True, development=development)
             df = df.merge(tgt[["row_id", "y", "y_ult", "n_claims"]], on="row_id", how="left")
         frames.append(df)
     return pd.concat(frames, ignore_index=True)
