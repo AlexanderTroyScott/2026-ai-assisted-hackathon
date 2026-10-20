@@ -53,6 +53,49 @@ def load_claims() -> pd.DataFrame:
     return c[["claim_id", "policy_id", "line", "peril", "loss", "rep", "cost"]]
 
 
+def load_denied_claims() -> pd.DataFrame:
+    """Repudiated claims: zero cost by definition (D-004), but the *event* of
+    having a claim refused is claim-occurrence information (D-031)."""
+    c = pd.read_parquet(DATA / "claims.parquet")
+    c = c[c["status"] == "repudiated"].copy()
+    c["loss"] = pd.to_datetime(c["loss_date"])
+    return c[["claim_id", "policy_id", "loss"]]
+
+
+def denial_features(policies: pd.DataFrame, denied: pd.DataFrame) -> pd.DataFrame:
+    """Strictly lagged denied-claim history (D-031).
+
+    Same leakage rule as the experience block (D-014 / AGENTS.md rule 6): a row
+    only sees denied claims with `loss < ps`. A denied claim inside the row's own
+    period is outcome information about that period and must never be visible.
+    """
+    d = denied.merge(
+        policies[["policy_id", "customer_id"]].drop_duplicates(), on="policy_id", how="inner"
+    )[["customer_id", "policy_id", "loss"]].drop_duplicates()
+    out = policies[["row_id"]].copy()
+
+    cust = policies[["row_id", "customer_id", "ps"]].merge(
+        d[["customer_id", "loss"]].drop_duplicates(), on="customer_id", how="left"
+    )
+    lag = cust[cust["loss"] < cust["ps"]]
+    g = lag.groupby("row_id").agg(cust_denied_all=("loss", "size"), last_denied=("loss", "max"))
+    out = out.join(g, on="row_id")
+
+    pol = policies[["row_id", "policy_id", "ps"]].merge(d[["policy_id", "loss"]], on="policy_id", how="left")
+    pol_lag = pol[pol["loss"] < pol["ps"]]
+    g2 = pol_lag.groupby("row_id").agg(pol_denied_all=("loss", "size"))
+    out = out.merge(g2, on="row_id", how="left")
+    last = pd.to_datetime(out.set_index("row_id")["last_denied"])
+    out["days_since_denied"] = (
+        (policies.set_index("row_id")["ps"] - last).dt.days
+    ).to_numpy()
+    # counts default to 0; days_since_denied stays NaN for "no history" so the
+    # model can distinguish it from "denied claim yesterday" (align fills -1).
+    return out.drop(columns=["last_denied"]).fillna(
+        {c: 0 for c in out.columns if c.startswith(("cust_denied", "pol_denied"))}
+    )
+
+
 def canonicalise(df: pd.DataFrame) -> pd.DataFrame:
     """D-001/D-quality: normalise dirty categorical levels."""
     if "construction_type" in df.columns:
@@ -190,7 +233,8 @@ def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
     frames = []
     for ln in LINES:
         pol = attach_attributes(canonicalise(load_policies(ln, split)))
-        feats = experience_features(pol, claims) if split == "train" else experience_features(pol, claims)
+        feats = experience_features(pol, claims)
+        feats = feats.merge(denial_features(pol, load_denied_claims()), on="row_id", how="left")
         df = pol.merge(feats, on="row_id", how="left")
         if split == "train":
             tgt = row_target(pol, claims, develop=True, development=development)

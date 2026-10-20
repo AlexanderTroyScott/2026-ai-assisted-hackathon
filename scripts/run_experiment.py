@@ -67,6 +67,11 @@ EXPERIENCE = [
     "cust_claims_4y", "cust_cost_4y", "cust_claims_all", "cust_cost_all",
     "pol_claims_all", "pol_cost_all", "days_since_claim",
 ]
+# D-031: strictly-lagged denied-claim history (loss < ps). Denied claims carry
+# zero cost (D-004) but the refusal event is claim-occurrence information.
+DENIED = [
+    "cust_denied_all", "pol_denied_all", "days_since_denied",
+]
 WEATHER = [
     "hail_days", "wind_exposure_index", "freezing_days", "dry_summer_index",
     "wildfire_index", "rainfall_mm", "mean_temperature_c",
@@ -116,6 +121,8 @@ def feature_cols(groups: str) -> list[str]:
         cols += CUSTOMER_NUMERIC
     if "experience" in groups:
         cols += EXPERIENCE
+    if "denied" in groups:
+        cols += DENIED
     if "weather" in groups:
         cols += WEATHER
     if "flags" in groups:

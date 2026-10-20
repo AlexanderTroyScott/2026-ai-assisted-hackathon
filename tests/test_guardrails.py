@@ -170,13 +170,13 @@ def test_requested_features_exist_in_frame():
     sys.path.insert(0, str(ROOT))
     from scripts.run_experiment import (
         ADDRESS_NUMERIC, BASE_FEATURES, CAT_FEATURES, CUSTOMER_NUMERIC,
-        EXPERIENCE, FLAGS, WEATHER, add_derived, add_weather,
+        DENIED, EXPERIENCE, FLAGS, WEATHER, add_derived, add_weather,
     )
     from src.dataset import build_frame
 
     frame = add_weather(add_derived(build_frame("train")))
     listed = (
-        BASE_FEATURES + CAT_FEATURES + CUSTOMER_NUMERIC + EXPERIENCE
+        BASE_FEATURES + CAT_FEATURES + CUSTOMER_NUMERIC + EXPERIENCE + DENIED
         + WEATHER + FLAGS + ADDRESS_NUMERIC
     )
     # relativity features are generated on demand, everything else must exist
