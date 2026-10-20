@@ -1,1 +1,12 @@
+# source data as received from Kaggle (see data_raw/MANIFEST.md)
 /data_raw
+
+# generated submission payloads (recorded by sha256 in docs/experiment_log.md)
+outputs/submissions/
+outputs/experiment_log.csv
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
