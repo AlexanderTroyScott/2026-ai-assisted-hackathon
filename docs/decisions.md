@@ -224,3 +224,69 @@ Cause: multiplying two noisy conditional expectations compounds error, and
 count and severity are not independent given the features. A single Tweedie
 (p=1.5, Poisson–Gamma compound — well specified per D-020) estimates E[cost|x]
 directly and is the better choice. **Negative result, kept as evidence.**
+
+## D-023 — Frequency/severity split as a model variant
+**2026-10-20 · accepted for trial · verdict in D-026**
+
+(exp-005's message referenced this ID before the entry was written — gap-filled
+same day.) Poisson frequency × Gamma severity as an alternative to the single
+Tweedie, motivated by the BI tail (DGP findings §6b). Mechanics: Poisson count
+model exposure-weighted, Gamma severity on claims with cost > 0, combined as
+E[cost] = E[count] × E[severity]. Verdict: loses to the single Tweedie — see
+D-026. Kept as an actuarially standard cross-check for the write-up.
+
+## D-024 — Premium-formula derived features
+**2026-10-20 · accepted · verified on the leaderboard (exp-006)**
+
+(exp-006's message referenced this ID before the entry was written — gap-filled
+same day.) Expose the decoded premium structure (D-021) to the tree instead of
+making it re-derive it: `premium_per_exposure`, `age_band` (3 bands), `ncb_band`
+(3 bands), `vvg_log`. exp-006 tested this as one change: locally −0.0008 vs
+exp-004 but **+0.0005 on the leaderboard** — the first D-025 near-tie flip.
+Conclusion: the premium structure transfers to 2025 and the model benefits from
+its components being exposed rather than re-learned.
+
+## D-027 — Time-safe historical relativity features (strictly lagged)
+**2026-10-20 · accepted · verified on the leaderboard (exp-007)**
+
+Target-encoded historical relativities `<level>_hist_rate` and `<level>_hist_freq`
+per categorical level (cost rate and claim frequency per exposure), credibility-
+smoothed toward the line global with 200 exposure units of prior. Leakage rule
+(AGENTS.md 6) enforced structurally: a query row only sees source rows with
+`source.pe < row.ps` — since every claim attributed to a source row has
+`loss <= source.pe`, all contributing loss dates precede the row's period_start.
+Guardrailed by `tests/test_features.py` (own-row, overlapping-period and
+unseen-level cases on toy frames).
+
+Result: local +0.0006 / +0.0009 across seeds 0/1 vs exp-006 same-seed;
+**LB exp-007 = 0.11637 (+0.00068 over exp-006)** — new best. The features give
+the tree the historical level of each risk class so it can learn deviations
+(price/risk misalignment per D-021) rather than raw category identity.
+
+## D-028 — Per-peril development factors, level-neutral
+**2026-10-20 · proposed · verified locally, no skill change — tie-break candidate**
+
+Open question 3: distribute the accepted D-005 LOB×AY development level across
+perils using their own age→ultimate factors (incurred triangle, volume-weighted
+chain ladder from `scripts/build_development.py`): motor bodily_injury 1.535 and
+buildings subsidence 1.306 at age 0 vs 1.01–1.05 for short-tail perils. The
+cost-weighted mean factor within each (LOB, AY) is kept **exactly** equal to the
+accepted D-005 factor (level-preserving normalisation, `tests/test_development.py`).
+
+Local result: D² 0.1223 vs 0.1242 under the old truth, but the model-vs-baseline
+skill gap is identical (0.0444 vs 0.0445) — the label redefinition moved truth
+and predictions together. Within the D-025 tie band. Actuarially the per-peril
+truth is the more defensible definition (BI really does develop more than OD);
+kept as the proposed label definition and as a tie-break submission candidate.
+Needs human sign-off before replacing D-005 labels in the primary stack.
+
+## D-029 — 3-seed ensemble does not move the leaderboard
+**2026-10-20 · accepted · verified locally and on the leaderboard (exp-009)**
+
+Equal-weight average of 3 seeds on the exp-007 stack: local 0.1250 vs best single
+0.1248 (mean single 0.1242) — variance reduction is real but small. Submitted as
+exp-009: **LB 0.11632 vs exp-007 0.11637 (−0.00005)** — a tie. Second D-025
+near-tie flip (this time against the ensemble). Consequence: seed averaging is
+free robustness for a production model but is **not a scoring lever** here; do
+not spend slots on ensembling again. The 2024→2025 population shift dominates
+everything below the ~0.002 D² scale.

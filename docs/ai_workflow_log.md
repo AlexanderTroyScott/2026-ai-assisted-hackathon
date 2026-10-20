@@ -192,3 +192,55 @@ Make relevant git commits and pushes as we go.
 **Output.** Leaderboard 0.07293 → **0.11519** (top is 0.12996). 4 submissions,
 each with a stated hypothesis and a measured local D². Full attribution in
 `docs/experiment_log.md`; decisions D-016 to D-022 recorded.
+
+---
+
+## Session 7 — 2026-10-20 (afternoon, autonomous) · Control cycle: relativity features, per-peril development, ensemble
+
+**Asked.** Continue the actuarial control cycle from `docs/experiment_log.md`;
+check the Kaggle quota before any submission and hold if it has reset to 10.
+
+**AI did.**
+- Checked the quota through the Kaggle API (`num_today=6`, `num_allowed_now=4`) —
+  not a fresh window, so the hold rule did not trigger. Re-checked before every
+  upload; each upload printed its own quota line.
+- Fixed a logging bug found on the way: `fetch_leaderboard` recorded the board
+  *maximum* as our score (0.12996) — replaced with our own latest submission
+  score, and added a mechanical hold gate to `kaggle_submit.py` that refuses to
+  upload when the daily quota reads 10 unless `--ack-quota-reset` is given.
+- Measured the local noise band first (D-025 operationalised): exp-006 config at
+  seeds 0/1/2 → 0.1242 / 0.1233 / 0.1240 (sd ≈ 0.0005). Anything below ~0.002
+  local D² is a tie.
+- Built `src/features.py`: historical relativity target encodings with the
+  strict lag `source.pe < row.ps` (AGENTS.md rule 6), credibility-smoothed, with
+  toy-frame guardrail tests for own-row, overlapping-period and unseen-level
+  leakage (4 new tests).
+- Built `scripts/build_development.py` + `src/development.py`: per-peril
+  age→ultimate factors (BI 1.535, subsidence 1.306 vs short-tail 1.01–1.05),
+  level-neutral against the accepted D-005 table, with level-preservation tests
+  (5 new tests). 20 pytest guardrails pass.
+- Ran the ladder: exp-007 (relativities) local 0.1248 — consistent +0.0006 to
+  +0.0009 across seeds; exp-008 (per-peril development) 0.1223 with identical
+  skill-vs-baseline gap; weather-lag sensitivity 0.1243 vs 0.1242 (D-012
+  question closed: no dependence on same-year indices); 3-seed ensemble 0.1250.
+- Submitted exp-007 (relativity block) and exp-009 (seed ensemble), one primary
+  change each, through `scripts/kaggle_submit.py`. 2 slots kept in reserve.
+
+**Verified.**
+- Quota read from the API before each submission (6→7 used; never reset to 10).
+- exp-007 = **0.11637** (new best, +0.00068 over exp-006); exp-009 = 0.11632 —
+  the second near-tie flip (D-025), now measured in both directions.
+- The optimism gap holds at −0.0084 / −0.0087 for the two new points (8 points
+  total, −0.007 to −0.010 band).
+- 20 tests green before either submission; every upload passed the format gate
+  (626,639 rows, exact row_id set, floor ≥ 1e-3) and recorded sha256.
+
+**Human decided (standing pre-authorization, restated in the task).**
+- Routine submissions as part of the control cycle, with the quota-reset hold.
+- The user's message named exp-004 (0.11519) as best; the live board showed
+  exp-006 (0.11569) from the earlier population-shift test — the log and the
+  board were treated as ground truth and the discrepancy flagged in the report.
+
+**Output.** Leaderboard 0.11569 → **0.11637**. Local evidence: seed-noise band,
+relativity gain, per-peril tie, weather-lag robustness, ensemble tie. Decisions
+D-023/D-024 gap-filled and D-027/D-028/D-029 recorded. 2 quota slots reserved.
