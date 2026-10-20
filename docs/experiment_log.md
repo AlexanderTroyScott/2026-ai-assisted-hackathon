@@ -20,6 +20,12 @@ negative results are as valuable as positive ones.
 
 ## Submissions
 
+| 2026-10-20 05:03 UTC | exp-004 | exp-003 + weather and property flags (D-012); LOB recalibration (D-009) | 0.1250 | 0.12996 | posted | 3c9cf1621af2 | Best local model. Weather adds +0.0020, LOB recal +0.0010 |
+
+| 2026-10-20 05:02 UTC | exp-003 | exp-002 + lagged claim experience features (D-014) | 0.1230 | 0.12996 | posted | fdff74e6ab85 | Tests experience block: +0.0023 local D2 over exp-002 |
+
+| 2026-10-20 05:02 UTC | exp-002 | LGBM Tweedie base model (rating factors + premium); D-016 leakage removed | 0.1207 | 0.12996 | posted | 12da874d8ce1 | Tests model vs constant_rate. Local D2 0.1207 vs 0.0797 baseline |
+
 | 2026-10-20 03:01 UTC | exp-001 | Baseline: exposure x developed cost rate per LOB (D-005 LDFs applied) | n/a - no holdout truth | 0.12996 | posted | 7e1b0082099b | Marker submission to track quota reset; constant-rate baseline per D-015 |
 
 | # | timestamp | tag | message | change | hypothesis | local D² | LB score | LB rank | Δ | attribution | notes |

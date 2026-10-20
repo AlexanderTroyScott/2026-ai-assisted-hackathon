@@ -117,6 +117,28 @@ cost/exposure 323 → 1,750 (LR 0.47 → 2.37). Must be lagged strictly (only
 loss dates before the row's `period_start`). Fallback to `prior_claims_5y` for
 customers unseen in history.
 
+## D-016 — `customer_service_contacts` is outcome leakage — deny-list
+**2026-10-20 · accepted · verified empirically**
+
+A model using this single feature scores **D² = 0.628** on a 2024 holdout (motor),
+against 0.001 for `written_premium`. Claimants average 3.28 contacts vs 0.41 for
+non-claimants (ratio 8.1, max 36). Contacts are generated *during* the policy
+period by the claim itself. The brief gives it no time qualifier — unlike
+`missed_payments_12m` ("in the previous 12 months") — confirming it is post-outcome.
+Excluded from every model. A leaked submission would score far above the public
+leaderboard top (0.13) and would be disqualified on review.
+
+Detection note: local D² near 0.6 is the tell. Anything above ~0.2 on this data
+must be treated as leakage until proven otherwise.
+
+## D-017 — `telematics_score` excluded from the primary model (ambiguous window)
+**2026-10-20 · proposed · judgement — needs human sign-off**
+
+"Driving score from the device" with no stated observation window; measured over
+the policy period it would leak. Univariate signal is weak (mean 58.2 for
+claimants vs 60.2, single-feature D² negligible) and it is 87% missing. Excluded
+from the primary model; kept as a documented sensitivity variant only.
+
 ## D-015 — `written_premium` is a benchmark, not just a feature
 **2026-10-20 · accepted · verified empirically**
 
