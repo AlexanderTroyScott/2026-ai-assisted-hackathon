@@ -26,7 +26,7 @@ Judged on four axes: pricing performance & adaptation (40%), effective use of AI
 | `scripts/` | Baseline generation + Kaggle submission tooling |
 | `tests/` | Automated tests / guardrails |
 | `outputs/` | Submission CSVs, charts, manifests |
-| `data_raw/` | Parquet files as received (**gitignored** — see `data_raw/MANIFEST.md`) |
+| `data_raw/` | Parquet files as received (**gitignored** — see `docs/data_manifest.md`) |
 | `.opencode/` | Skills, agents and commands for context-efficient work |
 
 ---
@@ -164,7 +164,7 @@ the week on judgement, not plumbing:
 
 ## Reproducibility
 
-- `data_raw/` is gitignored; `data_raw/MANIFEST.md` records files, row counts and
+- `data_raw/` is gitignored; `docs/data_manifest.md` records files, row counts and
   sha256 so the dataset can be re-verified against the Kaggle download.
 - Submission CSVs are hashed on upload so any leaderboard entry is reproducible.
 - Tests guard the invariants: exposure bounds, claim-row uniqueness, orphan count,

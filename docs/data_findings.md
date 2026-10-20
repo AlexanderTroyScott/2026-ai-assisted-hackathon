@@ -214,6 +214,6 @@ mean falls 6.60 → 5.87. `construction_type` loses `T/t` levels in test.
 
 ## 9. Reproducibility
 
-- `data_raw/` is gitignored. Do not commit parquets. Keep `data_raw/MANIFEST.md` (file, rows, sha256)
+- `data_raw/` is gitignored. Do not commit parquets. Keep `docs/data_manifest.md` (file, rows, sha256)
   so the repo remains reproducible against the Kaggle download.
 - All analysis in this file is reproducible with pandas over `data_raw/`.
