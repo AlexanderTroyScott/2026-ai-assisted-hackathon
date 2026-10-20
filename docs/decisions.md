@@ -1,0 +1,125 @@
+# Decision Log
+
+Append-only. Every entry: **date, decision, rationale, verification, status**.
+Statuses: `proposed` → `accepted` → (optional) `superseded`. Nothing reaches
+`accepted` without either an empirical check or an explicit human sign-off —
+this is the "rigorous verification of AI-generated outputs" evidence trail.
+
+---
+
+## D-001 — Recompute `exposure` from period dates
+**2026-10-20 · accepted · verified empirically**
+
+The supplied `exposure` mixes days/365, days/360 and plain-days units
+(934/656/729 rows in days across motor/buildings/contents). Using it as a GLM
+weight would let a handful of rows dominate. Always recompute
+`exposure = (period_end − period_start + 1) / 365`. Keep the original column
+as `exposure_raw` for audit only.
+
+## D-002 — Drop orphan claims (414) with an audit trail
+**2026-10-20 · accepted · verified empirically**
+
+414 claims have a loss date matching no policy row (274 pre-2021, 156/115/69 in
+2021–2023). 0.25% of claims. Dropping them is immaterial to the level but leaving
+them unmatched silently would create unattributed loss. Rule: exclude from
+target construction, write ids to `outputs/dropped_claims.csv`, assert the count
+in tests so a regression in matching logic is caught.
+
+## D-003 — Target is net of excess as stated; do not deduct excess again
+**2026-10-20 · accepted · verified empirically**
+
+`incurred_to_date` is already net of policy excess. `max(0, incurred − recoveries)`
+is the correct row cost. `recoveries > incurred` never occurs.
+
+## D-004 — Excluding repudiated claims is a numerical no-op; document, don't hide
+**2026-10-20 · accepted · verified empirically**
+
+All 1,711 repudiated claims carry `paid = incurred = recoveries = 0`. The filter
+must still be applied (it is part of the target definition and protects against a
+data change), but the write-up should state that it changes no amounts.
+
+## D-005 — Develop labels to ultimate; never develop predictions
+**2026-10-20 · accepted · verified empirically**
+
+2024 observed cost is understated (motor age-0→ultimate ≈ ×1.26, buildings ×1.09,
+contents ×1.04, plus IBNER on open claims). Apply development to recent-year
+**labels**, then model. Predictions are already ultimate-level — applying an
+additional IBNR loading at scoring would double-count.
+
+## D-006 — Validate against developed truth, never raw 2024
+**2026-10-20 · accepted · follows from D-005**
+
+A raw-2024 holdout rewards underprediction. Rolling-origin CV: train 2021–22 →
+val 2023; train 2021–23 → val 2024; score against developed truth and report
+raw-vs-developed side by side.
+
+## D-007 — Per-peril severity trend, not one global inflation factor
+**2026-10-20 · accepted · verified empirically**
+
+Measured inflation spans +2.9%/yr (contents AD) to +9.4%/yr (glass_hail).
+A single factor would be wrong for both ends. Long-tail perils (bodily_injury,
+subsidence, fire) are trended on **developed ultimates**, never closed-only
+cohorts — closure bias produces a fake −9.5%/yr on BI.
+
+## D-008 — Trees: forward-factor only (Option B), not full de-trending
+**2026-10-20 · accepted · judgement, flagged for review**
+
+Train tree models on developed-but-not-de-trended labels and apply only the
+forward factor `index(2025)/index(2024)` at scoring. Rationale: trees cannot
+extrapolate a linear trend from a `year` feature, and full de-trending makes the
+whole level depend on the index being exactly right. The GLM may use full
+de-trending as the cleaner, explainable formulation. Revisit if backtests show
+the partial approach underperforms.
+
+## D-009 — 2025 level factor: blended claims-index + premium anchor (70/30)
+**2026-10-20 · proposed · judgement — needs human sign-off**
+
+Central 2025 factor = 0.7 × claims-index extrapolation (3-yr CAGR) + 0.3 ×
+premium-implied factor (2025 premium/exposure vs 2024, under constant LR).
+Low/high scenarios bracket it. **Open question for the team:** alternatives are
+pure claims-index or pure premium/LR anchor (2025 prices are already trended
++5%/yr, arguably the more defensible single source).
+
+## D-010 — Floor predictions at 1e-3
+**2026-10-20 · accepted · verified against sklearn**
+
+`mean_tweedie_deviance(power=1.5)` raises on `y_pred <= 0` despite the brief
+saying "zero or above". Floor at 1e-3 in `build_submission`.
+
+## D-011 — Feature deny-list enforced by test
+**2026-10-20 · accepted**
+
+`renewal_decision` is training-only **and** is outcome information. Also exclude
+post-outcome fields if any appear. `tests/test_submission.py` asserts the deny-list
+columns never appear in a model matrix.
+
+## D-012 — Weather features are in scope, assumption documented
+**2026-10-20 · accepted · verified empirically**
+
+`weather` includes 2025 for 100% of test addresses. Assume annual climate indices
+are available at pricing time. Pre-empt the leakage question in the write-up and
+run a sensitivity using lagged (2024) weather.
+
+## D-013 — Routine submissions during development
+**2026-10-20 · accepted · user-directed**
+
+Submit after every meaningful model change so the leaderboard acts as an external
+test set for feature-level decisions. Budget 10/day. Every submission goes through
+`scripts/kaggle_submit.py` (validation + logging) and is recorded in
+`docs/experiment_log.md`. One change per submission where practical, otherwise the
+feature attribution is confounded.
+
+## D-014 — Experience features from `claims` are the top priority feature block
+**2026-10-20 · accepted · verified empirically**
+
+Lagged customer/policy claim history lifts motor frequency 0.083 → 0.486 and
+cost/exposure 323 → 1,750 (LR 0.47 → 2.37). Must be lagged strictly (only
+loss dates before the row's `period_start`). Fallback to `prior_claims_5y` for
+customers unseen in history.
+
+## D-015 — `written_premium` is a benchmark, not just a feature
+**2026-10-20 · accepted · verified empirically**
+
+Premium deciles rank risk 4x and LR is roughly flat (0.71–0.81). The baseline to
+beat is `written_premium × LOB LR`; the value of a model is in finding where
+current pricing is wrong (prior claimants LR 2.3, young/old drivers).
