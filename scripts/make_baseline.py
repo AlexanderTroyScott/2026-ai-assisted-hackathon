@@ -19,8 +19,11 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 DATA = ROOT / "data_raw"
 OUT = ROOT / "outputs" / "submissions"
+
+from src.dataset import LDF  # noqa: E402  single source of truth for D-005 factors
 
 TEST_FILES = {
     "motor": "test_motor.parquet",
@@ -33,16 +36,9 @@ TRAIN_FILES = {
     "contents": "policies_contents.parquet",
 }
 
-# Age-to-ultimate development factors, derived from the incurred triangle
-# (docs/data_findings.md section 5, decision D-005). Keyed by LOB then by the
-# age the accident year has been developed to at 2024-12-31:
-#   age = report_year - origin_year for the latest diagonal with data
-# 2021 -> age 3, 2022 -> age 2, 2023 -> age 1, 2024 -> age 0.
-LDF = {
-    "motor": {2021: 1.003, 2022: 1.005, 2023: 1.030, 2024: 1.259},
-    "buildings": {2021: 1.002, 2022: 1.003, 2023: 1.092, 2024: 1.092},
-    "contents": {2021: 1.002, 2022: 1.004, 2023: 1.044, 2024: 1.044},
-}
+# D-005 age-to-ultimate factors come from src.dataset.LDF (derived from the
+# documented age-to-age table). Do not restate them here — a second copy
+# drifted and over-developed 2023 buildings/contents labels.
 
 
 def load_policies(line: str) -> pd.DataFrame:

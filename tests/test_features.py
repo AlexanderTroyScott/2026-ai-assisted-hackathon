@@ -129,3 +129,101 @@ def test_denial_history_counts_are_zero_when_clean():
     out = ds.denial_features(policies, denied).set_index("row_id")
     assert out.loc["r1", "cust_denied_all"] == 0
     assert out.loc["r1", "pol_denied_all"] == 0
+
+
+# --- D-014: experience_features is the strongest feature block (data_findings
+# section 7) and had no leakage coverage at all. These pin the `loss < ps`
+# boundary in BOTH filters (customer-level and policy-level). Changing either
+# to `<=` must fail here.
+
+def _claim(claim_id, policy_id, loss, cost):
+    return {"claim_id": claim_id, "policy_id": policy_id,
+            "loss": pd.Timestamp(loss), "cost": float(cost)}
+
+
+def test_experience_lag_is_strict_at_period_start():
+    """A loss dated exactly on period_start belongs to that row's own period.
+
+    It is outcome information for the row and must not leak in. `loss <= ps`
+    would include it and is the single most likely regression in this file.
+    """
+    import src.dataset as ds
+
+    policies = pd.DataFrame([_prow("r1", "p1", "c1", "2022-01-01")])
+    claims = pd.DataFrame([
+        _claim("on_start", "p1", "2022-01-01", 100.0),   # == ps: must be excluded
+        _claim("day_before", "p1", "2021-12-31", 50.0),  # < ps: must be included
+    ])
+    out = ds.experience_features(policies, claims).set_index("row_id")
+    assert out.loc["r1", "pol_claims_all"] == 1
+    assert out.loc["r1", "pol_cost_all"] == pytest.approx(50.0)
+    assert out.loc["r1", "cust_claims_all"] == 1
+    assert out.loc["r1", "cust_cost_all"] == pytest.approx(50.0)
+
+
+def test_experience_excludes_own_period_and_later_losses():
+    import src.dataset as ds
+
+    policies = pd.DataFrame([
+        _prow("r1", "p1", "c1", "2021-01-01"),
+        _prow("r2", "p1", "c1", "2022-01-01"),
+        _prow("r3", "p1", "c1", "2023-01-01"),
+    ])
+    claims = pd.DataFrame([_claim("late", "p1", "2021-06-01", 100.0)])
+    out = ds.experience_features(policies, claims).set_index("row_id")
+    assert out.loc["r1", "pol_claims_all"] == 0, "own-period loss must not be visible"
+    assert out.loc["r2", "pol_claims_all"] == 1
+    assert out.loc["r3", "pol_claims_all"] == 1
+    assert out.loc["r1", "cust_claims_all"] == 0
+
+
+def test_experience_customer_history_cross_policy_is_lagged():
+    """Customer-level history spans the customer's other policies, but the
+    same `loss < ps` rule applies — and policy-level history must NOT pick up
+    another policy's claim."""
+    import src.dataset as ds
+
+    policies = pd.DataFrame([
+        _prow("r1", "p1", "c1", "2021-01-01"),
+        _prow("r2", "p2", "c1", "2022-01-01"),  # same customer, different policy
+    ])
+    claims = pd.DataFrame([_claim("own", "p1", "2021-06-01", 100.0)])
+    out = ds.experience_features(policies, claims).set_index("row_id")
+    assert out.loc["r1", "cust_claims_all"] == 0
+    assert out.loc["r1", "pol_claims_all"] == 0
+    assert out.loc["r2", "cust_claims_all"] == 1, "cross-policy history is customer-level only"
+    assert out.loc["r2", "pol_claims_all"] == 0, "policy history must stay on its own policy"
+    assert out.loc["r2", "cust_cost_all"] == pytest.approx(100.0)
+
+
+def test_experience_claim_in_later_period_is_invisible_to_earlier_row():
+    """A claim dated after a row's period_start must never reach it, even when
+    the two rows share a policy and a customer."""
+    import src.dataset as ds
+
+    policies = pd.DataFrame([
+        _prow("r1", "p1", "c1", "2021-01-01"),
+        _prow("r2", "p1", "c1", "2022-01-01"),
+    ])
+    claims = pd.DataFrame([_claim("future", "p1", "2022-06-01", 100.0)])
+    out = ds.experience_features(policies, claims).set_index("row_id")
+    for rid in ("r1", "r2"):
+        assert out.loc[rid, "pol_claims_all"] == 0
+        assert out.loc[rid, "cust_claims_all"] == 0
+
+
+def test_experience_windows_bound_the_lookback():
+    import src.dataset as ds
+
+    policies = pd.DataFrame([_prow("r1", "p1", "c1", "2023-01-01")])
+    claims = pd.DataFrame([
+        _claim("a", "p1", "2022-06-01", 1.0),   # ~214d back -> inside 1y
+        _claim("b", "p1", "2021-06-01", 2.0),   # ~579d back -> inside 2y only
+        _claim("c", "p1", "2019-06-01", 4.0),   # ~1310d back -> inside 4y only
+    ])
+    out = ds.experience_features(policies, claims).set_index("row_id")
+    assert out.loc["r1", "cust_claims_1y"] == 1
+    assert out.loc["r1", "cust_claims_2y"] == 2
+    assert out.loc["r1", "cust_claims_4y"] == 3
+    assert out.loc["r1", "cust_claims_all"] == 3
+    assert out.loc["r1", "cust_cost_all"] == pytest.approx(7.0)

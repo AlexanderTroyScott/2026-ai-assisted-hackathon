@@ -90,7 +90,7 @@ saying "zero or above". Floor at 1e-3 in `build_submission`.
 **2026-10-20 · accepted**
 
 `renewal_decision` is training-only **and** is outcome information. Also exclude
-post-outcome fields if any appear. `tests/test_submission.py` asserts the deny-list
+post-outcome fields if any appear. `tests/test_guardrails.py` asserts the deny-list
 columns never appear in a model matrix.
 
 ## D-012 — Weather features are in scope, assumption documented
@@ -361,3 +361,79 @@ bibliography changes a frozen decision (D-005 LDFs, Tweedie p=1.5, freq/sev
 result) without a new measurement. Sources that bear on existing findings are
 reconciled in `docs/references.md` "Notes" (e.g. R-02 App. J says freq/sev and
 Tweedie are often similar — our exp-005 measured it worse here; both recorded).
+
+## D-033 — LDF table is derived, not typed; age is keyed off the valuation year
+**2026-10-21 · accepted · correctness fix, verified against data_findings.md §5**
+
+Review found the frozen LDF table in `src/dataset.py` (and a second copy in
+`scripts/make_baseline.py`) mis-mapped accident year to age-to-ultimate factor.
+The documented age-to-age factors are motor 0→1=1.223, 1→2=1.027, 2→3=1.003;
+buildings 0→1=1.089, 1→2=1.003; contents 0→1=1.040, 1→2=1.004. At the 31 Dec
+2024 valuation an accident year sits at `age = 2024 − AY`, so 2023 is **age 1**
+and needs only the 1→2 (and 2→3) factors.
+
+The old table gave 2023 the full **age-0** factor — buildings 1.092 instead of
+1.003, contents 1.044 instead of 1.004 — overstating 2023 developed labels by
+**~8.9%** and **~4.0%**. 2021/2022 were similarly, and more mildly, overdone.
+Motor happened to be right at 2023 and wrong only in the mature years.
+
+Changes:
+- `AGE_TO_AGE` holds the documented age-to-age factors as the single source of
+  truth; `age_to_ultimate()` multiplies out the remaining factors, so `LDF` is
+  **derived**, never hand-typed. `scripts/make_baseline.py` now imports it —
+  the duplicated table was what let the two drift.
+- Mature accident years (2021, at age 3) get exactly 1.0: the documented
+  factors are the whole tail, so inventing a residual loading would breach
+  AGENTS.md rule 1.
+- `tests/test_development.py` pins `AGE_TO_AGE` and the age-0→ultimate column
+  to `data_findings.md` §5 and asserts mature years are undeveloped.
+
+Reconciliation (`row_target`, all lines): observed totals match the documented
+triangle to 0.1M (motor 105.9/116.7/117.3/90.7, buildings 54.1/61.5/64.8/67.4,
+contents 14.9/16.0/17.5/17.5) and 2024 develops to 114.2 / 73.6 / 18.3 against
+the documented ~114 / ~73.6 / ~18.3. 2023 buildings now develops 64.8 → 65.0,
+not 64.8 → 70.8.
+
+**Not fixed here:** `scripts/build_development.py` compares its
+`DOCUMENTED_LOB_AGE0` (the 0→1 age-to-age factors) against an age-0→ultimate
+quantity, so the check reports a permanent false mismatch and could never have
+caught this. Its own re-derivation also lands at 1.18/1.06/1.03 vs the accepted
+1.26/1.09/1.04 (see `experiment_log.md`, "different weighting window"). Left
+open as a separate item rather than silently re-anchoring D-005.
+
+## D-034 — 2025 level factor: implement D-009's blend, expose scenarios
+**2026-10-21 · proposed · implements D-009, which itself is unratified**
+
+Review found `FORWARD_FACTOR = {1.027, 1.053, 1.054}` was *exactly* the
+premium/exposure 2025-vs-2024 column from `data_findings.md` §6 — i.e. only the
+30%-weight component of D-009 — applied as a single hard-coded point and
+presented as fact. D-009 is still `proposed`, and the accepted per-peril
+severity trend (D-007) was not feeding it at all.
+
+`src/dataset.py::forward_factors(scenario)` now builds the factor from the two
+documented indications only:
+- **claims-index** — 3-yr CAGR of the mix-adjusted severity index (D-007), which
+  holds the 2021 peril mix fixed so mix shift cannot contaminate the trend;
+- **premium anchor** — premium/exposure 2025 vs 2024 (`data_findings.md` §6).
+
+`central` = 0.7 × claims-index + 0.3 × premium (D-009 as written). `low`/`high`
+are the two indications themselves, so the bracket claims no more precision than
+the sources support.
+
+| scenario | motor | buildings | contents |
+|---|---|---|---|
+| low | 1.0270 | 1.0530 | 1.0354 |
+| **central (D-009)** | **1.0350** | **1.0556** | **1.0410** |
+| high | 1.0385 | 1.0567 | 1.0540 |
+
+`scripts/run_experiment.py --trend {low,central,high}` selects the scenario and
+records it in the run manifest, so a submission can never inherit an untracked
+level choice.
+
+**Still `proposed`, needs human sign-off.** The level moves total predicted cost
+by roughly +0.8pp / +0.3pp / −1.3pp versus the old premium-only factors, and
+`experiment_log.md` already notes local D² declines for factors beyond 1.05 —
+buildings sits at 1.0556 central. Per AGENTS.md this stays `proposed` until a
+human accepts it; until then treat `central` as the working assumption, not a
+decision. Baseline scripts still do **not** apply any forward factor (a separate
+finding), so model-vs-baseline comparisons remain on a mixed basis.

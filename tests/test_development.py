@@ -2,6 +2,11 @@
 
 The per-peril development factors must preserve the accepted LOB level exactly
 within each (LOB, accident year) and only redistribute development across perils.
+
+The first block pins the LOB LDF table itself to the documented incurred
+triangle (docs/data_findings.md section 5). This is the test that was missing
+when a duplicated copy of the table over-developed 2023 buildings/contents
+labels by ~8.9% / ~4.0%.
 """
 from __future__ import annotations
 
@@ -15,8 +20,68 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.dataset import LDF  # noqa: E402
+from src.dataset import AGE_TO_AGE, LDF, age_to_ultimate  # noqa: E402
 from src.development import claim_factors, peril_age_factor  # noqa: E402
+
+
+# --- D-005: the LOB table must match the documented triangle -------------
+# docs/data_findings.md section 5, volume-weighted age-to-age factors:
+#   motor 0->1 = 1.223, 1->2 = 1.027, 2->3 = 1.003   -> age-0 to ultimate ~1.26
+#   buildings 0->1 = 1.089, 1->2 = 1.003             -> age-0 to ultimate ~1.09
+#   contents  0->1 = 1.040, 1->2 = 1.004             -> age-0 to ultimate ~1.04
+DOCUMENTED_AGE_TO_AGE = {
+    "motor": {0: 1.223, 1: 1.027, 2: 1.003},
+    "buildings": {0: 1.089, 1: 1.003},
+    "contents": {0: 1.040, 1: 1.004},
+}
+DOCUMENTED_AGE0_TO_ULT = {"motor": 1.26, "buildings": 1.09, "contents": 1.04}
+
+
+def test_age_to_age_factors_match_documented_triangle():
+    assert AGE_TO_AGE == DOCUMENTED_AGE_TO_AGE
+
+
+def test_age0_to_ultimate_matches_documented_column():
+    for ln, expected in DOCUMENTED_AGE0_TO_ULT.items():
+        assert LDF[ln][2024] == pytest.approx(expected, abs=5e-3), (
+            f"{ln} age-0 -> ultimate drifted from the documented {expected}"
+        )
+
+
+def test_mature_years_need_no_development():
+    """An accident year at or past the last tabulated age is fully developed.
+
+    Getting this wrong over-develops mature labels: the old table applied the
+    full age-0 factor to 2023 (age 1), inflating buildings labels by 8.9%.
+    """
+    # 2023 sits at age 1 at the 2024-12-31 valuation, so it needs only the
+    # 1->2 (and 2->3, if any) factors -- NOT the 0->1 factor.
+    assert LDF["buildings"][2023] == pytest.approx(1.003, rel=1e-9)
+    assert LDF["contents"][2023] == pytest.approx(1.004, rel=1e-9)
+    assert LDF["motor"][2023] == pytest.approx(1.027 * 1.003, rel=1e-9)
+
+    # 2021 sits at age 3, past every tabulated age for all three lines.
+    for ln in ("motor", "buildings", "contents"):
+        assert LDF[ln][2021] == 1.0, f"{ln} 2021 is mature and must not be developed"
+
+
+def test_younger_accident_years_develop_more():
+    """The less mature the accident year, the more development it still needs.
+
+    Walking 2021 -> 2024 the factor must never decrease; a dip would mean a
+    mis-keyed age (which is how 2023 came to carry the age-0 factor).
+    """
+    for ln, tab in LDF.items():
+        years = sorted(tab)  # 2021 (most mature) .. 2024 (least mature)
+        vals = [tab[y] for y in years]
+        assert vals == sorted(vals), f"{ln} LDF not monotone in maturity: {tab}"
+
+
+def test_age_to_ultimate_beyond_last_age_is_flat():
+    assert age_to_ultimate({0: 1.223, 1: 1.027, 2: 1.003}, 3) == 1.0
+    assert age_to_ultimate({0: 1.223, 1: 1.027, 2: 1.003}, 0) == pytest.approx(
+        1.223 * 1.027 * 1.003, rel=1e-12
+    )
 
 
 def _claims(rows):

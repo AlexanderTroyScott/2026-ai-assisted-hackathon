@@ -22,14 +22,79 @@ DATA = ROOT / "data_raw"
 
 LINES = ["motor", "buildings", "contents"]
 
-# Age-to-ultimate development factors from the incurred triangle (D-005).
-LDF = {
-    "motor": {2021: 1.003, 2022: 1.005, 2023: 1.030, 2024: 1.259},
-    "buildings": {2021: 1.002, 2022: 1.003, 2023: 1.092, 2024: 1.092},
-    "contents": {2021: 1.002, 2022: 1.004, 2023: 1.044, 2024: 1.044},
+# --- Development (D-005) -------------------------------------------------
+# Valuation date of the incurred triangle: 31 Dec 2024.
+EXTRACT_YEAR = 2024
+ACCIDENT_YEARS = (2021, 2022, 2023, 2024)
+
+# Volume-weighted age-to-age factors, docs/data_findings.md section 5.
+# f[a] develops an accident year from age a to age a+1, where
+# age = EXTRACT_YEAR - accident_year. Ages with no entry are fully developed.
+AGE_TO_AGE = {
+    "motor": {0: 1.223, 1: 1.027, 2: 1.003},
+    "buildings": {0: 1.089, 1: 1.003},
+    "contents": {0: 1.040, 1: 1.004},
 }
-# Forward severity factor to move 2024-basis labels/predictions to 2025 (D-008).
-FORWARD_FACTOR = {"motor": 1.027, "buildings": 1.053, "contents": 1.054}
+
+
+def age_to_ultimate(factors: dict, age: int) -> float:
+    """Product of the remaining age-to-age factors from `age` onwards (D-005).
+
+    An accident year already at or beyond the last tabulated age is fully
+    developed and gets 1.0 — the documented factors are the whole tail.
+    """
+    return float(np.prod([factors.get(a, 1.0) for a in range(age, max(factors) + 1)]))
+
+
+# Age-to-ultimate development factors keyed by accident year. Derived, not
+# typed in: age = EXTRACT_YEAR - AY, so 2024 -> age 0 (least developed) and
+# 2021 -> age 3 (mature). tests/test_development.py pins these to the
+# documented age-0 -> ultimate column.
+LDF = {
+    ln: {ay: age_to_ultimate(f, EXTRACT_YEAR - ay) for ay in ACCIDENT_YEARS}
+    for ln, f in AGE_TO_AGE.items()
+}
+
+# --- 2025 level / trend (D-008, D-009) -----------------------------------
+# Two independent documented indications, each a one-year 2025-vs-2024 step:
+#   claims-index : 3-yr CAGR of the mix-adjusted severity index (D-007). The
+#                  index holds the 2021 peril mix fixed, so mix shift does not
+#                  contaminate the trend. data_findings.md section 6.
+#   premium      : premium per exposure 2025 vs 2024 (data_findings.md section 6).
+SEVERITY_INDEX = {
+    "motor": {2021: 100.0, 2022: 105.0, 2023: 111.0, 2024: 112.0},
+    "buildings": {2021: 100.0, 2022: 101.0, 2023: 108.0, 2024: 118.0},
+    "contents": {2021: 100.0, 2022: 99.0, 2023: 106.0, 2024: 111.0},
+}
+PREMIUM_ANCHOR = {"motor": 1.027, "buildings": 1.053, "contents": 1.054}
+CLAIMS_WEIGHT, PREMIUM_WEIGHT = 0.7, 0.3  # D-009 — status `proposed`, needs sign-off
+TREND_SCENARIOS = ("low", "central", "high")
+
+
+def forward_factors(scenario: str = "central") -> dict:
+    """One-year 2025-vs-2024 level factor per LOB (applied at scoring, D-008).
+
+    'central' is D-009's 70/30 blend of the claims-index CAGR and the premium
+    anchor. 'low'/'high' bracket it with the two indications themselves, so the
+    range never pretends to more precision than the two sources support.
+
+    D-009 is `proposed`: the *level* is a judgement call awaiting human sign-off
+    (AGENTS.md), so callers must not treat 'central' as verified.
+    """
+    claims = {ln: (SEVERITY_INDEX[ln][2024] / SEVERITY_INDEX[ln][2021]) ** (1.0 / 3.0)
+              for ln in LINES}
+    if scenario == "central":
+        return {ln: CLAIMS_WEIGHT * claims[ln] + PREMIUM_WEIGHT * PREMIUM_ANCHOR[ln]
+                for ln in LINES}
+    if scenario == "low":
+        return {ln: min(claims[ln], PREMIUM_ANCHOR[ln]) for ln in LINES}
+    if scenario == "high":
+        return {ln: max(claims[ln], PREMIUM_ANCHOR[ln]) for ln in LINES}
+    raise ValueError(f"unknown trend scenario {scenario!r}; use one of {TREND_SCENARIOS}")
+
+
+# Back-compat alias for the D-009 central case.
+FORWARD_FACTOR = forward_factors("central")
 
 
 def load_policies(line: str, split: str = "train") -> pd.DataFrame:
@@ -113,16 +178,65 @@ def canonicalise(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def write_orphan_log(claims: pd.DataFrame, policies: pd.DataFrame,
+                     path: Path, expected: int = 414) -> pd.DataFrame:
+    """Audit trail for D-002: claims whose loss date matches no policy row.
+
+    Orphans are dropped from the target (they cannot be attributed to a policy
+    period) but must remain visible, so write them out rather than discard
+    silently.
+
+    `policies` must be **all** lines concatenated and `claims` the **raw**
+    table (all statuses): the verified count of 414 is book-wide and includes
+    4 repudiated orphans, which `load_claims()` has already filtered out.
+    `expected` is the verified figure from docs/data_findings.md — raise if it
+    moves, because that means the join changed underneath us.
+
+    The join is on (policy_id, line): policy_id is only unique within a line,
+    so a policy_id-only merge fans out and invents orphans.
+    """
+    key = policies[["policy_id", "line", "ps", "pe"]].drop_duplicates()
+    m = claims.merge(key, on=["policy_id", "line"], how="left")
+    hit = (m["loss"] >= m["ps"]) & (m["loss"] <= m["pe"])
+    matched_ids = set(m.loc[hit, "claim_id"])
+    if (m.loc[hit].groupby("claim_id").size() > 1).any():
+        raise SystemExit("FATAL: a claim matched more than one policy row (D-002)")
+
+    orphans = claims.loc[~claims["claim_id"].isin(matched_ids),
+                         ["claim_id", "policy_id", "line", "peril", "loss", "cost", "status"]]
+    if expected is not None and len(orphans) != expected:
+        raise SystemExit(
+            f"FATAL: {len(orphans)} orphan claims, expected {expected} (D-002). "
+            "The policy/claim join changed — re-verify docs/data_findings.md before proceeding."
+        )
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    orphans.to_csv(path, index=False)
+    return orphans
+
+
 def row_target(policies: pd.DataFrame, claims: pd.DataFrame, develop: bool = True,
                development: str = "lob") -> pd.DataFrame:
     """Attribute claims to rows and (optionally) develop to ultimate.
 
     development='lob'   uniform factor per (LOB, accident year) — D-005
     development='peril' level-preserving per-peril factors — src/development.py
+
+    Orphan accounting (D-002) is book-level and lives in `write_orphan_log`;
+    this function asserts the invariants that must hold for the rows it returns.
     """
     key = ["row_id", "policy_id", "ps", "pe", "acc_year", "line"]
-    merged = policies[key].merge(claims.drop(columns=["line"]), on="policy_id", how="inner")
+    # Join on (policy_id, line), not policy_id alone: policy_id is only unique
+    # within a line. Dropping claims["line"] and matching on policy_id happens
+    # to work today (no policy_id spans two lines) but silently breaks if that
+    # ever stops holding. Same key as write_orphan_log.
+    merged = policies[key].merge(claims, on=["policy_id", "line"], how="inner")
     merged = merged[(merged["loss"] >= merged["ps"]) & (merged["loss"] <= merged["pe"])]
+
+    # D-002: every claim must land on exactly one row.
+    dup = merged.groupby("claim_id").size()
+    if (dup > 1).any():
+        raise SystemExit(f"FATAL: {(dup > 1).sum()} claims match more than one policy row")
     if develop and development == "peril":
         from src.development import claim_factors
         merged = merged.copy()
@@ -227,9 +341,31 @@ def attach_attributes(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def load_raw_claims() -> pd.DataFrame:
+    """All claims including repudiated, for book-level audits like D-002.
+
+    `load_claims()` drops repudiated rows (they carry zero cost, D-004), but
+    4 of the 414 orphans are repudiated — an audit built on the filtered frame
+    would report 410 and silently disagree with docs/data_findings.md.
+    """
+    c = pd.read_parquet(DATA / "claims.parquet")
+    c["loss"] = pd.to_datetime(c["loss_date"])
+    c["cost"] = np.maximum(0.0, c["incurred_to_date"] - c["recoveries"])
+    return c
+
+
 def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
     """Full modelling frame for one split, all LOBs concatenated."""
     claims = load_claims()
+    if split == "train":
+        # D-002: orphan audit is book-level — written once over all lines, not
+        # per LOB, and over the raw claims table (4 of the 414 orphans are
+        # repudiated and already filtered out of `claims`).
+        all_pol = pd.concat(
+            [load_policies(ln, split)[["policy_id", "line", "ps", "pe"]] for ln in LINES],
+            ignore_index=True,
+        )
+        write_orphan_log(load_raw_claims(), all_pol, ROOT / "outputs" / "dropped_claims.csv")
     frames = []
     for ln in LINES:
         pol = attach_attributes(canonicalise(load_policies(ln, split)))

@@ -139,6 +139,88 @@ def test_no_2025_claims_in_data():
     assert pd.to_datetime(claims["loss_date"]).dt.year.max() <= 2024
 
 
+# --- D-002: orphan audit trail -------------------------------------------
+# 414 claims match no policy row and must be dropped AND logged, never
+# silently discarded. The join is on (policy_id, line): policy_id is not
+# globally unique, so a policy_id-only merge invents orphans.
+
+def _pol(policy_id, line, ps, pe):
+    return {"policy_id": policy_id, "line": line,
+            "ps": pd.Timestamp(ps), "pe": pd.Timestamp(pe)}
+
+
+def _clm(claim_id, policy_id, line, loss, cost, status="closed"):
+    return {"claim_id": claim_id, "policy_id": policy_id, "line": line,
+            "peril": "theft", "loss": pd.Timestamp(loss), "cost": float(cost),
+            "status": status}
+
+
+def test_orphan_claims_are_dropped_and_logged(tmp_path):
+    from src.dataset import write_orphan_log
+
+    pol = pd.DataFrame([
+        _pol("p1", "motor", "2021-01-01", "2021-12-31"),
+        _pol("p2", "buildings", "2021-01-01", "2021-12-31"),
+    ])
+    claims = pd.DataFrame([
+        _clm("c1", "p1", "motor", "2021-06-01", 100.0),      # matched
+        _clm("c2", "p1", "motor", "2022-06-01", 50.0),       # orphan: after pe
+        _clm("c3", "p2", "buildings", "2020-06-01", 70.0),   # orphan: before ps
+        _clm("c4", "p9", "motor", "2021-06-01", 90.0),       # orphan: unknown policy
+        _clm("c5", "p2", "buildings", "2021-03-01", 10.0),   # matched
+    ])
+    out = write_orphan_log(claims, pol, tmp_path / "dropped_claims.csv", expected=3)
+    assert sorted(out["claim_id"]) == ["c2", "c3", "c4"]
+    # logged, not discarded
+    on_disk = pd.read_csv(tmp_path / "dropped_claims.csv", dtype={"claim_id": str})
+    assert sorted(on_disk["claim_id"]) == ["c2", "c3", "c4"]
+    assert not on_disk["claim_id"].isin(["c1", "c5"]).any()
+
+
+def test_orphan_count_mismatch_fails_loud(tmp_path):
+    """If the join changes, the verified 414 moves — refuse to proceed (D-002)."""
+    from src.dataset import write_orphan_log
+
+    pol = pd.DataFrame([_pol("p1", "motor", "2021-01-01", "2021-12-31")])
+    claims = pd.DataFrame([_clm("c1", "p1", "motor", "2022-06-01", 50.0)])  # 1 orphan
+    with pytest.raises(SystemExit, match="orphan"):
+        write_orphan_log(claims, pol, tmp_path / "never.csv", expected=414)
+
+
+def test_orphan_join_needs_line_not_policy_id_alone(tmp_path):
+    """policy_id repeats across LOBs; joining on it alone multiplies rows and
+    manufactures orphans. This test would fail if someone 'simplified' the key.
+    """
+    from src.dataset import write_orphan_log
+
+    # Same policy_id string, different lines: each is a real, distinct policy.
+    pol = pd.DataFrame([
+        _pol("p1", "motor", "2021-01-01", "2021-12-31"),
+        _pol("p1", "buildings", "2021-01-01", "2021-12-31"),
+    ])
+    claims = pd.DataFrame([
+        _clm("m1", "p1", "motor", "2021-06-01", 100.0),
+        _clm("b1", "p1", "buildings", "2021-06-01", 200.0),
+    ])
+    out = write_orphan_log(claims, pol, tmp_path / "orphans.csv", expected=0)
+    assert len(out) == 0, "both claims match; a policy_id-only join would orphan one"
+
+
+def test_orphan_audit_on_real_data_matches_documented_count(tmp_path):
+    """The documented figure: 414 orphans book-wide (docs/data_findings.md §2)."""
+    from src.dataset import load_policies, load_raw_claims, write_orphan_log
+
+    pol = pd.concat(
+        [load_policies(ln)[["policy_id", "line", "ps", "pe"]] for ln in ("motor", "buildings", "contents")],
+        ignore_index=True,
+    )
+    out = write_orphan_log(load_raw_claims(), pol, tmp_path / "dropped_claims.csv", expected=414)
+    assert len(out) == 414
+    # 4 of them are repudiated (zero cost, D-004) — an audit over the filtered
+    # claims frame would report 410 and drift from the findings doc.
+    assert (out["status"] == "repudiated").sum() == 4
+
+
 
 def test_attach_attributes_joins_rating_columns():
     """D-030: address/customer rating factors must be joined onto policy rows.

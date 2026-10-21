@@ -221,3 +221,63 @@ promote it only with evidence outside the tie band.
 
 **Leaderboard at time of writing:** top 0.12996 · our best **0.12113** (exp-010) ·
 rank 20/22 · 9 of 10 slots used today (**1 remaining, deliberately unspent**).
+
+### D-033 / D-034 — actuarial review fixes (2026-10-21, code only, not submitted)
+
+First pass of the `reviewer` subagent against the `actuarial-methods`,
+`actuarial-target` and `data-facts` skills. Two label/level defects and two
+missing guardrails. **No leaderboard slot spent** — these are correctness fixes
+to the labelling and scoring path, not a model change, so nothing was submitted.
+
+**D-033 — LDF age mis-key (fixed).** The frozen table applied the age-0 factor
+to 2023 (which is age 1 at the 2024 valuation). 2023 labels were overstated
+buildings **+8.9%**, contents **+4.0%**; 2021/2022 mildly overstated. `LDF` is
+now derived from the documented age-to-age factors via `age_to_ultimate()`, and
+`scripts/make_baseline.py` imports it instead of keeping a second copy — the
+duplication is what let the drift survive.
+
+Observed vs `data_findings.md` §5 after the fix (row_target, all lines):
+
+| AY | motor | buildings | contents |
+|---|---|---|---|
+| 2021 | 105.9M | 54.1M | 14.9M |
+| 2022 | 116.7M | 61.5M | 16.0M |
+| 2023 | 117.3M | 64.8M | 17.5M |
+| 2024 | 90.7M | 67.4M | 17.5M |
+| 2024 → dev | 114.2M | 73.6M | 18.3M |
+
+2023 buildings now develops 64.8 → 65.0 (was 64.8 → 70.8).
+
+**D-034 — forward factor was premium-anchor-only (fixed, `proposed`).**
+`FORWARD_FACTOR` was exactly the premium/exposure 2025-vs-2024 column — the 30%
+leg of D-009's blend — hard-coded as fact while D-009 is still `proposed`.
+`forward_factors(scenario)` now implements the 70/30 blend and brackets it:
+
+| scenario | motor | buildings | contents |
+|---|---|---|---|
+| low | 1.0270 | 1.0530 | 1.0354 |
+| central | 1.0350 | 1.0556 | 1.0410 |
+| high | 1.0385 | 1.0567 | 1.0540 |
+
+`--trend` selects it and writes the choice into the run manifest. **Level is
+`proposed` and unratified** — see D-034. Note the old sensitivity row above
+("D² declines beyond 1.05") puts buildings central 1.0556 in the soft zone;
+worth a local check before the next submission.
+
+**Guardrails added.** `experience_features` (D-014, the strongest feature block)
+had **no** leakage test; `loss < ps` is now pinned at both the customer-level and
+policy-level filters. Orphan audit (D-002) now writes `outputs/dropped_claims.csv`
+and asserts the documented **414** — note 4 of them are repudiated, so an audit
+over the post-filter claims frame reports 410 and drifts from the findings doc.
+The join is `(policy_id, line)`: `policy_id` is not globally unique, and a
+policy_id-only merge manufactures orphans.
+
+Mutation-checked: flipping either lag filter to `<=` fails `tests/test_features.py`;
+re-introducing the age-0 factor on 2023 fails `tests/test_development.py`. 39 tests
+green (was 25).
+
+**Still open from the review:** baseline submissions omit the forward factor
+(model is trended, baselines are not — mixed basis); `build_development.py`'s
+guardrail compares 0→1 factors against age-0→ultimate so it can never catch a
+table drift; `renewal_decision` deny-list is asserted at source-text level, not
+on the aligned model matrix; rolling-origin 2021-22→2023 fold (D-006) unimplemented.

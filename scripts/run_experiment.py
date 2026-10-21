@@ -21,7 +21,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.dataset import build_frame, LINES, FORWARD_FACTOR  # noqa: E402
+from src.dataset import build_frame, LINES, forward_factors  # noqa: E402
 from src.features import historical_relativities  # noqa: E402
 from sklearn.metrics import d2_tweedie_score  # noqa: E402
 
@@ -251,6 +251,8 @@ def main() -> int:
     ap.add_argument("--features", default="base,premium")
     ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev"])
     ap.add_argument("--development", default="lob", choices=["lob", "peril"])
+    ap.add_argument("--trend", default="central", choices=["low", "central", "high"],
+                    help="2025 level scenario (D-009, still `proposed`)")
     ap.add_argument("--weather-lag", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-val-pred", action="store_true")
@@ -258,7 +260,8 @@ def main() -> int:
     args = ap.parse_args()
     groups = set(args.features.split(","))
 
-    print(f"=== {args.name}  features={args.features}  development={args.development} ===")
+    print(f"=== {args.name}  features={args.features}  development={args.development}"
+          f"  trend={args.trend} ===")
     train, test = prepare(args.features, development=args.development, weather_lag=args.weather_lag)
     print(f"train rows {len(train):,}  test rows {len(test):,}")
 
@@ -337,9 +340,12 @@ def main() -> int:
     # carry the holdout LOB scales over to the test set
     p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
                            ref_pred=p_ref, ref_actual=yv)
-    fwd = test["line"].map(FORWARD_FACTOR).to_numpy()
-    # forward factor is applied because labels are on an accident-year basis
-    # and the model has learned the 2021-2024 average level (D-008).
+    fwd_tab = forward_factors(args.trend)
+    fwd = test["line"].map(fwd_tab).to_numpy()
+    # Forward factor is applied because labels are on an accident-year basis and
+    # the model has learned the 2021-2024 average level (D-008). The factor
+    # itself is a scenario, not a measured fact: D-009 blends the claims-index
+    # CAGR with the premium anchor and is still `proposed` (needs sign-off).
     p_te = p_te * fwd
     sub = pd.DataFrame({"row_id": test["row_id"], "prediction": np.maximum(p_te, 1e-3)})
     assert len(sub) == 626_639, len(sub)
@@ -354,7 +360,8 @@ def main() -> int:
 
     (MET / f"{args.name}.json").write_text(json.dumps({
         "name": args.name, "features": args.features, "mode": args.mode, "seed": args.seed,
-        "development": args.development,
+        "development": args.development, "trend": args.trend,
+        "forward_factor": fwd_tab,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),
         "d2_model": float(d2(p_va)), "d2_model_raw": float(d2(p_raw)), "n_iter": best_iter,
         "top_features": imp.head(20).to_dict(),
