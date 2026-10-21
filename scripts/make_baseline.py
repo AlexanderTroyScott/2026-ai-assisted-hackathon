@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 DATA = ROOT / "data_raw"
 OUT = ROOT / "outputs" / "submissions"
 
-from src.dataset import LDF  # noqa: E402  single source of truth for D-005 factors
+from src.dataset import LDF, forward_factors  # noqa: E402  single source of truth
 
 TEST_FILES = {
     "motor": "test_motor.parquet",
@@ -86,7 +86,18 @@ def developed_totals(attr: pd.DataFrame, line: str) -> dict[str, float]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--kind", choices=["constant_rate", "premium_lr"], required=True)
+    ap.add_argument("--trend", default="central", choices=["low", "central", "high"],
+                    help="2025 level scenario (D-009, still `proposed`)")
     args = ap.parse_args()
+
+    # D-036: the baselines must sit on the same basis as the model. Both are
+    # fitted on 2021-2024 developed cost and scored on 2025 rows, so both need
+    # the same 2025 level step. Without it the model appeared to beat the
+    # baseline by a margin that was partly just trend -- and exp-001's
+    # leaderboard score was measured on an un-trended basis.
+    fwd = forward_factors(args.trend)
+    print(f"trend scenario '{args.trend}': "
+          + "  ".join(f"{ln} x{fwd[ln]:.4f}" for ln in ["motor", "buildings", "contents"]))
 
     OUT.mkdir(parents=True, exist_ok=True)
     pieces = []
@@ -110,6 +121,7 @@ def main() -> int:
             pred = exp.to_numpy() * rate
         else:
             pred = test["written_premium"].to_numpy() * rate
+        pred = pred * fwd[line]
         pieces.append(pd.DataFrame({"row_id": test["row_id"], "prediction": np.maximum(pred, 1e-3)}))
 
     sub = pd.concat(pieces, ignore_index=True)
@@ -118,7 +130,7 @@ def main() -> int:
     assert set(sub["row_id"]) == set(sample["row_id"]), "row_id set mismatch"
     assert sub["prediction"].min() > 0, "predictions must be strictly positive"
 
-    path = OUT / f"{args.kind}.csv"
+    path = OUT / f"{args.kind}-{args.trend}.csv"
     sub.to_csv(path, index=False)
     print(f"\nwrote {path}  rows={len(sub)}  mean={sub['prediction'].mean():.4f}  "
           f"p50={sub['prediction'].median():.4f}  max={sub['prediction'].max():.2f}")

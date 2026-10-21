@@ -20,27 +20,34 @@ import pandas as pd
 EXTRACT_YEAR = 2024
 
 # age k -> ultimate, k = EXTRACT_YEAR - accident_year (k >= len => fully mature)
+#
+# D-035: re-derived 2026-10-21 from `scripts/build_development.py` after fixing
+# its triangle. The previous table was built with immature accident years left
+# in the volume-weighted average, which dragged every factor toward 1.0 and
+# under-developed long-tail perils most (motor BI 1.535 -> 1.708, subsidence
+# 1.306 -> 1.464). Level stays anchored to the accepted D-005 LOB factors via
+# `claim_factors` normalisation; only the per-peril split moved.
 PERIL_LDF = {
     "motor": {
-        "bodily_injury": {0: 1.5351, 1: 1.0376, 2: 1.0023, 3: 1.0},
-        "third_party_prop": {0: 1.0544, 1: 1.0008, 2: 1.0, 3: 1.0},
-        "own_damage": {0: 1.0284, 1: 1.0008, 2: 1.0, 3: 1.0},
-        "theft": {0: 1.0153, 1: 1.001, 2: 1.0, 3: 1.0},
-        "glass_hail": {0: 1.0257, 1: 1.0018, 2: 1.0, 3: 1.0},
+        "bodily_injury": {0: 1.7079, 1: 1.0693, 2: 1.0081, 3: 1.0},
+        "third_party_prop": {0: 1.0749, 1: 1.0012, 2: 1.0, 3: 1.0},
+        "own_damage": {0: 1.0388, 1: 1.001, 2: 1.0, 3: 1.0},
+        "theft": {0: 1.0205, 1: 1.0012, 2: 1.0, 3: 1.0},
+        "glass_hail": {0: 1.0367, 1: 1.0031, 2: 1.0, 3: 1.0},
     },
     "buildings": {
-        "flood": {0: 1.0317, 1: 1.0011, 2: 1.0, 3: 1.0},
-        "escape_of_water": {0: 1.0507, 1: 1.0017, 2: 1.0, 3: 1.0},
-        "fire": {0: 1.0253, 1: 1.0, 2: 1.0, 3: 1.0},
-        "subsidence": {0: 1.3058, 1: 1.0034, 2: 1.0, 3: 1.0},
-        "storm": {0: 1.0469, 1: 1.0012, 2: 1.0, 3: 1.0},
-        "accidental_damage": {0: 1.0203, 1: 1.0001, 2: 1.0, 3: 1.0},
+        "flood": {0: 1.0445, 1: 1.0024, 2: 1.0, 3: 1.0},
+        "escape_of_water": {0: 1.0727, 1: 1.0027, 2: 1.0, 3: 1.0},
+        "fire": {0: 1.0352, 1: 1.0, 2: 1.0, 3: 1.0},
+        "subsidence": {0: 1.464, 1: 1.0076, 2: 1.0, 3: 1.0},
+        "storm": {0: 1.0668, 1: 1.0027, 2: 1.0, 3: 1.0},
+        "accidental_damage": {0: 1.0281, 1: 1.0001, 2: 1.0, 3: 1.0},
     },
     "contents": {
-        "theft": {0: 1.014, 1: 1.0015, 2: 1.0, 3: 1.0},
-        "flood": {0: 1.0395, 1: 1.0018, 2: 1.0, 3: 1.0},
-        "escape_of_water": {0: 1.0524, 1: 1.0028, 2: 1.0, 3: 1.0},
-        "accidental_damage": {0: 1.0278, 1: 1.0013, 2: 1.0, 3: 1.0},
+        "theft": {0: 1.0192, 1: 1.0017, 2: 1.0, 3: 1.0},
+        "flood": {0: 1.0504, 1: 1.0, 2: 1.0, 3: 1.0},
+        "escape_of_water": {0: 1.0722, 1: 1.0039, 2: 1.0, 3: 1.0},
+        "accidental_damage": {0: 1.0381, 1: 1.0017, 2: 1.0, 3: 1.0},
     },
 }
 

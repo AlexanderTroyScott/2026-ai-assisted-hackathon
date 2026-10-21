@@ -174,6 +174,13 @@ def align(train: pd.DataFrame, test: pd.DataFrame, cols: list[str], cats: list[s
         test[c] = test[c].astype(np.float64)
     train[num] = train[num].fillna(-1)
     test[num] = test[num].fillna(-1)
+    # D-011/D-037: assert on the matrix actually returned, not on the request
+    # list or on source text. Anything deny-listed that reaches `use` is outcome
+    # leakage regardless of how it got here (a feature group, a derived name,
+    # a silent join).
+    leaked = [c for c in use if c in DENYLIST]
+    if leaked:
+        raise SystemExit(f"FATAL: deny-listed features in the model matrix: {leaked}")
     return train[use], test[use], use, cats
 
 
@@ -245,6 +252,13 @@ def fit_freq_sev(tr, va, cols, cats, seed=0):
     return p_freq * p_sev, fmodel, smodel, use, cats2
 
 
+# Rolling-origin folds (D-006). Each is (holdout year, training max year).
+# The 2024 fold is the primary one -- it is closest to the 2025 scoring
+# population (D-018). The 2023 fold is a stability check, not a second tuning
+# opportunity (D-025: local near-ties do not rank on the leaderboard).
+FOLDS = {"2024": (2024, 2023), "2023": (2023, 2022)}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True)
@@ -253,23 +267,28 @@ def main() -> int:
     ap.add_argument("--development", default="lob", choices=["lob", "peril"])
     ap.add_argument("--trend", default="central", choices=["low", "central", "high"],
                     help="2025 level scenario (D-009, still `proposed`)")
+    ap.add_argument("--fold", default="2024", choices=sorted(FOLDS),
+                    help="rolling-origin holdout year (D-006)")
     ap.add_argument("--weather-lag", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-val-pred", action="store_true")
     ap.add_argument("--no-submit", action="store_true")
     args = ap.parse_args()
     groups = set(args.features.split(","))
+    holdout_year, train_max_year = FOLDS[args.fold]
 
     print(f"=== {args.name}  features={args.features}  development={args.development}"
-          f"  trend={args.trend} ===")
+          f"  trend={args.trend}  fold={args.fold} ===")
     train, test = prepare(args.features, development=args.development, weather_lag=args.weather_lag)
     print(f"train rows {len(train):,}  test rows {len(test):,}")
 
     # ---- baselines on the same holdout (developed truth) ----
     y_true = train["y_ult"].to_numpy()
-    tr = train[train["acc_year"] <= 2023]
-    va = train[train["acc_year"] == 2024]
+    tr = train[train["acc_year"] <= train_max_year]
+    va = train[train["acc_year"] == holdout_year]
     yv = va["y_ult"].to_numpy()
+    print(f"fold {args.fold}: train AY <= {train_max_year} ({len(tr):,} rows) "
+          f"-> holdout AY {holdout_year} ({len(va):,} rows)")
 
     lob_rate = tr.groupby("line").apply(
         lambda g: g["y_ult"].sum() / g["exposure"].sum(), include_groups=False
@@ -360,7 +379,8 @@ def main() -> int:
 
     (MET / f"{args.name}.json").write_text(json.dumps({
         "name": args.name, "features": args.features, "mode": args.mode, "seed": args.seed,
-        "development": args.development, "trend": args.trend,
+        "development": args.development, "trend": args.trend, "fold": args.fold,
+        "holdout_year": holdout_year, "train_max_year": train_max_year,
         "forward_factor": fwd_tab,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),
         "d2_model": float(d2(p_va)), "d2_model_raw": float(d2(p_raw)), "n_iter": best_iter,

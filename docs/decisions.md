@@ -437,3 +437,118 @@ buildings sits at 1.0556 central. Per AGENTS.md this stays `proposed` until a
 human accepts it; until then treat `central` as the working assumption, not a
 decision. Baseline scripts still do **not** apply any forward factor (a separate
 finding), so model-vs-baseline comparisons remain on a mixed basis.
+
+## D-035 — Triangle derivation: respect the valuation diagonal
+**2026-10-21 · accepted · correctness fix, reproduces data_findings.md §5**
+
+Review item 6 was reported as a `build_development.py` guardrail comparing
+incompatible quantities. The real defect was upstream of the guardrail: the
+triangle builder itself.
+
+`build_cum` did `unstack(fill_value=0)` then `cumsum(axis=1)`. At the 31 Dec
+2024 valuation accident year 2024 has reached **age 0 only** — no 2024 claim
+has been reported at age 1 — but the fill-then-cumsum wrote 90.7M into that
+unreached cell and every cell after it. `triangle_factors` then volume-weighted
+over **all** AYs, so each immature AY contributed a phantom 1.0 ratio and
+dragged every factor toward 1.0.
+
+Corrected derivation, using only AYs that have actually reached both ages:
+
+| | buggy | corrected | documented |
+|---|---|---|---|
+| motor f(0→1) | 1.166 | **1.221** | 1.223 |
+| motor age-0→ult | 1.183 | **1.257** | 1.26 |
+
+**The `data_findings.md` §5 numbers are correct and the script was wrong.** The
+"D-028 re-derivation 1.18/1.06/1.03 vs documented 1.22/1.09/1.04 (different
+weighting window)" note misdiagnosed this as a weighting-window difference. It
+was the diagonal bug. No change to the findings document is required.
+
+Changes:
+- `build_cum` blanks cells past `age > EXTRACT_YEAR − AY`; `triangle_factors`
+  drops any AY that has not reached both ages.
+- `load_claims` restricts to the documented origin years 2021–2024. The 2020
+  rows are pre-book orphans and are far too thin to anchor a factor — 2 claims
+  of contents/flood swung f(1→2) to ~10x before this.
+- The guardrail now compares **like with like**: age-to-age against the
+  documented 0→1/1→2/2→3, and age-0→ultimate against the documented "to
+  ultimate" column. It previously compared 0→1 factors to an age-0→ultimate
+  quantity, so it reported a permanent false mismatch and could never have
+  caught D-033.
+- `PERIL_LDF` re-frozen from the corrected derivation (motor BI 1.535 → **1.708**,
+  subsidence 1.306 → **1.464**; short-tail perils move ~1pp). Long-tail perils
+  were the most under-developed, which is the direction the tail evidence
+  predicts (bodily_injury 10.2% of claims report >365 days).
+- `tests/test_development.py` pins the volume-weighted factors on the published
+  motor triangle and asserts the fill-zero+cumsum variant dilutes f(0→1) to
+  1.166 — the exact regression.
+
+**Blast radius was contained**: D-028 normalises per-peril factors to the
+accepted D-005 LOB level, so the **level never moved** and the D-005 table is
+untouched (it came from the findings document, not this script). Only the
+per-peril split was wrong, which affects `--development peril` alone.
+
+Re-measured under D-028's protocol (skill-vs-baseline gap, same features/seed,
+because a truth redefinition moves D² on its own and earns nothing):
+
+| | model D² | baseline D² | gap |
+|---|---|---|---|
+| exp-012 peril (corrected) | 0.1280 | 0.0769 | 0.0511 |
+| exp-013 lob | 0.1312 | 0.0791 | 0.0521 |
+
+Gap −0.0010, inside the D-025 band. **D-028 stands as a tie**, now reading
+slightly against per-peril rather than slightly for it. Per-peril remains
+opt-in and unpromoted.
+
+## D-036 — Baselines share the model's 2025 basis
+**2026-10-21 · accepted · comparability fix**
+
+`make_baseline.py` applied D-005 development but **no** forward factor, while
+`run_experiment.py` applied one to every model submission. The two were on
+different level bases: the baseline predicted 2025 at a 2024 level. That mixes
+trend into any model-vs-baseline leaderboard gap and makes exp-001's 0.07293
+incomparable with later entries.
+
+Measured contamination is small — a uniform level miss of the cost-weighted
+forward factor (1.0429) moves D² by **+0.00066** on the real 2024 holdout,
+against a D-025 tie band of ~0.002. So the recorded conclusion that risk
+differentiation dominates (+0.0393) survives; at most 0.0007 of it was level.
+This is an attributability fix, not a restatement.
+
+Baselines now take `--trend {low,central,high}` and apply the same
+`forward_factors()` as the model, and the filename records the scenario
+(`constant_rate-central.csv`).
+
+## D-037 — Deny-list asserted on the model matrix
+**2026-10-21 · accepted · guardrail fix**
+
+The D-011 deny-list test grepped `run_experiment.py` source text and its first
+assertion was `assert ... or True`, i.e. dead. A leak that reached the model
+matrix by any route other than a quoted name in a feature list would have
+passed.
+
+- `align` now raises on any deny-listed column in the **returned** matrix —
+  the thing the model actually sees, however the column got there.
+- `tests/test_guardrails.py` asserts `align` refuses a request containing
+  `renewal_decision`, that a clean request returns only what was asked, and
+  that every documented feature group is disjoint from `DENYLIST`.
+- Verified by mutation: removing the `align` guard fails the test.
+
+## D-038 — Rolling-origin fold 2021-22 → 2023 (D-006) implemented
+**2026-10-21 · accepted · validation completeness**
+
+D-006 specified two rolling-origin folds; only the 2024 one was built.
+`--fold {2024,2023}` now selects the holdout year and the manifest records it.
+
+Stability read (exp-013 vs exp-014, same features/seed, D-028 gap protocol):
+
+| fold | train AY | holdout | model D² | baseline D² | gap |
+|---|---|---|---|---|---|
+| 2024 | ≤2023 | 2024 | 0.1312 | 0.0791 | 0.0521 |
+| 2023 | ≤2022 | 2023 | 0.1385 | 0.0878 | 0.0507 |
+
+Gaps agree to 0.0014 (inside the D-025 band) and the top features are the same
+(occupation, region, written_premium, exposure). This is **evidence of
+stability for the write-up**, not a second tuning opportunity — per D-025 local
+differences below ~0.002 do not rank on the leaderboard. The 2024 fold stays
+primary because it is closest to the 2025 scoring population (D-018).

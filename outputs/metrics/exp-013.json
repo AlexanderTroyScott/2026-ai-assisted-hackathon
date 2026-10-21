@@ -1,0 +1,40 @@
+{
+  "name": "exp-013",
+  "features": "base,premium,experience,weather,flags",
+  "mode": "tweedie",
+  "seed": 0,
+  "development": "lob",
+  "trend": "central",
+  "forward_factor": {
+    "motor": 1.0350491742591545,
+    "buildings": 1.0556052636811044,
+    "contents": 1.0409791638138843
+  },
+  "d2_constant": 0.07910888682013018,
+  "d2_premium_lr": 0.07575705553536738,
+  "d2_model": 0.13122353599073866,
+  "d2_model_raw": 0.12846904816777327,
+  "n_iter": 115,
+  "top_features": {
+    "occupation": 1271,
+    "region": 532,
+    "written_premium": 468,
+    "exposure": 436,
+    "sum_insured": 319,
+    "premium_per_exposure": 284,
+    "energy_rating": 252,
+    "flood_zone": 221,
+    "rainfall_mm": 216,
+    "annual_mileage": 185,
+    "construction_type": 162,
+    "prior_claims_5y": 156,
+    "driver_age": 142,
+    "voluntary_excess": 133,
+    "years_licensed": 127,
+    "policyholder_age": 124,
+    "soil_type": 122,
+    "credit_band": 121,
+    "wind_exposure_index": 114,
+    "mean_temperature_c": 112
+  }
+}

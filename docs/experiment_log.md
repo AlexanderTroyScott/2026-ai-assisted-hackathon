@@ -281,3 +281,88 @@ green (was 25).
 guardrail compares 0→1 factors against age-0→ultimate so it can never catch a
 table drift; `renewal_decision` deny-list is asserted at source-text level, not
 on the aligned model matrix; rolling-origin 2021-22→2023 fold (D-006) unimplemented.
+
+### D-035..D-038 — review items 2-4 + baseline basis (2026-10-21)
+
+Continuation of the actuarial review. Four items evaluated with measurement
+before touching anything. No submission; quota unchanged (1 slot held).
+
+**Item 2 — the triangle bug (D-035).** Reported as a guardrail comparing the
+wrong quantities. The defect was upstream: `build_cum` did
+`unstack(fill_value=0)` + `cumsum`, writing the 2024 age-0 amount across every
+later age. Accident year 2024 has reached **age 0 only** at the 31 Dec 2024
+valuation; those cells are unreached, not zero. Volume-weighting then averaged
+in a phantom 1.0 ratio from each immature AY.
+
+| | buggy | corrected | documented |
+|---|---|---|---|
+| motor f(0→1) | 1.166 | **1.221** | 1.223 |
+| motor age-0→ult | 1.183 | **1.257** | 1.26 |
+
+**This corrects the note in the measurements table above** ("LOB re-derivation
+1.18/1.06/1.03 vs documented 1.22/1.09/1.04 — different weighting window").
+That was a misdiagnosis: it was not a weighting-window difference, it was the
+diagonal bug. `data_findings.md` §5 was right all along and needs no change.
+
+Also dropped 2020 origin rows (pre-book orphans) from the derivation — 2 claims
+of contents/flood swung f(1→2) to ~10x on their own. The guardrail now compares
+age-to-age against age-to-age and age-0→ult against the "to ultimate" column;
+previously it compared 0→1 factors to an age-0→ult quantity and so could never
+have caught the D-033 table bug either.
+
+`PERIL_LDF` re-frozen. Long-tail perils were the most under-developed, which is
+the direction the tail evidence predicts (bodily_injury 10.2% of claims report
+>365 days):
+
+| peril | was | now |
+|---|---|---|
+| motor bodily_injury | 1.535 | **1.708** |
+| buildings subsidence | 1.306 | **1.464** |
+| motor glass_hail | 1.026 | 1.037 |
+
+Blast radius was contained — D-028 normalises to the accepted D-005 LOB level,
+so the level never moved and `--development peril` was the only consumer.
+
+Re-measured under D-028's own protocol (skill-vs-baseline gap, not raw D²,
+because a truth redefinition moves D² by itself and earns nothing):
+
+| | model D² | baseline D² | gap |
+|---|---|---|---|
+| exp-012 peril (corrected) | 0.1280 | 0.0769 | 0.0511 |
+| exp-013 lob | 0.1312 | 0.0791 | 0.0521 |
+
+Gap −0.0010, inside the D-025 band. **D-028 remains a tie**, now leaning
+slightly against per-peril. Still opt-in, still unpromoted.
+
+**Item 1 — baseline mixed basis (D-036).** Measured first: a uniform level miss
+of the cost-weighted forward factor (1.0429) moves D² by only **+0.00066** on
+the real holdout, against the 0.002 D-025 band. So no recorded conclusion is
+contaminated — the "+0.0393 is risk differentiation" claim survives, with at
+most 0.0007 of it being level. Fixed for attributability: `make_baseline.py`
+now takes `--trend` and applies the same `forward_factors()` as the model, and
+the filename records the scenario.
+
+**Item 3 — deny-list (D-037).** The gap was narrower than reported:
+`feature_cols` already raised at runtime. The genuine hole was that the test
+grepped source text and its first assertion was `assert ... or True` (dead).
+`align` now raises on any deny-listed column in the **returned** matrix, and the
+tests assert on `align` output and on every feature group. Verified by mutation.
+
+**Item 4 — D-006 second fold (D-038).** `--fold {2024,2023}` implemented.
+
+| fold | train AY | holdout | model D² | baseline D² | gap |
+|---|---|---|---|---|---|
+| 2024 | ≤2023 | 2024 | 0.1312 | 0.0791 | 0.0521 |
+| 2023 | ≤2022 | 2023 | 0.1385 | 0.0878 | 0.0507 |
+
+Gaps agree to 0.0014 and the top features are identical (occupation, region,
+written_premium, exposure). **Stability evidence for the write-up**, not a
+second tuning opportunity (D-025). 2024 stays primary (D-018).
+
+**Tests: 43 green (was 25 at the start of the review).** Mutation-checked on
+the triangle factors, both lag filters, the LDF age key, and the `align`
+deny-list guard.
+
+**Still open:** D-009 is `proposed` and needs human sign-off before the next
+submission; the buildings central factor 1.0556 sits just past the point where
+the earlier sensitivity row found D² starting to decline.

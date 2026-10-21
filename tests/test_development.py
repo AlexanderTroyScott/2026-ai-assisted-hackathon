@@ -140,3 +140,83 @@ def test_peril_age_factor_monotone_in_tail():
         "motor", "glass_hail", 2024
     )
     assert peril_age_factor("motor", "bodily_injury", 2021) == 1.0
+
+
+# --- D-035: the triangle derivation itself must reproduce the documented
+# factors. This is the guardrail whose absence let a cumsum bug under-develop
+# every peril while the level check passed.
+
+def _triangle_fixture():
+    """The documented motor triangle (data_findings.md section 5), incremental.
+
+    Values are M CU exactly as published. Cells past the valuation diagonal
+    (age > 2024 - AY) are unreached and must stay NaN.
+    """
+    import numpy as _np
+    return pd.DataFrame(
+        {0: [81.5, 92.2, 100.1, 90.7],
+         1: [21.8, 21.5, 17.3, _np.nan],
+         2: [2.36, 3.19, _np.nan, _np.nan],
+         3: [0.37, _np.nan, _np.nan, _np.nan]},
+        index=pd.Index([2021, 2022, 2023, 2024], name="ay"),
+    )
+
+
+def test_volume_weighted_factors_exclude_immature_years():
+    """Immature AYs must not enter the volume-weighted average (D-035).
+
+    2024 has reached age 0 only and 2023 age 1 only. Including them drags
+    f(0->1) toward 1.0 — that was the bug.
+    """
+    from src.development import EXTRACT_YEAR
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from build_development import age0_to_ultimate, triangle_factors
+
+    cum = _triangle_fixture().cumsum(axis=1)
+    fac = triangle_factors(cum)
+
+    # Only 2021-2023 reach age 1: f(0->1) = (103.3+113.7+117.4)/(81.5+92.2+100.1)
+    assert fac[0] == pytest.approx(1.2213, abs=5e-3)
+    # Only 2021-2022 reach age 2
+    assert fac[1] == pytest.approx(1.0256, abs=5e-3)
+    assert fac[2] == pytest.approx(1.0035, abs=5e-3)
+    assert age0_to_ultimate(fac, 0) == pytest.approx(1.257, abs=5e-3)
+    assert EXTRACT_YEAR - 2024 == 0, "2024 is at age 0 and must not reach age 1"
+
+
+def test_fill_zero_cumsum_is_the_bug_dilutes_factors():
+    """Regression pin for the exact D-035 defect.
+
+    The old build_cum did unstack(fill_value=0) then cumsum, which writes the
+    2024 age-0 amount across every later age. Volume-weighting then averages
+    that phantom in and drags f(0->1) from 1.221 down to ~1.166.
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from build_development import triangle_factors
+
+    inc = _triangle_fixture()
+    naive_cum = inc.fillna(0.0).cumsum(axis=1)   # <- the bug
+    naive_fac = triangle_factors(naive_cum)
+    correct_fac = triangle_factors(inc.cumsum(axis=1))
+
+    assert naive_fac[0] < correct_fac[0] - 0.02, (
+        f"fill-zero+cumsum should dilute f(0->1): {naive_fac[0]:.4f} vs {correct_fac[0]:.4f}"
+    )
+    assert naive_fac[0] == pytest.approx(1.1663, abs=5e-3)
+
+
+def test_peril_factors_are_long_tail_ordered():
+    """D-028: long-tail perils must develop more than short-tail ones, and the
+    ordering must survive the D-035 re-freeze."""
+    from src.development import PERIL_LDF
+
+    assert PERIL_LDF["motor"]["bodily_injury"][0] > PERIL_LDF["motor"]["glass_hail"][0]
+    assert PERIL_LDF["buildings"]["subsidence"][0] > PERIL_LDF["buildings"]["accidental_damage"][0]
+    # long-tail factors should be well above the LOB average, not compressed
+    assert PERIL_LDF["motor"]["bodily_injury"][0] > LDF["motor"][2024]
+    assert PERIL_LDF["buildings"]["subsidence"][0] > LDF["buildings"][2024]
+    # mature ages are flat
+    for ln in PERIL_LDF:
+        for pr, tab in PERIL_LDF[ln].items():
+            assert tab[3] == 1.0, f"{ln}/{pr} age 3 should be fully developed"

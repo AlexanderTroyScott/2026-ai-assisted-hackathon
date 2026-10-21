@@ -86,14 +86,67 @@ DENYLIST_FEATURES = {
 
 
 def test_denylist_features_never_reach_model_code():
-    """D-011/D-016/D-017: these fields leak the outcome and must not be features."""
+    """D-011/D-016/D-017: these fields leak the outcome and must not be features.
+
+    Asserts two ways. First on the **aligned matrix** — that is the thing the
+    model actually sees, and it is where a leak would do damage regardless of
+    how the column got there. Second on the source, as a cheap tripwire.
+    """
+    import pandas as pd
+
     src = ROOT / "scripts" / "run_experiment.py"
     text = src.read_text()
+
+    # (1) matrix-level: `align` must refuse a request that includes a deny-listed
+    # column. This is the guardrail that was missing -- the old test only grepped
+    # source text and contained an `assert ... or True`, which never fails.
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import DENYLIST, align
+
+    frame = pd.DataFrame({
+        "exposure": [1.0, 1.0],
+        "renewal_decision": ["renewed", "lapsed_by_customer"],   # the leak
+        "customer_service_contacts": [0, 4],
+        "telematics_score": [0.5, 0.1],
+    })
+    frame["is_test"] = False
+    with pytest.raises(SystemExit, match="deny-listed"):
+        align(frame, frame.copy(), ["exposure", "renewal_decision"], [])
+
+    # a clean request still works and returns only what was asked
+    tr, te, use, cats = align(frame, frame.copy(), ["exposure"], [])
+    assert use == ["exposure"], use
+    assert set(DENYLIST) & set(use) == set()
     for feat in DENYLIST_FEATURES:
-        assert f'"{feat}"' not in text.split("DENYLIST")[1].split("BASE_FEATURES")[0] or True
-        # the feature must appear only inside the DENYLIST definition
+        assert feat in DENYLIST, f"{feat} must be in the runtime DENYLIST"
+
+    # (2) source tripwire: a deny-listed name must not be quoted in a feature
+    # list. Counting occurrences is the only structural check available on text.
+    for feat in DENYLIST_FEATURES:
         occurrences = [i for i in range(len(text)) if text.startswith(f'"{feat}"', i)]
         assert len(occurrences) <= 1, f"{feat} referenced more than once (deny-list only)"
+
+
+def test_aligned_matrix_is_disjoint_from_denylist():
+    """D-037: the columns the model trains on must never intersect the deny-list.
+
+    Uses the real feature-col builder over every documented feature group, so a
+    group that smuggles a deny-listed name in is caught here rather than at
+    scoring time.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import CAT_FEATURES, DENYLIST, feature_cols
+
+    groups = ["base", "premium", "address", "customer", "experience", "denied",
+              "weather", "flags", "relativity"]
+    for g in groups:
+        cols = feature_cols(g)
+        leaked = set(cols) & set(DENYLIST)
+        assert not leaked, f"group '{g}' carries deny-listed columns {leaked}"
+    leaked = set(CAT_FEATURES) & set(DENYLIST)
+    assert not leaked, f"CAT_FEATURES carries deny-listed columns {leaked}"
 
 
 def test_customer_service_contacts_is_leakage():
