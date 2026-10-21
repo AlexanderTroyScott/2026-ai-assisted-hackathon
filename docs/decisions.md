@@ -854,3 +854,170 @@ control runs (exp-019/exp-020) were produced by patching `src.dataset.LDF` in a
 in the experiment log. Historical `d2_model` in manifests remains oracle-based;
 from exp-016 onward `d2_model` is train-fitted and `d2_model_oracle` is recorded
 separately (D-040).
+
+## D-042 — 2025 weather: realised data, but worth ~nothing locally
+**2026-10-21 · measured, local only · no slots spent · for human decision**
+
+Human asked how much the 2025 weather improves predictions and whether other
+candidates might use it, so they can raise the question of whether it should be
+in scope. Measurement only — nothing submitted, no position taken.
+
+### What the 2025 weather actually is
+
+**Realised values, not a climate normal.** Verified empirically: 2025 is a
+distinct year, not a copy or interpolation of another. Cross-address
+correlation of 2025 against the best-matching other year is 0.54 (hail_days),
+0.63 (rainfall_mm), 0.81 (wildfire_index), 0.83 (freezing_days); exact-match
+fraction is 0.000 for rainfall and 0.001 for dry_summer. For test addresses,
+2025 vs 2024 rainfall has corr 0.63 with mean absolute difference 193mm.
+
+So it is genuine future information: at pricing time nobody knows the realised
+2025 rainfall for a given address.
+
+### Two corrections to the framing
+
+1. **Nobody said it would get a run thrown out.** `D-012` records the opposite
+   — weather is **accepted**, on an explicit documented assumption ("annual
+   climate indices available at pricing time"), with a required sensitivity.
+   The repo position is disclose-and-measure, not avoid. It should not be
+   described as leaked data that invalidates a run.
+2. **Our best run already uses it.** exp-010 includes the `weather` feature
+   group and `add_weather` defaults test rows to 2025. The 0.12113 on the
+   leaderboard is already a 2025-weather score. The actionable question is what
+   it costs to *remove*, not what it gains to add.
+
+### The measurement is structurally hard
+
+`add_weather` sets `weather_year = where(is_test, 2025, acc_year)`. The local
+holdout is 2024 **train** rows (`is_test=False`), so it sees `acc_year` weather
+whatever is chosen. Only test rows ever see 2025 weather.
+
+**Therefore the value of 2025 weather is invisible to local CV.** No local
+number can measure it; only the leaderboard can. Note also that `--weather-lag`
+lags *train* rows too (`acc_year − 1`), so an A-vs-B comparison is confounded —
+it tests "own-year vs lagged weather", not "is 2025 test weather useful".
+
+Honest local D² (train-fitted scales, seed 0, exp-010 stack):
+
+| config | honest D² | vs A |
+|---|---|---|
+| A weather 2025 (current) | 0.1331 | — |
+| B weather lagged to 2024 | 0.1326 | −0.0005 |
+| C **no weather at all** | 0.1338 | **+0.0007** |
+| D + log1p(sum_insured) + artefact flag | 0.1334 | +0.0003 |
+
+**All deltas ≤ 0.0007, inside the local seed band of ~0.0005–0.001.** Nothing
+here is a measured effect. Two candidate readings, not separated by this data:
+
+- The best local score is *no weather at all*, which would say the weather block
+  adds little once `elevation_m`, `distance_to_river_km`, `flood_zone`,
+  `region` and `energy_rating` are present — those already carry most of the
+  geography, and weather's marginal content is temporal.
+- Or all four are the same model and the differences are noise.
+
+The proxy for "how much is correct-year weather worth" is A vs B = +0.0005,
+which is the largest defensible claim and is itself within noise.
+
+### On whether other candidates use it
+
+Cannot be determined from here, and should not be guessed at. What is known:
+the weather table is in the public competition data and includes 2025 for 100%
+of test addresses, so any team that used it faced the same choice. Our own
+top-feature lists show `rainfall_mm` and `dry_summer_index` ranking 8th and
+16th for exp-010, so the model does use them.
+
+### Recommendation for the human's question
+
+The evidence to bring is: (a) 2025 weather is realised data and is a genuine
+look-ahead, (b) its measurable value is at most +0.0005 and is not separable
+from noise locally, (c) removing it costs nothing that we can detect, and (d)
+the leaderboard value is unmeasurable without spending a slot on a lagged
+submission. On that basis dropping 2025 weather is close to free and removes
+the look-ahead entirely — but that is a policy call, not a modelling one.
+
+## D-043 — Outliers and transforms: one real artefact, and a test I got wrong
+**2026-10-21 · measured, local only · no slots spent**
+
+### The `sum_insured` artefact is real
+
+`sum_insured` has a **structural break with zero rows in between**:
+
+| band | buildings | contents |
+|---|---|---|
+| ≤ 500k | 499,357 (99.02%) | 720,178 (99.80%) |
+| 500k–1M | 6,934 | 107 |
+| **1M–10M** | **0 rows** | **7 rows** |
+| 50M–100M | 95 | 386 |
+| > 100M | 1,300 | 26 |
+
+Above 10M sits a separate population of **1,395 buildings rows (0.197%)** and
+**1,395 contents rows (0.193%)**, maxing at 594,000,000. The test set has the
+same contamination at the same rate (0.201% / 0.191%).
+
+They are not real sums insured. The decisive evidence is the premium ratio:
+
+- `written_premium / sum_insured` median for >10M rows: **0.000001**
+- `written_premium / sum_insured` median for all other rows: **0.000970**
+
+A **1000×** gap. Median premium is 215 for the giant rows against 217 overall —
+ordinary premiums on absurd sums insured. The rows also look completely ordinary
+otherwise (region R01/R12/R03, semi-detached/terraced/detached/flat, all three
+urbanity levels), so this is not a distinct commercial book; it is a field
+error, plausibly a unit or code column.
+
+They carry essentially no claims signal either: buildings claims in the
+10M–100M band number **14** with mean cost 3,749, versus 9,588 for the 100k–1M
+band. The >100M band has 145 claims at 13,152.
+
+**Recommendation: flag, do not delete.** A binary `si_artefact` indicator plus
+a capped `log1p(clip(sum_insured, 1e7))` preserves the information that a row
+is anomalous without letting 594M dominate a scale-sensitive split. Deleting
+rows would break the 626,639-row submission contract.
+
+### Other outliers named
+
+| feature | evidence | note |
+|---|---|---|
+| `exposure` (supplied) | max 365, skew 35.5 | **the corrupt column (D-001)** — confirmed it is days, not exposure. Already recomputed. |
+| `annual_mileage` | p50 10k, p99 30k, max 86k | 60% missing; plausible but long-tailed |
+| `missed_payments_12m` | kurtosis 25, max 7 | genuine count, keep raw |
+| `days_unoccupied` | kurtosis 20.5, 71% missing | not currently a feature |
+| `written_premium` | skew 2.4, max 5,076 vs p99 1,522 | continuous tail, tree-safe |
+| `customer_service_contacts` | skew 3.3, kurt 21.9 | **deny-listed (D-016)** — not a feature |
+
+### Log transforms: they matter a lot for linear models, not at all for trees
+
+I first tested this with Spearman correlation and got delta 0.0000 everywhere.
+**That test was wrong and I am recording it as such**: log is monotonic, so it
+*cannot* change a rank correlation. A tautology dressed as a result.
+
+The correct test is Pearson against log-claim-severity (n = 183,418 claims):
+
+| feature | raw | log1p | delta |
+|---|---|---|---|
+| `sum_insured` | +0.015 | **+0.316** | **+0.301** |
+| `written_premium` | +0.240 | **+0.303** | +0.063 |
+| `distance_to_river_km` | −0.063 | −0.090 | −0.027 |
+| `elevation_m` | −0.055 | −0.103 | −0.048 |
+
+So log1p is a large improvement *for a linear relationship* — `sum_insured`
+goes from essentially uninformative to the strongest of the four. But the model
+test moved only +0.0003 (0.1334 vs 0.1331), inside noise.
+
+The reason is structural and worth writing down: **decision trees are invariant
+to monotone transforms.** A split at the 90th percentile of `sum_insured` is the
+same split as at the 90th percentile of `log1p(sum_insured)`. Tree models do not
+need log transforms for skewness — they need them only to make *linear*
+combinations behave.
+
+Practical consequence: the log transforms are near-worthless for the current
+LGBM stack and **material for C-2 (the Tweedie GLM benchmark)**. Anyone
+building the GLM should absolutely use them; anyone tuning the tree should not
+expect them to move the score. The one transform that *can* matter to a tree is
+the artefact flag, because it is not monotone — it is a new binary split.
+
+### Not done
+
+No submission. Effect sizes are all inside the local noise band, and spending a
+slot on a ≤0.0007 candidate would be a poor use of quota given the D-025 finding
+that local near-ties do not rank reliably on the leaderboard.

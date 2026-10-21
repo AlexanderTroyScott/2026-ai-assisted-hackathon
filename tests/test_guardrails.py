@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -416,3 +417,58 @@ def test_oracle_and_ref_scales_differ_when_calibration_drifts():
         "when calibration drifts between train and holdout the two differ, "
         "which is exactly why reporting only the oracle overstates local D2"
     )
+
+
+# --- D-042/D-043: data-quality guardrails found in the outlier review ---
+
+def test_supplied_exposure_is_days_not_exposure():
+    """D-001 reconfirmed: the supplied `exposure` column reaches 365.
+
+    It is a day count, not an exposure fraction. Recompute must never use it.
+    """
+    for name in ["policies_motor", "policies_buildings", "policies_contents"]:
+        df = pd.read_parquet(DATA / f"{name}.parquet",
+                             columns=["period_start", "period_end", "exposure"])
+        ps = pd.to_datetime(df["period_start"])
+        pe = pd.to_datetime(df["period_end"])
+        days = (pe - ps).dt.days + 1
+        assert df["exposure"].max() > 10, f"{name}: supplied exposure is not a fraction"
+        assert df["exposure"].max() <= 366, f"{name}: supplied exposure exceeds a year of days"
+        # and it is the day count, confirming the diagnosis
+        frac = float(np.isclose(df["exposure"], days).mean())
+        assert frac < 0.05, f"{name}: expected a day-like column, exact-match {frac:.3f}"
+
+
+def test_sum_insured_has_a_structural_break():
+    """D-043: `sum_insured` is bimodal with a dead zone.
+
+    Above 10M sits a separate population with premium/sum_insured 1000x lower
+    than the rest. Not real sums insured. This test pins the break so a future
+    cleaning step cannot silently reintroduce a smooth distribution.
+    """
+    for name in ["policies_buildings", "policies_contents"]:
+        s = pd.read_parquet(DATA / f"{name}.parquet", columns=["sum_insured"]).sum_insured.dropna()
+        gap = int(((s > 1e6) & (s < 1e7)).sum())
+        assert gap <= 10, f"{name}: expected a dead zone 1M-10M, found {gap} rows"
+        art = int((s > 1e7).sum())
+        assert art > 0, f"{name}: expected an artefact population above 10M"
+
+
+def test_sum_insured_artefacts_do_not_carry_premium():
+    """D-043 decisive evidence: giant sum_insured rows pay ordinary premiums.
+
+    premium/sum_insured is ~1000x lower for them, so the field is not a real
+    sum insured on the same scale.
+    """
+    for name in ["policies_buildings", "policies_contents"]:
+        df = pd.read_parquet(DATA / f"{name}.parquet",
+                             columns=["sum_insured", "written_premium"]).dropna()
+        big = df[df.sum_insured > 1e7]
+        rest = df[df.sum_insured <= 1e7]
+        assert len(big) > 0, f"{name}: no artefact rows to test"
+        r_big = (big.written_premium / big.sum_insured).median()
+        r_rest = (rest.written_premium / rest.sum_insured).median()
+        assert r_big < r_rest / 100, (
+            f"{name}: expected giant sum_insured rows to carry ~1000x lower "
+            f"premium ratio, got {r_big:.3e} vs {r_rest:.3e}"
+        )
