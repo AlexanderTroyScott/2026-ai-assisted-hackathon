@@ -37,6 +37,7 @@ negative results are as valuable as positive ones.
 | 13 | 2026-10-21 14:28 UTC | exp-019 | exp-010 config, seed 1, PRE-D-033 label table (control) - measures old-labels seed band [D-041] | control run via /tmp patch of src.dataset.LDF only. Isolates whether exp-010's 0.12113 is a lucky seed draw. | 0.1337 | - | — | clean | `271770ec27ef` |
 | 14 | 2026-10-21 14:49 UTC | exp-020 | exp-010 config, seed 2, PRE-D-033 label table (control) - third point on old-labels seed band [D-041] | FINAL slot today (5 reserved for the human). Completes the seed-band estimate on the old-labels side where variance is largest. | 0.1346 | - | — | clean | `e28fcebeaac8` |
 | 15 | 2026-10-21 19:54 UTC | exp-021 | D-045 final refit on ALL training years incl. 2024 (was fitting AY<=2023 only) | single primary change = refit scope. Diagnostic: adding most recent train year (2022->2023) is +0.0022 honest local D2, outside the D-025 band. 2024 was 26% of training rows and unused in fit. | 0.1331 | - | — | clean | `a68c5a47d9a4` |
+| 16 | 2026-10-21 23:20 UTC | exp-022 | exp-021 config, seed 1 - second seed to firm up the label-parity claim [D-045][D-048] | identical to exp-021 apart from seed. Tests whether 0.12150 was a lucky draw; the parity claim in D-045 rests on n=1 vs a 3-seed band. | 0.1328 | - | — | clean | `510e0e367a6a` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -589,3 +590,36 @@ past. Rolling-origin remains the design.
 **State:** 6 slots used today, 4 remaining. Best single run exp-020 at 0.12173
 (mis-keyed labels). **Best defensible run exp-021 at 0.12150 (corrected
 labels).**
+
+### exp-022 — second seed, parity resolved (2026-10-21 23:20)
+
+| # | timestamp | tag | message | change | local D² (honest) | LB score | Δ | attribution | sha256 |
+|---|---|---|---|---|---|---|---|---|---|
+| 16 | 23:20 | exp-022 | exp-021 config, seed 1 | **seed only** | 0.1328 | **0.12249** | **+0.00099** vs exp-021 | clean | `510e0e367a6a10e3` |
+
+D-045 said the corrected label table was "at parity" with the mis-keyed one but
+rested on n=1 against a 3-seed band. This is that second seed.
+
+| config | seed 0 | seed 1 | seed 2 | mean | sd |
+|---|---|---|---|---|---|
+| corrected + refit | 0.12150 | **0.12249** | — | **0.12200** | 0.00070 |
+| mis-keyed, no refit | 0.12113 | 0.12024 | 0.12173 | 0.12103 | 0.00075 |
+
+**Parity resolves in our favour.** Corrected mean beats mis-keyed mean by
++0.00097 (~1.3 pooled sd); corrected best beats mis-keyed best by +0.00076.
+**exp-022 at 0.12249 is our best submission to date** and it is on the
+actuarially correct model — D-044's presentation decision is now correct *and*
+better, not a trade.
+
+n=2 vs n=3, so strong directional evidence rather than proof. But the direction
+never reversed in either pairing, and the earlier "corrected labels are worse"
+reading came from comparing before the D-045 refit was applied.
+
+**Withdraws part of D-041.** The "corrected labels fit 8× more stably" note was
+measured on runs *without* the final refit. After D-045 the corrected band is
+0.00070 against the mis-keyed 0.00075 — no meaningful difference. The
+stability was an artefact of dropping 26% of the training data, not a property
+of the label table.
+
+**State:** 7 slots used, 3 remaining. Best single run and best defensible model
+are now the same run (exp-022, 0.12249).

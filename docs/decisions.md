@@ -1224,3 +1224,54 @@ ncb_years ×0.898, sum_insured ×1.112. Note `driver_age` is U-shaped in reality
 variant in R-06 would handle it properly.
 
 Artefacts output: `outputs/metrics/glm-001_relativities.csv`.
+
+## D-048 — Label parity resolved: the corrected table is now the better model
+**2026-10-21 · accepted · closes the D-041/D-044 tension · exp-022**
+
+D-045 established that the corrected label table was **at parity** with the
+mis-keyed one (0.12150 vs a 0.12173 best / 0.12103 mean), but rested on a
+single seed against a three-seed band and said so explicitly. exp-022 is that
+second seed. It resolves the question and resolves it the other way.
+
+| config | seed 0 | seed 1 | seed 2 | mean | sd |
+|---|---|---|---|---|---|
+| **corrected labels + D-045 refit** | 0.12150 | **0.12249** | — | **0.12200** | 0.00070 |
+| mis-keyed labels, no refit | 0.12113 | 0.12024 | 0.12173 | 0.12103 | 0.00075 |
+
+- Corrected **best (0.12249)** beats mis-keyed best (0.12173) by **+0.00076**.
+- Corrected **mean (0.12200)** beats mis-keyed mean (0.12103) by **+0.00097**,
+  about 1.3 pooled seed sd.
+- Both corrected runs beat two of the three mis-keyed runs.
+
+**This is our best submission to date**, and it is on the model we can defend.
+The D-044 decision to present the corrected table is no longer a
+correctness-over-score trade — it is now correct *and* better. The tension that
+D-041 opened is closed.
+
+Stated carefully, because the sample is still small: **n=2 against n=3**. The
+mean gap is ~1.3 sd, so this is strong directional evidence rather than proof.
+But note the direction never reversed across either pairing, and the previous
+"corrected labels score worse" conclusion came from comparing n=2 to n=3 *before*
+the D-045 refit was applied. With the refit in place the ordering flips.
+
+### A correction to D-041's unexplained finding
+
+D-041 recorded that the corrected labels fit **8× more stably** (seed sd
+0.00009 vs 0.00075) with no explanation. That comparison was made on runs
+**without** the final refit. After D-045 the corrected-label seed band is
+0.00070 — essentially the same as the mis-keyed band (0.00075).
+
+So the stability difference was an artefact of the missing refit, not a
+property of the label table. Removing 26% of the training data happened to
+suppress seed variance; restoring it restores the variance. The "8× more
+stable" observation should be withdrawn.
+
+### Current standings
+
+| | score | note |
+|---|---|---|
+| **exp-022** | **0.12249** | **best — corrected labels + refit, seed 1** |
+| exp-020 | 0.12173 | mis-keyed labels, best of 3 |
+| exp-021 | 0.12150 | corrected labels + refit, seed 0 |
+
+Best *single* run and best *defensible* model are now the same run.
