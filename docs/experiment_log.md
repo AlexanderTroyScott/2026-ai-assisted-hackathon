@@ -31,6 +31,7 @@ negative results are as valuable as positive ones.
 | 7 | 2026-10-20 14:56 | exp-007 | exp-006 + time-safe historical relativity features (D-027) | historical level relativities (cost rate + freq) strictly lagged (pe < ps) expose price/risk misalignment | 0.1248 | **0.11637** | **+0.00068** | clean | `44af51f7b6c3` |
 | 8 | 2026-10-20 15:47 | exp-009 | exp-007 averaged over 3 seeds (D-025/D-029) | seed averaging reduces the variance behind local/LB rank flips | 0.1250 | **0.11632** | **−0.00005** | clean | `5a16b2b2d1ad` |
 | 9 | 2026-10-20 16:57 | exp-010 | exp-007 + address/customer rating attributes (D-030) | the dimension tables were never joined, so the property-geo and demographic rating factors were listed but silently absent from every model — restoring them should help substantially, especially property lines | 0.1342 | **0.12113** | **+0.00476** | clean | `0b06b8e14c23` |
+| 10 | 2026-10-21 02:24 UTC | exp-015 | exp-010 stack + corrected 2023 labels (D-033/D-035); premium-only level (D-036) | isolates the label correction; level held at premium-only so D-009 stays out of it | 0.1332 | - | — | clean | `155f5cc7198f` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -366,3 +367,35 @@ deny-list guard.
 **Still open:** D-009 is `proposed` and needs human sign-off before the next
 submission; the buildings central factor 1.0556 sits just past the point where
 the earlier sensitivity row found D² starting to decline.
+
+### exp-015 — corrected labels, premium-only level (2026-10-21 02:24)
+
+| # | timestamp | tag | message | change | hypothesis | local D² | LB score | Δ | attribution | sha256 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 10 | 2026-10-21 02:24 | exp-015 | exp-010 stack + corrected 2023 labels (D-033/D-035); premium-only level (D-036) | **one primary change: the label correction** | correcting the 2023 over-development should improve calibration | 0.1332 | **0.11955** | −0.00158 | clean | `155f5cc7198f70f8` |
+
+Config: exp-010's exact stack (`base,premium,experience,weather,flags,relativity,address,customer`, tweedie, seed 0, `development=lob`, fold 2024). Level deliberately held at **premium-only** so D-009 stays out of the comparison — this slot isolates the label change and nothing else. 1 of 10 slots used today.
+
+**Result: worse by 0.00158** (exp-010 0.12113 → exp-015 0.11955). Just inside the D-025 ~0.002 band, so taken alone it is not conclusive — but the direction is consistent with the level arithmetic, and this is the first leaderboard evidence bearing directly on the open D-009 level question.
+
+Local D² moved only −0.0010 (0.1342 → 0.1332) — a local tie that the leaderboard resolved as a real drop. Another instance of D-025.
+
+**Why a correct fix can score worse — the important finding.** The D-033/D-035 correction is right: it reproduces `data_findings.md` §5 exactly (motor f(0→1) 1.221 vs documented 1.223). But it *removes* level from the training labels:
+
+| | old (buggy) | new (correct) | level removed |
+|---|---|---|---|
+| buildings 2023 | ×1.092 | ×1.003 | **−8.2%** |
+| contents 2023 | ×1.044 | ×1.004 | **−3.8%** |
+| motor 2023 | ×1.030 | ×1.030 | 0 |
+
+The bug was applying the age-0 factor to an accident year sitting at age 1. That was wrong — but it was accidentally supplying a loading the triangle method **explicitly does not include**. From `data_findings.md` §5: the age-to-age factors are "*lower bounds — they capture late reporting but not IBNER on open claims*", and D-005 states the target needs "*…plus IBNER on open claims*". The over-development was masking part of a documented gap.
+
+Supporting evidence that the gap is real and material: open-claim share is **20.4% for 2024** against 3.2% for 2023, and 2024 open claims carry a mean case of ~7.7k versus 21–27k for mature open claims. The immature year is exactly where the bug was over-developing, and exactly where IBNER lives.
+
+The measured sensitivity on the 2024 holdout maps −0.00158 D² to roughly a **−5% level miss** — consistent with removing 8.2%/3.8% of label level on ~45% of cost without replacing it with an IBNER loading.
+
+**Conclusion for the write-up, and the state of D-009.** The chain-ladder factors are now correct *as chain-ladder factors*. What they are not is ultimate factors — the IBNER-on-open-claims component has never been estimated. That is the identified gap, it is documented in the findings as a lower bound, and it is the C-1 candidate (Bornhuetter-Ferguson / Cape Cod labels) already queued in `docs/references.md`. Per AGENTS.md rule 1 it must be **measured, not invented** — no ad-hoc loading is being added here.
+
+Practical read for the next slot: the old table's accidental IBNER loading plus the premium-only level happened to net out close to right for 2025. Both corrections are independently justified; doing one without the other leaves the level short. The natural next experiment is the label correction **with** a properly estimated IBNER component (C-1), or the label correction with the D-009 central level, measured as separate slots so the two effects stay attributable.
+
+Our best remains **exp-010 at 0.12113**. exp-015 is retained as a negative result — it is the evidence that pins the IBNER gap.

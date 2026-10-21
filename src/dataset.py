@@ -68,7 +68,7 @@ SEVERITY_INDEX = {
 }
 PREMIUM_ANCHOR = {"motor": 1.027, "buildings": 1.053, "contents": 1.054}
 CLAIMS_WEIGHT, PREMIUM_WEIGHT = 0.7, 0.3  # D-009 — status `proposed`, needs sign-off
-TREND_SCENARIOS = ("low", "central", "high")
+TREND_SCENARIOS = ("premium", "low", "central", "high")
 
 
 def forward_factors(scenario: str = "central") -> dict:
@@ -77,6 +77,8 @@ def forward_factors(scenario: str = "central") -> dict:
     'central' is D-009's 70/30 blend of the claims-index CAGR and the premium
     anchor. 'low'/'high' bracket it with the two indications themselves, so the
     range never pretends to more precision than the two sources support.
+    'premium' is the premium anchor on its own — the pre-D-034 level, kept so a
+    submission can isolate a label change from a level change.
 
     D-009 is `proposed`: the *level* is a judgement call awaiting human sign-off
     (AGENTS.md), so callers must not treat 'central' as verified.
@@ -86,6 +88,8 @@ def forward_factors(scenario: str = "central") -> dict:
     if scenario == "central":
         return {ln: CLAIMS_WEIGHT * claims[ln] + PREMIUM_WEIGHT * PREMIUM_ANCHOR[ln]
                 for ln in LINES}
+    if scenario == "premium":
+        return dict(PREMIUM_ANCHOR)
     if scenario == "low":
         return {ln: min(claims[ln], PREMIUM_ANCHOR[ln]) for ln in LINES}
     if scenario == "high":

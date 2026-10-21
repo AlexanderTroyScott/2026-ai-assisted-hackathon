@@ -86,7 +86,7 @@ def developed_totals(attr: pd.DataFrame, line: str) -> dict[str, float]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--kind", choices=["constant_rate", "premium_lr"], required=True)
-    ap.add_argument("--trend", default="central", choices=["low", "central", "high"],
+    ap.add_argument("--trend", default="central", choices=["premium", "low", "central", "high"],
                     help="2025 level scenario (D-009, still `proposed`)")
     args = ap.parse_args()
 

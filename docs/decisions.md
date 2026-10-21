@@ -552,3 +552,50 @@ Gaps agree to 0.0014 (inside the D-025 band) and the top features are the same
 stability for the write-up**, not a second tuning opportunity — per D-025 local
 differences below ~0.002 do not rank on the leaderboard. The 2024 fold stays
 primary because it is closest to the 2025 scoring population (D-018).
+
+## D-039 — The IBNER gap is now exposed and measured
+**2026-10-21 · accepted · negative result that pins an open quantity**
+
+exp-015 (2026-10-21) isolated the D-033/D-035 label correction with the level
+held at premium-only, so the slot tested the label change and nothing else. It
+scored **0.11955 vs exp-010's 0.12113 (−0.00158)** — a correct fix that scores
+worse. 1 of 10 slots used; best remains exp-010.
+
+This is the first measurement bearing on the IBNER component, and it changes how
+D-005 should be read:
+
+- The age-to-age factors in `data_findings.md` §5 are correct *as chain-ladder
+  factors*. D-035 now reproduces them exactly. That part is closed.
+- They are documented **lower bounds** that "capture late reporting but not
+  IBNER on open claims", and D-005's own wording requires "*plus IBNER on open
+  claims*". That component has never been estimated.
+- The old mis-keyed table applied the age-0 factor to accident years at age 1.
+  Wrong — but it was accidentally supplying a loading in the direction of the
+  missing IBNER. Removing the bug without replacing the loading leaves the
+  training level short by roughly the documented gap.
+
+Evidence the gap is real and material rather than noise: open-claim share is
+**20.4% for 2024** against 3.2% for 2023; 2024 open claims carry a mean case of
+~7.7k versus 21–27k for mature open claims. The immature year is exactly where
+the bug over-developed and exactly where IBNER lives. Mapping −0.00158 D²
+through the measured level sensitivity gives roughly a **−5% level miss**.
+
+**No loading has been invented** (AGENTS.md rule 1). The gap is now a measured,
+named quantity instead of an accidental one.
+
+Consequences:
+- C-1 (Bornhuetter-Ferguson / Cape Cod labels, `docs/references.md`) is no longer
+  a speculative refinement — it is the candidate that closes a measured gap.
+  Same gate as every other change: local experiment → `D-xxx` → experiment-log
+  row → quota slot only if it clears the D-025 band.
+- D-009's level question is entangled with this. The old accidental IBNER
+  loading plus the premium-only level netted out near-correct for 2025; fixing
+  either one alone leaves the level short. The two must be measured in separate
+  slots to stay attributable.
+- exp-015 is retained as a **valuable negative result**. It is the run that made
+  the IBNER gap visible.
+
+**Open question for the human:** whether to spend the next slot on (a) the label
+correction plus an estimated IBNER component (C-1, the principled fix), or
+(b) the label correction plus the D-009 central level (faster, but entangles
+D-009). Both are single-primary-change if kept separate from each other.

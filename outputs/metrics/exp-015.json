@@ -1,0 +1,43 @@
+{
+  "name": "exp-015",
+  "features": "base,premium,experience,weather,flags,relativity,address,customer",
+  "mode": "tweedie",
+  "seed": 0,
+  "development": "lob",
+  "trend": "premium",
+  "fold": "2024",
+  "holdout_year": 2024,
+  "train_max_year": 2023,
+  "forward_factor": {
+    "motor": 1.027,
+    "buildings": 1.053,
+    "contents": 1.054
+  },
+  "d2_constant": 0.07910888682013018,
+  "d2_premium_lr": 0.07575705553536738,
+  "d2_model": 0.13324547640706108,
+  "d2_model_raw": 0.13031150062742414,
+  "n_iter": 130,
+  "top_features": {
+    "occupation": 1216,
+    "region": 501,
+    "exposure": 450,
+    "written_premium": 428,
+    "elevation_m": 276,
+    "sum_insured": 230,
+    "premium_per_exposure": 211,
+    "rainfall_mm": 190,
+    "energy_rating": 187,
+    "annual_mileage": 181,
+    "year_built": 173,
+    "years_licensed": 137,
+    "prior_claims_5y": 133,
+    "construction_type": 124,
+    "flood_zone": 124,
+    "driver_age": 123,
+    "voluntary_excess": 123,
+    "credit_band": 109,
+    "flood_zone_hist_rate": 92,
+    "dry_summer_index": 91
+  }
+}
