@@ -32,6 +32,10 @@ negative results are as valuable as positive ones.
 | 8 | 2026-10-20 15:47 | exp-009 | exp-007 averaged over 3 seeds (D-025/D-029) | seed averaging reduces the variance behind local/LB rank flips | 0.1250 | **0.11632** | **−0.00005** | clean | `5a16b2b2d1ad` |
 | 9 | 2026-10-20 16:57 | exp-010 | exp-007 + address/customer rating attributes (D-030) | the dimension tables were never joined, so the property-geo and demographic rating factors were listed but silently absent from every model — restoring them should help substantially, especially property lines | 0.1342 | **0.12113** | **+0.00476** | clean | `0b06b8e14c23` |
 | 10 | 2026-10-21 02:24 UTC | exp-015 | exp-010 stack + corrected 2023 labels (D-033/D-035); premium-only level (D-036) | isolates the label correction; level held at premium-only so D-009 stays out of it | 0.1332 | - | — | clean | `155f5cc7198f` |
+| 11 | 2026-10-21 12:54 UTC | exp-016 | exp-015 config, seed 1 (labels corrected, premium level) - LB noise band probe [D-040] | H2 probe: measures unmeasured LB seed band; also tests whether exp-015's -0.00158 was refit noise | 0.1294 | - | — | clean | `0d4d1f9992c4` |
+| 12 | 2026-10-21 13:35 UTC | exp-017 | H1 level probe: exp-016 predictions x1.03 uniform (corrected labels, premium level) [D-040] | single primary change = level. Tests whether the 2025 level is short (D-005 anchor / IBNER). Expected under H1: LB > 0.11942 | 0.1294 | - | — | clean | `f624564534d6` |
+| 13 | 2026-10-21 14:28 UTC | exp-019 | exp-010 config, seed 1, PRE-D-033 label table (control) - measures old-labels seed band [D-041] | control run via /tmp patch of src.dataset.LDF only. Isolates whether exp-010's 0.12113 is a lucky seed draw. | 0.1337 | - | — | clean | `271770ec27ef` |
+| 14 | 2026-10-21 14:49 UTC | exp-020 | exp-010 config, seed 2, PRE-D-033 label table (control) - third point on old-labels seed band [D-041] | FINAL slot today (5 reserved for the human). Completes the seed-band estimate on the old-labels side where variance is largest. | 0.1346 | - | — | clean | `e28fcebeaac8` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -467,3 +471,66 @@ s=1.0 value, Σpred/Σy = 1.0000:
 Our best remains **exp-010 at 0.12113**. exp-015 stays logged as a valuable
 negative result — it is the run that exposed both the refit-reshuffle effect and
 the oracle-recalibration defect.
+
+### Overnight session 2026-10-21 — hypothesis testing (D-041). 5 slots used, 5 reserved.
+
+| # | timestamp | tag | message | change | local D² (raw) | LB score | Δ vs control | attribution | sha256 |
+|---|---|---|---|---|---|---|---|---|---|
+| 11 | 12:54 | exp-016 | exp-015 config, seed 1 | seed only | 0.1294 | **0.11942** | −0.00013 vs exp-015 | clean | `0d4d1f9992c4a36b` |
+| 12 | 13:35 | exp-017 | H1 level probe: exp-016 ×1.03 uniform | level only | 0.1294 | **0.11949** | +0.00007 vs exp-016 | clean | `f624564534d690a1` |
+| 13 | 14:28 | exp-019 | exp-010 config, seed 1, PRE-D-033 labels | seed only (old labels) | 0.1319 | **0.12024** | −0.00089 vs exp-010 | clean | `271770ec27ef9349` |
+| 14 | 14:49 | exp-020 | exp-010 config, seed 2, PRE-D-033 labels | seed only (old labels) | 0.1327 | **0.12173** | +0.00060 vs exp-010 | clean | `e28fcebeaac86844` |
+
+**The headline correction to D-040.** D-040 called the label penalty "12× the
+seed band". That was an artefact of measuring the band on one side only. Full
+design:
+
+| | seed 0 | seed 1 | seed 2 | mean | sd |
+|---|---|---|---|---|---|
+| old labels | 0.12113 | 0.12024 | 0.12173 | **0.12103** | **0.00075** |
+| new labels | 0.11955 | 0.11942 | — | **0.11949** | **0.00009** |
+
+- Label effect **+0.00155** (old better) vs pooled seed sd 0.00061 ⇒ **~2.1×**,
+  not 12×. Direction consistent across both pairings (−0.00158, −0.00082), so
+  probably real, but modest.
+- **Best single run is exp-020 at 0.12173**, not exp-010. Our previous "best"
+  was a favourable draw from a band 0.0015 wide. Honest best estimate is the
+  **mean 0.12103**.
+- Unexplained and worth keeping: corrected labels fit **8× more stably**
+  (seed sd 0.00009 vs 0.00075). Cause unknown.
+
+**H1 level — refuted.** exp-017 = exp-016 ×1.03 → +0.00007, half a seed band.
+Uniform level is worth nothing; the IBNER-as-level story dies with it.
+
+**H2 noise — refuted as an explanation**, but see the band correction above.
+
+**H3 recency weighting — refuted.** `--recency-lambda` sample weights
+`exp(lambda·(AY−train_max))`, swept on fold 2023 (train 2021–22 → holdout 2023):
+
+| lambda | 0.00 | 0.15 | 0.30 | 0.50 |
+|---|---|---|---|---|
+| honest local D² | **0.1404** | 0.1348 | 0.1379 | 0.1362 |
+
+Uniform wins at every tilt; early stopping collapses 163 → ~88 iterations.
+
+**H4 tail flattening — not distinguishable from noise. NOT SUBMITTED.**
+`exp-018.csv` was built (gamma power-stretch, sum-preserving) then discarded
+locally after measurement showed old-vs-new spread diff 0.0074 < within-labels
+seed spread 0.0207. Keeping this in the log as a negative result so nobody
+rebuilds it.
+
+One diagnostic that does survive: label change moves ranks **less** than a seed
+change (Spearman 0.993 vs 0.990) yet costs more score — so it is **not** a
+ranking effect.
+
+**Control-run method.** exp-019/exp-020 were produced by a `/tmp` runner that
+patches `src.dataset.LDF` back to the pre-D-033 table before calling
+`run_experiment.main()`. The repo keeps the correct table; nothing in `src/`
+was reverted. Reproducible: see `/tmp/opencode/run_old_ldf.py` pattern — patch
+the module global, then call main().
+
+**State at handover.** 5 slots remain for the human. Our best *single* run is
+exp-020 at 0.12173 (old, wrong labels). Our best *defensible* model is the
+corrected-labels config at mean 0.11949. D-009 still `proposed`. The open
+question is why an actuarially wrong label table predicts 2025 slightly better —
+no mechanism established after four tests.

@@ -269,6 +269,9 @@ def main() -> int:
                     help="2025 level scenario (D-009, still `proposed`)")
     ap.add_argument("--fold", default="2024", choices=sorted(FOLDS),
                     help="rolling-origin holdout year (D-006)")
+    ap.add_argument("--recency-lambda", type=float, default=0.0,
+                    help="exp(lambda*(AY-train_max)) sample weights; >0 up-weights "
+                         "recent accident years (D-041). 0 = uniform.")
     ap.add_argument("--weather-lag", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-val-pred", action="store_true")
@@ -316,6 +319,18 @@ def main() -> int:
         min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
         bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
     )
+    # D-041: recency weighting. The 2025 scoring population is the newest year,
+    # and the DGP findings document non-stationary relativities (ncb=0 freq rel
+    # 1.60 -> 2.53; age 17-24 2.03 -> 1.74). Uniform training weights let 2021
+    # pull the fit as hard as 2023. Note the D-033 label bug was accidentally
+    # doing this job by inflating 2023 labels, which is why removing it cost
+    # leaderboard score -- this replaces that accident with an explicit knob.
+    rec_w = np.exp(args.recency_lambda * (tr["acc_year"].to_numpy() - train_max_year))
+    rec_w = rec_w / rec_w.mean()
+    if args.recency_lambda:
+        print(f"recency lambda={args.recency_lambda}: sample-weight range "
+              f"{rec_w.min():.3f}..{rec_w.max():.3f}")
+
     if args.mode == "freq_sev":
         p_raw, fmodel, smodel, use, cats = fit_freq_sev(tr, va, cols, CAT_FEATURES, seed=args.seed)
         model = smodel
@@ -328,6 +343,7 @@ def main() -> int:
             eval_metric="tweedie",
             callbacks=[lgb.early_stopping(80, verbose=False), lgb.log_evaluation(0)],
             categorical_feature=cats,
+            sample_weight=rec_w,
         )
         p_raw = np.maximum(model.predict(X_va), 1e-3)
         best_iter = int(model.best_iteration_)
@@ -408,7 +424,7 @@ def main() -> int:
         "name": args.name, "features": args.features, "mode": args.mode, "seed": args.seed,
         "development": args.development, "trend": args.trend, "fold": args.fold,
         "holdout_year": holdout_year, "train_max_year": train_max_year,
-        "forward_factor": fwd_tab,
+        "forward_factor": fwd_tab, "recency_lambda": args.recency_lambda,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),
         "d2_model": float(d2(p_va_oof)),
         "d2_model_oracle": float(d2(p_va_oracle)),

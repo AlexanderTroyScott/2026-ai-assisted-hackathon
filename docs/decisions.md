@@ -740,3 +740,117 @@ exp-015 left open:
   −0.00158 drop, which would also defeat "not noise".
 
 Cheapest decisive pair is those two, one slot each.
+
+## D-041 — Four hypotheses tested overnight; seed band is asymmetric
+**2026-10-21 · accepted · measured, with corrections to D-040's over-claim**
+
+Budget: 5 slots spent (exp-016..exp-020), **5 reserved for the human**. All four
+candidate explanations for exp-015's leaderboard drop were tested. Three are
+refuted; the fourth is real but much weaker than first claimed.
+
+### H1 — level is short on the 2024 anchor. **REFUTED.**
+
+exp-017 = exp-016 predictions × 1.03 uniform. **0.11949** vs 0.11942, delta
+**+0.00007** — half the seed band measured on that side. A 3% uniform level move
+is worth nothing. Consistent with the model-level sensitivity curve (D-040),
+which is flat near scale 1.0.
+
+This also kills the IBNER-as-level story. If the LDFs' missing IBNER component
+were a level shortfall, a uniform lift would have recovered it.
+
+### H2 — the drop is refit/seed noise. **REFUTED as an explanation, but it
+exposed a serious error in D-040.**
+
+exp-016 (corrected labels, seed 1) = 0.11942 against exp-015 (seed 0) = 0.11955.
+Seed band **0.00013** — and on that basis D-040 called the −0.00158 label effect
+"12× the seed band". **That was wrong.** The band was measured only on the
+corrected-label side, which turns out to be the *low-variance* side.
+
+The control (exp-019, exp-020) re-ran the **pre-D-033 label table** at seeds 1
+and 2, patched via `src.dataset.LDF` without touching the repo:
+
+| | seed 0 | seed 1 | seed 2 | mean | sd |
+|---|---|---|---|---|---|
+| **old labels** | 0.12113 | 0.12024 | **0.12173** | 0.12103 | **0.00075** |
+| **new labels** | 0.11955 | 0.11942 | — | 0.11949 | **0.00009** |
+
+Two things fall out.
+
+**The label effect is real but modest.** Mean difference **+0.00155** in favour
+of the old labels, against a pooled seed sd of 0.00061 — about **2.1×**, not 12×.
+Direction is consistent (old wins at every pairing: −0.00158 at seed 0,
+−0.00082 at seed 1), so the effect is probably genuine; the magnitude is roughly
+one to two seed standard deviations, not an order of magnitude.
+
+**Best single run is exp-020 at 0.12173, not exp-010 at 0.12113.** exp-010's
+position as "our best" was partly a lucky draw at the top of a 0.0015-wide band.
+Our honest best estimate is the *mean*, 0.12103, not either single run.
+
+**A separate, unexplained finding:** the corrected labels fit far more stably
+(seed sd 0.00009 vs 0.00075, an 8× difference). Whatever the 2023 over-development
+was doing, it was also injecting variance into the fit. That is not obviously
+bad for the score — old labels win on the mean — but it is a real property of
+the two label tables and worth noting in the write-up. Cause unknown.
+
+### H3 — recency weighting replaces what the bug was doing. **REFUTED.**
+
+The mechanism looked plausible: the old table inflated 2023 labels (buildings
+×1.092 vs the correct ×1.003), and since `lob_recalibrate` pins each LOB's total
+that inflation *redistributed* cost toward 2023-like rows. The scoring
+population is 2025, the newest year — so the bug may have been accidental
+recency weighting.
+
+Tested explicitly with `--recency-lambda`, sample weights
+`exp(lambda·(AY − train_max))`, on fold 2023 (train 2021–22 → holdout 2023 — the
+exact analogue of train ≤2023 → predict 2025). Honest (train-fitted) local D²:
+
+| lambda | 0.00 | 0.15 | 0.30 | 0.50 |
+|---|---|---|---|---|
+| local D² | **0.1404** | 0.1348 | 0.1379 | 0.1362 |
+
+Uniform weights win by a clear margin at every tilt. Early stopping also
+collapsed from 163 iterations to ~88, so the tilt distorts the objective rather
+than refining it. The recency story is not supported.
+
+### H4 — corrected labels flatten the tail. **NOT DISTINGUISHABLE FROM NOISE.**
+
+First pass suggested the corrected labels produced a flatter predicted
+distribution (sd/mean 1.082 vs 1.090, max 8,725 vs 9,605) and that the 2025
+truth rewards spread. **This was an over-read and I discarded the probe before
+submitting it.** Measured across all four submissions, the old-vs-new spread
+difference (0.0074) is *smaller* than the within-labels seed spread (0.0207).
+
+A supporting diagnostic does survive, and is worth keeping: the label change
+moves ranks **less** than a seed change does (Spearman 0.993 old-vs-new vs 0.990
+seed-0-vs-seed-1) yet costs more score. So the effect is not a ranking effect —
+but the shape evidence is not strong enough to say what it *is*.
+
+**No shape probe was submitted.** `outputs/submissions/exp-018.csv` was built
+and then discarded locally.
+
+### Where this leaves D-033/D-035
+
+The label correction remains **correct as chain-ladder factors** and must stay.
+The leaderboard mildly prefers the over-developed table (mean +0.00155), the
+direction is consistent, but no mechanism has been established for *why*, and
+all four candidate mechanisms are dead or unproven. The honest position:
+
+- Keep the corrected labels. They reproduce `data_findings.md` §5 exactly; the
+  old table is wrong and cannot be justified to an examiner.
+- Do not claim the penalty is large. It is ~2 seed sd, and our previous "best"
+  was itself a favourable draw from a wider band than we knew.
+- The open question is now genuinely open, not merely unmeasured: **why does an
+  actuarially wrong label table predict 2025 slightly better?** Candidate
+  explanations that remain live: the 2025 population shift (D-025) interacting
+  with fit shape; the corrected labels being a lower bound that *under*-develops
+  in a way the old table accidentally compensated; or the effect being at the
+  edge of detectability and not worth chasing.
+
+### Metric note
+
+`--recency-lambda` is implemented and gated locally, default 0.0 (off). The
+control runs (exp-019/exp-020) were produced by patching `src.dataset.LDF` in a
+`/tmp` runner so the repo keeps the correct table — the patch path is documented
+in the experiment log. Historical `d2_model` in manifests remains oracle-based;
+from exp-016 onward `d2_model` is train-fitted and `d2_model_oracle` is recorded
+separately (D-040).
