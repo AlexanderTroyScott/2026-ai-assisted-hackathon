@@ -272,6 +272,13 @@ def main() -> int:
     ap.add_argument("--recency-lambda", type=float, default=0.0,
                     help="exp(lambda*(AY-train_max)) sample weights; >0 up-weights "
                          "recent accident years (D-041). 0 = uniform.")
+    ap.add_argument("--train-max", type=int, default=None,
+                    help="override the fold's training max AY (diagnostic: measures "
+                         "the value of including the most recent training year)")
+    ap.add_argument("--final-fit", action="store_true",
+                    help="refit on ALL training years incl. the holdout before "
+                         "scoring test (D-045). Uses the CV best_iteration as a "
+                         "fixed tree count; local D2 is then unavailable.")
     ap.add_argument("--weather-lag", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-val-pred", action="store_true")
@@ -279,6 +286,8 @@ def main() -> int:
     args = ap.parse_args()
     groups = set(args.features.split(","))
     holdout_year, train_max_year = FOLDS[args.fold]
+    if args.train_max is not None:
+        train_max_year = args.train_max
 
     print(f"=== {args.name}  features={args.features}  development={args.development}"
           f"  trend={args.trend}  fold={args.fold} ===")
@@ -386,6 +395,27 @@ def main() -> int:
 
     print("top features:", ", ".join(f"{k}={v}" for k, v in imp.head(12).items()))
 
+    # ---- D-045: final fit on ALL training years ----
+    # The holdout is only for model selection. Once the tree count is chosen,
+    # leaving the holdout out of the fit throws away the most recent 26% of the
+    # book (2024: 626,190 rows), which is also the year closest to the 2025
+    # scoring population. Standard practice is to refit on everything before
+    # deploying. Local D2 above is still the honest out-of-sample number for
+    # this config family; it is NOT re-measurable after refitting.
+    final_model = model
+    if args.final_fit and args.mode != "freq_sev":
+        n_fix = max(int(best_iter), 50)
+        print(f"\nD-045 final refit on ALL {len(train):,} training rows "
+              f"(AY 2021-2024) with fixed n_estimators={n_fix}")
+        X_all, X_te, _, _ = align(train, test, cols, CAT_FEATURES)
+        final_model = lgb.LGBMRegressor(
+            objective="tweedie", tweedie_variance_power=1.5,
+            n_estimators=n_fix, learning_rate=0.04, num_leaves=64,
+            min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
+            bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
+        )
+        final_model.fit(X_all, train["y_ult"], categorical_feature=cats)
+
     # ---- score the test set ----
     X_all, X_te, _, _ = align(train, test, cols, CAT_FEATURES)
     if args.mode == "freq_sev":
@@ -394,11 +424,17 @@ def main() -> int:
         p_ref = (np.maximum(fmodel.predict(X_va), 1e-9)
                  * np.maximum(smodel.predict(X_va), 1e-3))
     else:
-        p_te = np.maximum(model.predict(X_te), 1e-3)
-        p_ref = np.maximum(model.predict(X_va), 1e-3)
-    # carry the holdout LOB scales over to the test set
-    p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
-                           ref_pred=p_ref, ref_actual=yv)
+        p_te = np.maximum(final_model.predict(X_te), 1e-3)
+        p_ref = np.maximum(final_model.predict(X_va), 1e-3)
+    # LOB scales. After a final refit the anchor should also be all-data, so the
+    # level is set on the full training book rather than the 2024 slice alone.
+    if args.final_fit:
+        p_all = np.maximum(final_model.predict(X_all), 1e-3)
+        p_te = lob_recalibrate(p_te, test["line"], ref_lines=train["line"],
+                               ref_pred=p_all, ref_actual=train["y_ult"].to_numpy())
+    else:
+        p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
+                               ref_pred=p_ref, ref_actual=yv)
     fwd_tab = forward_factors(args.trend)
     fwd = test["line"].map(fwd_tab).to_numpy()
     # Forward factor is applied because labels are on an accident-year basis and

@@ -1021,3 +1021,124 @@ the artefact flag, because it is not monotone — it is a new binary split.
 No submission. Effect sizes are all inside the local noise band, and spending a
 slot on a ≤0.0007 candidate would be a poor use of quota given the D-025 finding
 that local near-ties do not rank reliably on the leaderboard.
+
+## D-044 — Human decisions on scope, presentation and slot policy
+**2026-10-21 · accepted · human-directed, closes the open questions in D-042/D-041**
+
+Five calls made by the human, recorded so nothing downstream is ambiguous.
+
+1. **2025 weather stays in scope.** Rationale given: it is available to every
+   team. So `D-012` stands as written — weather is accepted on the documented
+   pricing-time assumption, the sensitivity is retained, and the assumption is
+   disclosed in the write-up rather than removed from the model. The exposure to
+   examiner challenge is accepted knowingly and is now a recorded judgement, not
+   an oversight. `D-042`'s measurement (removal costs ≤ +0.0005, not separable
+   from noise) remains the sensitivity evidence to attach.
+
+2. **The corrected label table is our presented model** (D-033/D-035). The old
+   mis-keyed table scores marginally better (mean 0.12103 vs 0.11949) and holds
+   the single best run (exp-020, 0.12173); it will be reported as a documented
+   sensitivity, not as our result. Decision rests on actuarial correctness, not
+   score.
+
+3. **Slot policy: hybrid.** Conservative normally (only changes clearing the
+   D-025 band), becoming more exploratory as we approach midnight GMT. Rationale
+   is that the leaderboard has shown lucky-draw movement (exp-020) larger than
+   most feature effects, so an exploratory window is worth more late than early.
+
+4. **C-3 (GLM + LGBM form ensemble) is first** among the model-form candidates.
+   Lower risk than C-1 because it does not touch the target and therefore cannot
+   destabilise the label correction just settled.
+
+5. **C-2 (Tweedie GLM benchmark) and C-5 (ASOP 9 documentation pass) take
+   priority now**, with next steps evaluated afterwards. Rationale: judging
+   weights actuarial credibility at 20% and that axis is where we can still
+   gain, whereas the accuracy axis is showing diminishing returns.
+
+Consequent gating rule for C-3, from `docs/references.md`: the GLM must land
+within ~0.01 local D² of LGBM to be worth blending. That is measured next.
+
+`D-009` is still `proposed` and is not ratified by this entry — the human was
+told it is low-stakes (measured flat) and it remains for the assumptions record.
+
+## D-045 — The final model was never fitted on 2024
+**2026-10-21 · accepted · human-identified, measured, submitted as exp-021**
+
+Human asked why we hold 2024 out entirely rather than cross-validating, whether
+we were missing 2024 claim developments, and whether we should recalibrate on
+all data before predicting. All three pointed at a real defect.
+
+### The defect
+
+`run_experiment.py` split `tr = AY <= 2023` and called `model.fit(X_tr, ...)`.
+The 2024 rows — **626,190 of 2,409,311, i.e. 26.0% of the training book** —
+appeared only in `eval_set` for early stopping. They contributed **zero**
+gradient updates. The submission model had never seen the most recent year of
+experience, which is also the year closest to the 2025 scoring population.
+
+Training periods all end 2024-12-30, so no 2024 policy has exposure in 2025 —
+but 2024 policies carry claims that develop *through* 2025, and 2024 is the
+accident year whose rating relationships are most likely to persist into 2025.
+
+### On 5-fold cross-validation specifically
+
+Random 5-fold is the wrong instrument here and was not used. The data is
+temporally structured and the scoring population is a future year, so random
+folds leak future into past. Rolling-origin (train ≤2023 → holdout 2024, and
+train ≤2022 → holdout 2023) is the right design and is what D-006 specifies.
+What was missing was not more folds but the **final refit after selection**.
+
+### Measurement: the most recent training year is worth +0.0022
+
+Diagnostic holding the holdout fixed at 2024 and varying only which years are
+fitted on (honest, train-fitted scales):
+
+| training years | honest local D² |
+|---|---|
+| 2021–2022 | 0.1309 |
+| 2021–2023 (previous) | 0.1331 |
+
+**+0.0022** — outside the entire D-025 ~0.002 tie band, and larger than every
+feature effect measured on 2026-10-21 (all ≤ 0.0007). By analogy, refitting on
+2021–2024 before predicting 2025 should help similarly.
+
+### Result: exp-021, +0.00195 on the leaderboard
+
+| config | LB score |
+|---|---|
+| exp-015 corrected labels, **no refit** | 0.11955 |
+| **exp-021 corrected labels, refit on all 2021–2024** | **0.12150** |
+| exp-020 mis-keyed labels, best of 3 seeds | 0.12173 |
+| exp-010/019/020 mis-keyed labels, mean of 3 | 0.12103 |
+
+The refit gains **+0.00195**, larger than the **−0.00158** label penalty
+measured in D-041. Consequence for that open question:
+
+**The corrected label table is now score-competitive.** exp-021 sits 0.00023
+below the best mis-keyed run and 0.00047 *above* the mis-keyed mean. That
+difference is well inside the 0.00075 seed band measured on the mis-keyed side.
+
+Stated carefully, because D-041 over-claimed twice already: this is **one seed**
+against a three-seed band. It establishes parity, not superiority. But it does
+defuse the tension D-041 left open — we can present the actuarially correct
+label table at no material score cost, which is what D-044 committed us to
+anyway.
+
+### What was also changed and why it does not confound
+
+The final refit also re-anchors the LOB recalibration on all-data scales rather
+than the 2024 slice. That is part of "fit the final model on all the data", not
+a separate knob. It cannot confound the attribution: D-041 measured the level
+as **flat** (uniform +3% moved the leaderboard by +0.00007), so any movement
+here is attributable to the refit, not the level.
+
+Single primary change: refit scope. exp-021 vs exp-015 share seed, features,
+labels, trend and fold; only the fit scope differs.
+
+### Implementation
+
+`--final-fit` refits on all training rows with the tree count fixed at the
+cross-validated `best_iteration` (no early stopping available without a
+holdout). `--train-max` added as a diagnostic override. Honest local D² is
+still reported from the pre-refit model and remains the out-of-sample estimate
+for the config family; it is not re-measurable after refitting.

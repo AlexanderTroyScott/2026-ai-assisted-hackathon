@@ -36,6 +36,7 @@ negative results are as valuable as positive ones.
 | 12 | 2026-10-21 13:35 UTC | exp-017 | H1 level probe: exp-016 predictions x1.03 uniform (corrected labels, premium level) [D-040] | single primary change = level. Tests whether the 2025 level is short (D-005 anchor / IBNER). Expected under H1: LB > 0.11942 | 0.1294 | - | — | clean | `f624564534d6` |
 | 13 | 2026-10-21 14:28 UTC | exp-019 | exp-010 config, seed 1, PRE-D-033 label table (control) - measures old-labels seed band [D-041] | control run via /tmp patch of src.dataset.LDF only. Isolates whether exp-010's 0.12113 is a lucky seed draw. | 0.1337 | - | — | clean | `271770ec27ef` |
 | 14 | 2026-10-21 14:49 UTC | exp-020 | exp-010 config, seed 2, PRE-D-033 label table (control) - third point on old-labels seed band [D-041] | FINAL slot today (5 reserved for the human). Completes the seed-band estimate on the old-labels side where variance is largest. | 0.1346 | - | — | clean | `e28fcebeaac8` |
+| 15 | 2026-10-21 19:54 UTC | exp-021 | D-045 final refit on ALL training years incl. 2024 (was fitting AY<=2023 only) | single primary change = refit scope. Diagnostic: adding most recent train year (2022->2023) is +0.0022 honest local D2, outside the D-025 band. 2024 was 26% of training rows and unused in fit. | 0.1331 | - | — | clean | `a68c5a47d9a4` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -534,3 +535,57 @@ exp-020 at 0.12173 (old, wrong labels). Our best *defensible* model is the
 corrected-labels config at mean 0.11949. D-009 still `proposed`. The open
 question is why an actuarially wrong label table predicts 2025 slightly better —
 no mechanism established after four tests.
+
+### D-045 — exp-021, final refit on all training years (2026-10-21 19:54)
+
+| # | timestamp | tag | message | change | local D² (honest) | LB score | Δ | attribution | sha256 |
+|---|---|---|---|---|---|---|---|---|---|
+| 15 | 19:54 | exp-021 | D-045 final refit on ALL training years incl. 2024 | **refit scope only** | 0.1331 | **0.12150** | **+0.00195** vs exp-015 | clean | `a68c5a47d9a48eaa` |
+
+**Human-identified defect.** The submission model was fitted on AY ≤ 2023
+only. 2024 rows (626,190 = 26.0% of the training book) were used for early
+stopping and contributed zero gradient updates — the most recent year of
+experience never entered the fit, and it is the year closest to the 2025
+scoring population.
+
+Diagnostic, holdout fixed at 2024, varying only fit scope (honest D²):
+train 2021–2022 = 0.1309 · train 2021–2023 = 0.1331 ⇒ **+0.0022** for one
+additional recent year. Outside the D-025 ~0.002 band and larger than every
+feature effect measured today (all ≤ 0.0007).
+
+**On 5-fold CV:** random 5-fold is wrong for temporally structured data scored
+on a future year — it leaks. Rolling-origin is the right design (D-006) and
+was already in place. What was missing was the *final refit after selection*,
+not more folds.
+
+**Result.** exp-021 (corrected labels, refit on 2021–2024) = **0.12150**.
+
+| | LB |
+|---|---|
+| exp-015 corrected labels, no refit | 0.11955 |
+| **exp-021 corrected labels, refit** | **0.12150** |
+| exp-020 mis-keyed labels, best of 3 | 0.12173 |
+| mis-keyed labels, mean of 3 | 0.12103 |
+
+**This defuses the D-041 label puzzle.** The refit gain (+0.00195) exceeds the
+label penalty (−0.00158). The corrected-labels model is now 0.00023 below the
+best mis-keyed run and 0.00047 above the mis-keyed mean — both inside the
+0.00075 seed band.
+
+Careful wording, given D-041 over-claimed twice: **one seed against a
+three-seed band**. This establishes **parity**, not superiority. But it means we
+can present the actuarially correct label table (D-044) at no material score
+cost, which removes the tension between correctness and score that D-041 left
+open.
+
+Attribution is clean: exp-021 vs exp-015 share seed, features, labels, trend
+and fold; only fit scope differs. The LOB recalibration anchor also moved to
+all-data scales as part of the same change, but D-041 measured level as flat
+(+0.00007 at uniform +3%), so any movement is the refit, not the level.
+
+Random 5-fold CV was **not** used and should not be: it leaks future into
+past. Rolling-origin remains the design.
+
+**State:** 6 slots used today, 4 remaining. Best single run exp-020 at 0.12173
+(mis-keyed labels). **Best defensible run exp-021 at 0.12150 (corrected
+labels).**
