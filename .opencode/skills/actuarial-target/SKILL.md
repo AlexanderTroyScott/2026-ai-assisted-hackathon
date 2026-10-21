@@ -72,9 +72,11 @@ Traps:
 - Scale shift, not shape change → a single per-peril scale factor is defensible.
 - YoY is not constant (2024 cooled). Extrapolate as **low / central / high** scenarios.
 
-Premium anchor (independent): premium/exposure index 2025 vs 2024 = motor +3.2%,
-buildings +5.1%, contents +5.6%. D-009 proposes blending 70% claims-index / 30%
-premium-anchor for the central factor — **status `proposed`, needs human sign-off**.
+Premium anchor (independent): premium/exposure index 2025 vs 2024 = motor +2.7%,
+buildings +5.3%, contents +5.4% (`data_findings.md` §6, the canonical figures —
+an earlier draft of this skill quoted +3.2/+5.1/+5.6 and was wrong). D-009
+proposes blending 70% claims-index / 30% premium-anchor for the central factor —
+**status `proposed`, needs human sign-off**.
 
 ## Validation rules (D-006)
 

@@ -354,3 +354,65 @@ def test_generated_submission_if_present():
         path = ROOT / "outputs" / "submissions" / name
         if path.exists():
             validate_submission_csv(path)
+
+
+# --- D-040: LOB recalibration must not be an in-sample oracle for local
+# scoring. Fitting the scales on the sample you then score inflates D2 by
+# ~0.002-0.003 -- the entire D-025 tie band -- and is structurally blind to
+# LOB-level miss.
+
+def test_recalibrate_ref_path_does_not_peek_at_target_sample():
+    """The out-of-sample path must scale by the REFERENCE sample's totals only.
+
+    If it ever used the target sample's actuals, local D2 would silently become
+    an oracle again.
+    """
+    import sys
+    import numpy as np
+    import pandas as pd
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import lob_recalibrate
+
+    # reference (train) sample: LOB "motor" underpredicts by 2x
+    ref_lines = pd.Series(["motor"] * 4)
+    ref_pred = np.array([10.0, 10.0, 10.0, 10.0])
+    ref_actual = np.array([20.0, 20.0, 20.0, 20.0])   # scale should be 2.0
+
+    # target (holdout) sample with its own, very different actuals
+    lines = pd.Series(["motor"] * 3)
+    pred = np.array([5.0, 5.0, 5.0])
+    actual = np.array([1000.0, 0.0, 0.0])             # must NOT be used
+
+    out = lob_recalibrate(pred, lines, ref_lines=ref_lines,
+                          ref_pred=ref_pred, ref_actual=ref_actual)
+    assert out == pytest.approx(np.array([10.0, 10.0, 10.0])), (
+        "ref path must apply the reference scale (x2) and nothing else"
+    )
+
+    # the in-sample path, by contrast, does use the target actuals
+    oracle = lob_recalibrate(pred, lines, actual=actual)
+    assert oracle.sum() == pytest.approx(actual.sum()), "oracle path sums to truth"
+
+
+def test_oracle_and_ref_scales_differ_when_calibration_drifts():
+    """Documents why the two numbers must both be reported (D-040)."""
+    import sys
+    import numpy as np
+    import pandas as pd
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import lob_recalibrate
+
+    ref_lines = pd.Series(["motor"] * 4)
+    ref_pred = np.array([10.0] * 4)
+    ref_actual = np.array([20.0] * 4)      # train: x2
+    lines = pd.Series(["motor"] * 3)
+    pred = np.array([5.0] * 3)
+    actual = np.array([30.0] * 3)          # holdout: x6
+
+    oof = lob_recalibrate(pred, lines, ref_lines=ref_lines,
+                          ref_pred=ref_pred, ref_actual=ref_actual)
+    oracle = lob_recalibrate(pred, lines, actual=actual)
+    assert not np.allclose(oof, oracle), (
+        "when calibration drifts between train and holdout the two differ, "
+        "which is exactly why reporting only the oracle overstates local D2"
+    )

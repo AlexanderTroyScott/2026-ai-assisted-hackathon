@@ -399,3 +399,71 @@ The measured sensitivity on the 2024 holdout maps −0.00158 D² to roughly a **
 Practical read for the next slot: the old table's accidental IBNER loading plus the premium-only level happened to net out close to right for 2025. Both corrections are independently justified; doing one without the other leaves the level short. The natural next experiment is the label correction **with** a properly estimated IBNER component (C-1), or the label correction with the D-009 central level, measured as separate slots so the two effects stay attributable.
 
 Our best remains **exp-010 at 0.12113**. exp-015 is retained as a negative result — it is the evidence that pins the IBNER gap.
+
+### CORRECTION to the exp-015 entry above (2026-10-21) — see D-040
+
+The measured result stands: exp-015 **0.11955** vs exp-010 **0.12113**
+(−0.00158), clean single-change attribution, sha256 `155f5cc7198f70f8`. The
+**interpretation** that followed it is withdrawn in full. Specifically:
+
+- **The "−5% level miss" is wrong in sign, size and method.** exp-015's
+  submission is **+0.93% higher** than exp-010's in total predicted cost
+  (motor +1.04%, buildings +1.01%, contents −0.03%; joined the two submitted
+  CSVs, 626,639 rows). It rose, not fell. The −5% figure came from
+  interpolating a sensitivity curve measured on the **constant_rate baseline**;
+  on the model that curve is 3–4× flatter (−5% ⇒ only **−0.00044**, and −0.00158
+  would need ~−10% uniform). Method, sign and size all wrong. **Withdrawn.**
+- **"Removing the bug leaves the training level short"** — the level channel is
+  cancelled in this pipeline: `lob_recalibrate` fits per-LOB scales on the
+  holdout and carries them to the test set, so per-LOB uniform label-level
+  changes cannot reach the submission level. Aggregate training `y_ult` moved
+  only ~−1.3%, and the label change is one accident year of three. **Withdrawn.**
+- **"A loading the triangle method explicitly does not include"** — incorrect
+  for incurred chain ladder. Link ratios embed historical case strengthening;
+  CL provides no *separate* IBNER provision and is a documented lower bound, but
+  "explicitly excludes" overstates it. **Corrected** to the weaker, defensible
+  claim.
+- **The IBNER evidence was mislocated.** 20.4% open share and 7.7k vs 21–27k
+  case means describe **AY2024** — the holdout and level anchor, not training
+  (train ≤ 2023) — whose LDF is unchanged to 3 dp by the correction. Those
+  statistics cannot support a claim about the 2023 labels. **Re-attributed** to
+  the 2024 anchor, where D-005 actually puts "plus IBNER on open claims".
+- **"Real and material, not noise"** — over-read one draw **inside** the D-025
+  ~0.002 flip band. Local corroboration is only −0.0009 recalibrated and
+  −0.0004 on the skill-gap protocol. **Demoted.** D-039's `accepted` status for
+  this interpretation was premature.
+
+**What survives:** the label correction is correct as chain-ladder factors
+(reproduces `data_findings.md` §5 exactly); exp-015 is a clean negative result;
+and the correction caused a large **refit reshuffle** rather than a level move —
+row-level Spearman 0.977–0.993 but sd of log-ratio **0.113**, buildings
+row-ratios spanning roughly 0.38×–2.41×. The model reorganised how it allocates
+cost across rows and the realized 2025 truth preferred the old allocation.
+
+**Metric defect found and fixed (D-040).** Local D² was computed after an
+in-sample per-LOB oracle recalibration, worth **+0.0020 (exp-010) /
++0.0029 (exp-015)** — the size of the whole tie band — and structurally blind to
+LOB-level miss. `run_experiment.py` now reports `d2_model` (train-fitted scales,
+out-of-sample — use this for comparison) and `d2_model_oracle` (holdout-fitted;
+correct for the submission path, not a generalisation estimate) plus
+`d2_oracle_inflation`. Historical manifest `d2_model` values are oracle numbers
+and are **not** comparable to the new ones. The D-025 "local−LB gap stable at
+−0.007 to −0.010" rule is stale: measured is −0.0130 / −0.0137.
+
+**Level-removed table, restated** (the original omitted 2021/22): buildings 2023
+×1.092→×1.003 (−8.15%) and contents 2023 ×1.044→×1.004 (−3.83%) materially;
+2021/2022 all LOBs −0.2…−0.4% marginally; 2024 unchanged to 3 dp (drifts
++0.015%…+0.063% from rounding, per review NIT).
+
+Sensitivity curve underlying the above is recorded here for reproducibility
+(AGENTS.md rule 1) — sample `outputs/metrics/exp-007-s0_valpred.parquet`,
+626,190 rows, `d2_tweedie_score(y, max(s·pred, 1e-3), power=1.5)` minus the
+s=1.0 value, Σpred/Σy = 1.0000:
+
+| s | 0.90 | 0.92 | 0.94 | 0.96 | 0.98 | 1.00 | 1.02 | 1.04 | 1.06 | 1.08 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ΔD² | −0.00169 | −0.00108 | −0.00062 | −0.00029 | −0.00009 | 0 | −0.00002 | −0.00015 | −0.00038 | −0.00070 |
+
+Our best remains **exp-010 at 0.12113**. exp-015 stays logged as a valuable
+negative result — it is the run that exposed both the refit-reshuffle effect and
+the oracle-recalibration defect.

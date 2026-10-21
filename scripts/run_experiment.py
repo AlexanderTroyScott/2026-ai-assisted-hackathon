@@ -310,7 +310,6 @@ def main() -> int:
 
     cols = feature_cols(args.features)
     X_tr, X_va, use, cats = align(tr, va, cols, CAT_FEATURES)
-
     params = dict(
         objective="tweedie", tweedie_variance_power=1.5,
         n_estimators=2500, learning_rate=0.04, num_leaves=64,
@@ -335,14 +334,39 @@ def main() -> int:
         imp = pd.Series(model.feature_importances_, index=use).sort_values(ascending=False)
     print(f"model ({args.mode}, raw)  D2 = {d2(p_raw):+.4f}   (n_iter={best_iter})")
 
-    # D-009: recalibrate each LOB so predicted totals match expected totals.
-    p_va = lob_recalibrate(p_raw, va["line"], actual=yv)
-    print(f"model (LOB-recalibrated) D2 = {d2(p_va):+.4f}")
+    # LOB recalibration (D-009/D-005) scales each LOB so predicted totals match
+    # expected totals. WHERE those scales are fitted determines what the local
+    # number means (D-040):
+    #
+    #   * fitted on the holdout and scored on the holdout => in-sample ORACLE.
+    #     Measured worth +0.0020..+0.0029 of local D2, i.e. the size of the
+    #     whole D-025 tie band, and structurally blind to LOB-level miss. This
+    #     is NOT a generalisation estimate and must not be used to compare runs
+    #     on anything level-shaped.
+    #   * fitted on the TRAIN side and applied to the holdout => out-of-sample,
+    #     the honest local metric.
+    #
+    # The submission still uses the holdout-fitted scale carried to the test
+    # set, which is correct: 2024 developed truth is the right level anchor for
+    # 2025 rows. So the oracle number is the right thing for the submission path
+    # and the wrong thing for local model comparison.
+    p_va_oracle = lob_recalibrate(p_raw, va["line"], actual=yv)
+    p_tr_raw = (np.maximum(fmodel.predict(X_tr), 1e-9) * np.maximum(smodel.predict(X_tr), 1e-3)
+                if args.mode == "freq_sev" else np.maximum(model.predict(X_tr), 1e-3))
+    # Train-fitted scales applied to RAW holdout predictions. Passing
+    # p_va_oracle here would apply two scales at once.
+    p_va_oof = lob_recalibrate(p_raw, va["line"], ref_lines=tr["line"],
+                               ref_pred=p_tr_raw, ref_actual=tr["y_ult"].to_numpy())
+
+    print(f"model (recal, TRAIN-fitted = honest) D2 = {d2(p_va_oof):+.4f}")
+    print(f"model (recal, holdout-fitted = oracle) D2 = {d2(p_va_oracle):+.4f}"
+          f"   [in-sample; +{d2(p_va_oracle) - d2(p_raw):.4f} over raw]")
+    d2_oracle_inflation = float(d2(p_va_oracle) - d2(p_raw))
 
     for ln in LINES:
         m = va["line"].to_numpy() == ln
         if m.sum():
-            print(f"   {ln:10s} D2 = {d2_tweedie_score(yv[m], p_va[m], power=1.5):+.4f}")
+            print(f"   {ln:10s} D2 = {d2_tweedie_score(yv[m], p_va_oof[m], power=1.5):+.4f}")
 
     print("top features:", ", ".join(f"{k}={v}" for k, v in imp.head(12).items()))
 
@@ -371,7 +395,10 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     MET.mkdir(parents=True, exist_ok=True)
     if args.save_val_pred:
-        pd.DataFrame({"row_id": va["row_id"].to_numpy(), "y_true": yv, "pred": p_va}).to_parquet(
+        # store the honest (train-fitted) predictions so downstream analysis
+        # does not silently inherit the in-sample oracle (D-040)
+        pd.DataFrame({"row_id": va["row_id"].to_numpy(), "y_true": yv,
+                      "pred": p_va_oof, "pred_oracle": p_va_oracle}).to_parquet(
             MET / f"{args.name}_valpred.parquet", index=False)
     path = OUT / f"{args.name}.csv"
     sub.to_csv(path, index=False)
@@ -383,7 +410,10 @@ def main() -> int:
         "holdout_year": holdout_year, "train_max_year": train_max_year,
         "forward_factor": fwd_tab,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),
-        "d2_model": float(d2(p_va)), "d2_model_raw": float(d2(p_raw)), "n_iter": best_iter,
+        "d2_model": float(d2(p_va_oof)),
+        "d2_model_oracle": float(d2(p_va_oracle)),
+        "d2_oracle_inflation": d2_oracle_inflation,
+        "d2_model_raw": float(d2(p_raw)), "n_iter": best_iter,
         "top_features": imp.head(20).to_dict(),
     }, indent=2))
     return 0

@@ -599,3 +599,144 @@ Consequences:
 correction plus an estimated IBNER component (C-1, the principled fix), or
 (b) the label correction plus the D-009 central level (faster, but entangles
 D-009). Both are single-primary-change if kept separate from each other.
+
+## D-040 — Correction to D-039: the IBNER conclusion was wrong
+**2026-10-21 · accepted · retracts the interpretation in D-039; D-039's negative result stands**
+
+D-039 concluded that exp-015's drop (0.12113 → 0.11955) showed the old buggy
+labels were "accidentally supplying an IBNER loading", that the drop corresponded
+to "roughly a −5% level miss", and that the gap was "real and material, not
+noise". An independent audit falsified the quantitative core and the causal
+mechanism. D-039 is **withdrawn as an interpretation**. The measured negative
+result (exp-015 scores 0.11955) remains true and remains useful.
+
+### What was wrong
+
+1. **The sign is inverted.** exp-015's submission is **+0.93% higher** than
+   exp-010's in total predicted cost (motor +1.04%, buildings +1.01%, contents
+   −0.03%; measured by joining the two submitted CSVs, 626,639 rows). The
+   submission did not fall 5% — it rose. D-039 inferred a level *shortfall* from
+   a level that actually *increased* while the score fell.
+
+2. **The −5% number was measured on the wrong object.** The sensitivity curve
+   D-039 interpolated against came from uniformly scaling the **constant_rate
+   baseline**. On the **model** the curve is 3–4× flatter (re-measured on
+   `exp-007-s0` valpred, `d2_tweedie_score` power=1.5, floor 1e-3):
+
+   | uniform scale | 0.90 | 0.94 | 0.96 | 0.98 | 1.00 | 1.02 | 1.04 | 1.08 |
+   |---|---|---|---|---|---|---|---|---|
+   | model ΔD² | −0.00169 | −0.00062 | −0.00029 | −0.00009 | 0 | −0.00002 | −0.00015 | −0.00070 |
+   | baseline ΔD² (D-039) | — | −0.00189 | −0.00112 | −0.00050 | 0 | +0.00037 | +0.00063 | — |
+
+   A uniform −5% is worth only **−0.00044** on the model. To produce −0.00158
+   you need roughly −10% (or +12.5%) uniform — and the observed move was +0.93%,
+   which this curve scores at essentially zero. Curvature is a property of a
+   specific predictor's calibration, not of D² itself; the baseline was also
+   scored pre-recalibration (its optimum sits above 1.0) while the model is
+   post-recalibration (optimum at 1.0). The transfer was invalid.
+
+3. **The level channel is cancelled in this pipeline anyway.**
+   `lob_recalibrate(..., actual=yv)` fits per-LOB scales on the holdout and
+   carries them to the test set (`scripts/run_experiment.py`), so per-LOB
+   uniform label-level changes cannot reach the submission level. The label
+   correction moved aggregate training `y_ult` only ~−1.3% (buildings −3.3%,
+   contents −1.6%, motor −0.16%) — and even the per-LOB part of that is what
+   the recalibration absorbs. D-039's own arithmetic ("8.2%/3.8% of label level
+   on ~45% of cost") conflated a one-accident-year change with a three-year one.
+
+4. **"The triangle method explicitly excludes IBNER" is not correct.**
+   Volume-weighted chain ladder on an *incurred* triangle derives link ratios
+   from the historical development of incurred amounts, which includes
+   historical strengthening of open case estimates as older years matured. The
+   chain-ladder assumption is that this pattern repeats (R-01). It provides no
+   *separate* IBNER provision, and it will understate if the immature year's
+   open-case weakness is a pattern break against history — but that is a
+   different and weaker claim than "explicitly does not include". The defensible
+   statement is `data_findings.md` §5's own wording: these are **lower bounds**,
+   with a pattern-break risk on 2024's weak open cases.
+
+5. **The IBNER evidence was mislocated.** The open-claim statistics cited in
+   support (20.4% open share for 2024 vs 3.2% for 2023; 2024 open mean case
+   ~7.7k vs 21–27k mature) describe **AY2024** — which is the holdout and the
+   level anchor, not the training set (train is AY ≤ 2023). AY2024's LDF is
+   1.259/1.092/1.044 and is **unchanged to 3 dp** by the correction. So those
+   statistics cannot support a claim about the labels the correction changed.
+
+6. **"Not noise" over-read one draw.** −0.00158 sits **inside** the documented
+   D-025 ~0.002 flip band. Local corroboration is only −0.0009 recalibrated and
+   **−0.0004** under the skill-vs-baseline gap protocol (the baseline moved too:
+   0.07965 → 0.07911). D-039 marked its interpretation `accepted` on that basis;
+   it should not have.
+
+### What is actually established
+
+- The D-033/D-035 label correction is **correct** as chain-ladder factors —
+  it reproduces `data_findings.md` §5 exactly. That is unchanged.
+- exp-015 is a clean single-change negative result: the label correction, taken
+  alone, did not improve the leaderboard and may have cost ~0.0016. The
+  attribution claim survived audit.
+- The correction caused a large **refit reshuffle**, not a level move: row-level
+  Spearman 0.977–0.993 between the two submissions but sd of log-ratio 0.113,
+  with buildings row-ratios spanning roughly 0.38×–2.41×. The model reorganised
+  how it allocates cost across rows; the realized 2025 truth preferred the old
+  allocation.
+- There is a **plausible, unmeasured** level question, but it lives on the
+  **2024 anchor**, not the 2023 labels. D-005 attaches "plus IBNER on open
+  claims" to the 2024 development — i.e. `y_ult`, which is both the local
+  validation truth and the per-LOB anchor for the 2025 submission totals. If
+  the LDFs are lower bounds, the submission's level is anchored low. exp-015
+  gives this hypothesis **zero** support either way.
+
+### The metric defect this exposed (now fixed)
+
+Local D² was computed after an **in-sample per-LOB oracle recalibration** —
+scales fitted on the holdout and scored on the same holdout. Measured worth
+**+0.0020 (exp-010) / +0.0029 (exp-015)** — the size of the entire D-025 tie
+band — and structurally blind to LOB-level miss, which is precisely the
+dimension a "level" argument turns on. Any level inference drawn from local D²,
+including the methodology behind D-039's sensitivity curve, is therefore
+invalid.
+
+Fixed in `scripts/run_experiment.py`: two numbers are now reported and the
+manifest records both —
+
+- `d2_model` — LOB scales **fitted on the train side** and applied to the
+  holdout. Out-of-sample; this is the honest local metric and the one to use
+  for run comparison.
+- `d2_model_oracle` — scales fitted on the holdout. Kept because the
+  submission path legitimately uses it (2024 developed truth *is* the right
+  level anchor for 2025 rows), but it is not a generalisation estimate.
+- `d2_oracle_inflation` — the difference, so the optimism is visible per run.
+
+`tests/test_guardrails.py` asserts the out-of-sample path scales by the
+*reference* sample's totals only and never touches the target sample's actuals.
+
+Note this changes the meaning of `d2_model` in the manifests. Historical
+manifests hold oracle numbers; from here on `d2_model` is out-of-sample and is
+**not** comparable to them. The stale "local−LB gap stable at −0.007 to −0.010"
+rule (D-025) is also wrong now: measured gap is −0.0130 / −0.0137 for
+exp-010/exp-015.
+
+### Standing corrections to the record
+
+- D-039's interpretation is **withdrawn**; its negative result stands.
+- C-1 (Bornhuetter-Ferguson / Cape Cod) is **not** established as "closing a
+  measured gap". It remains a candidate at the normal gate. Note also that BF
+  stabilises immature-AY ultimates, whereas an IBNER-on-open-claims provision is
+  a case-adequacy loading — related but not the same instrument.
+- D-009 remains `proposed` and unratified.
+- No IBNER or level loading has been estimated or applied. AGENTS.md rule 1
+  stands: it must be measured, not invented.
+
+### Open question for the human
+
+Whether to spend a slot separating the two live hypotheses, both of which
+exp-015 left open:
+
+- **H1 — level is short on the 2024 anchor.** Probe: uniform level shift on the
+  current best predictions. Expected under H1: LB rises.
+- **H2 — exp-015's drop is refit/seed noise.** Probe: replicate the exp-015
+  config at a second seed. Expected under H2: the spread is comparable to the
+  −0.00158 drop, which would also defeat "not noise".
+
+Cheapest decisive pair is those two, one slot each.
