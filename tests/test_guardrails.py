@@ -472,3 +472,68 @@ def test_sum_insured_artefacts_do_not_carry_premium():
             f"{name}: expected giant sum_insured rows to carry ~1000x lower "
             f"premium ratio, got {r_big:.3e} vs {r_rest:.3e}"
         )
+
+
+# --- D-046: GLM benchmark guardrails ---
+
+def test_glm_fit_is_not_degenerate():
+    """D-046: an unscaled design makes L-BFGS stop at the starting point.
+
+    The symptom is 'converged in 1 iterations' with every coefficient exactly
+    zero, which silently produced an intercept-only model. Standardisation is
+    load-bearing.
+    """
+    import sys
+    import numpy as np
+    sys.path.insert(0, str(ROOT))
+    from src.glm import fit_glm, prepare_design
+
+    rng = np.random.default_rng(0)
+    n = 4000
+    # deliberately badly scaled: one column ~1e6, one ~1e1
+    df = pd.DataFrame({
+        "big": rng.lognormal(13, 1, n),      # ~ 1e6
+        "small": rng.normal(50, 5, n),       # ~ 50
+        "cat": rng.choice(list("abcde"), n),
+    })
+    y = np.exp(0.3 * np.log1p(df["big"] / 1e6) - 0.01 * df["small"])
+    X, cols = prepare_design(df, ["big", "small"], ["cat"])
+    m = fit_glm(X, pd.Series(y), pd.Series(np.ones(n)))
+
+    assert m.n_iter_ > 1, "fit stopped at the starting point — design not standardised"
+    assert np.abs(np.asarray(m.coef_)).max() > 1e-6, "all coefficients zero — degenerate fit"
+
+
+def test_glm_predict_matches_linear_predictor():
+    """D-046: coefficients are back-transformed to original units, so predict
+    must consume the RAW design. Standardising here double-transforms and
+    inflated predictions 22x.
+    """
+    import sys
+    import numpy as np
+    sys.path.insert(0, str(ROOT))
+    from src.glm import fit_glm, predict_cost, prepare_design
+
+    rng = np.random.default_rng(1)
+    n = 2000
+    df = pd.DataFrame({"x": rng.normal(100, 10, n), "cat": rng.choice(list("ab"), n)})
+    y = np.exp(0.01 * df["x"].to_numpy())
+    X, cols = prepare_design(df, ["x"], ["cat"])
+    exp = pd.Series(np.ones(n))
+    m = fit_glm(X, pd.Series(y), exp)
+
+    got = predict_cost(m, X, exp)
+    manual = np.exp(m.intercept_ + X.to_numpy() @ np.asarray(m.coef_)) * 1.0
+    assert np.allclose(got, np.maximum(manual, 1e-3), rtol=1e-6), (
+        "predict_cost does not reproduce the back-transformed linear predictor"
+    )
+
+
+def test_glm_denies_leakage_fields():
+    """The GLM spec must never admit a deny-listed field (D-011)."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_glm import CAT_SPEC, DENYLIST, NUM_SPEC
+
+    leaked = (set(NUM_SPEC) | set(CAT_SPEC)) & DENYLIST
+    assert not leaked, f"GLM spec carries deny-listed fields: {leaked}"

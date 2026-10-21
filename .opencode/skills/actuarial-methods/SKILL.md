@@ -51,3 +51,42 @@ our data — never paste them into `docs/` as findings (AGENTS.md rule 1).
 - Data, assumptions, methods, diagnostics and disclosures all get written down;
   "code as documentation" is explicit in R-03. This repo's `docs/decisions.md` +
   `docs/experiment_log.md` + tests are that record — extend them, never rewrite.
+
+## Penalized GLM = credibility (R-05)
+
+Ridge regression **is** Bühlmann credibility under a Gaussian assumption
+(Jewell 1974); the penalty λ *is* the credibility K. Lasso adds effect
+selection via a Laplace prior — it shrinks low-volume levels toward the grand
+average and zeroes what is immaterial, replacing p-value thresholding (which is
+binary, threshold-dependent, and rests on assumptions that often fail).
+Meets **ASOP 25 (Credibility Procedures)**. Reference treatment: CAS Monograph
+§10.5, Goldburd *GLMs for Insurance Rating* 2nd Ed.
+
+Practical consequence: a penalized (elastic-net) GLM is the actuarially
+principled fix for high-cardinality categoricals with thin levels, and gives a
+credibility-based weight instead of a swept one. **Derivative Lasso** (Laplace
+prior on the *derivative* of an ordinal variable) reproduces GBM-style adaptive
+grouping while staying additive, and collapses the tuning to one parameter
+(smoothness).
+
+Warning: a statistically significant polynomial term can be an artifact. Two
+equally-significant specifications of a driver-age curve produced wildly
+different tails (Akur8 deck, R-05). Significance is not evidence of a real tail.
+
+## Hybrid model forms (R-06)
+
+Three ways to get ML signal into an additive model, in increasing automation:
+**interaction detection** (XGBoost finds interactions → refit additive model),
+**XGBoost-informed GLM** (SHAP dependence → spline knots → hand-written
+formula), **IBLM** (GLM → XGBoost on residuals → absorbed back into a GLM).
+
+External evidence, ILEC mortality, both a random split and an out-of-time split:
+**rankings do not transfer**. IBLM fell from rank 7 to rank 11 out-of-time
+("inability of the internal booster model to extrapolate an observation year
+effect"); the plain GLM improved from 10 to 7. Best hybrid was interaction
+detection into a GAM, stable at rank 3 on both. Black-box XGBoost was rank 1 on
+both but is not deployable where governance applies (TAS 100 principles 5 & 7).
+
+Implication: prefer *XGBoost as a diagnostic* over *XGBoost as a predictor*.
+The hybrid keeps ~80% of the black-box gain on a random split but only ~62%
+out-of-time — transparency costs more in the setting that actually matters.

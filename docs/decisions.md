@@ -1142,3 +1142,85 @@ cross-validated `best_iteration` (no early stopping available without a
 holdout). `--train-max` added as a diagnostic override. Honest local D² is
 still reported from the pre-refit model and remains the out-of-sample estimate
 for the config family; it is not re-measurable after refitting.
+
+## D-046 — C-2 measured: Tweedie GLM benchmark
+**2026-10-21 · accepted · promotes C-2 from candidate to measured · no submission**
+
+C-2 (R-02 App. C, R-03 §5.2) built as `src/glm.py` + `scripts/run_glm.py`:
+Tweedie power 1.5, log link, exposure weights, cost modelled as
+`exposure × annual rate` per AGENTS.md. 112 terms — 21 numeric, 91 categorical
+dummies — on a deliberately narrow rating-plan spec rather than the LGBM
+feature soup, so the relativities read cleanly.
+
+### Result
+
+| | train D² | holdout D² |
+|---|---|---|
+| GLM | +0.1360 | **+0.1206** |
+| LGBM (raw) | — | +0.1303 |
+| LGBM (honest, train-fitted recal.) | — | +0.1331 |
+
+Calibration ratio Σpred/Σactual = **0.9805**. Per LOB: motor +0.0655,
+buildings +0.0997, contents +0.0628.
+
+**Gate check (C-3 requires the GLM within ~0.01 local D² of LGBM).** On a
+like-for-like raw-vs-raw basis the gap is **0.0097 — inside the gate,
+marginally**. Against the recalibrated LGBM it is 0.0125, outside. Raw-vs-raw
+is the fair comparison since neither has had the LOB level fitted to it. So
+**C-3 is cleared to proceed**, but the GLM is the weaker leg and should be
+weighted accordingly.
+
+Generalisation gap (train − holdout) is **0.0154**. Per R-04 the gap is the
+number to watch rather than the level; that is a modest but real optimism.
+
+### Specification decisions
+
+- **`occupation` excluded** (D-047 follow-up measured this). 21 dummy
+  parameters for 0.0001 of D² on the tree model, collinear with
+  `driver_age` / `years_licensed` / `ncb_years`, and 64% of its dispersion is
+  Student+Retired — age in disguise. Including it would destabilise every
+  coefficient it touches and wreck the relativities table.
+- **Log transforms applied** to `sum_insured`, `written_premium`,
+  `distance_to_river_km`, `premium_per_exposure` — D-043 established these are
+  material for linear models and near-worthless for trees. Here they matter
+  (`sum_insured` Pearson vs log-severity +0.015 → +0.316).
+- **`sum_insured` capped at 1e7 and flagged** (`si_artefact`), per D-043.
+
+### Three defects found and fixed while building it
+
+1. **Unscaled design.** First fit reported "converged in 1 iterations" with
+   every coefficient exactly 0.00000 — L-BFGS could not line-search a Hessian
+   spanning `driver_age` ~50 to `sum_insured` ~6e8. Now standardised for the
+   optimisation and back-transformed to original units.
+2. **Double transform.** `predict_cost` standardised the design *after*
+   coefficients had already been back-transformed, mixing units. Predictions
+   came out 22.7× too high. Now predicts on raw design.
+3. **Length mismatch** in the train D² call (train-length predictions scored
+   against holdout-length truth).
+
+A fourth was mine, not the code's: I initially reported a catastrophic
+collinearity on `written_premium` because I evaluated it at the raw premium
+(267) rather than its transformed value (`log1p` ≈ 5.59). The model was fine.
+Recorded so the mistake is not repeated.
+
+### Relativities for the write-up
+
+Categorical relativities are trustworthy (0/1 coded, no cancellation). Highest:
+flood_zone 5 **1.978**, construction non-standard **1.304**, security_level
+missing 1.240, cover TPO **1.197**, named young driver 1.183, flood_zone 4
+1.164. Lowest: vehicle use social **0.665**, commuting 0.720, owner-occupied
+0.735, rural 0.778, `si_artefact` **0.790**, TPFT **0.801**.
+
+Two are worth commentary: **flood_zone 5 at 1.98** is the damped multivariate
+shadow of the 190× rate ratio in `data_findings.md` §5, and **TPFT at 0.80
+against TPO at 1.20** independently reproduces the DGP finding that
+third-party-fire-and-theft is overpriced relative to its frequency.
+
+Numeric effects are reported **per 1 SD of the transformed column**, since
+per-unit coefficients on logged fields are not interpretable: written_premium
+×1.726, driver_age ×0.761, years_licensed ×1.234, annual_mileage ×1.127,
+ncb_years ×0.898, sum_insured ×1.112. Note `driver_age` is U-shaped in reality
+(D-043 / data_findings §7) so its linear term is a compromise — the GAM
+variant in R-06 would handle it properly.
+
+Artefacts output: `outputs/metrics/glm-001_relativities.csv`.

@@ -15,6 +15,7 @@ relevant skill instead:
 | Modelling, EDA, features, anything touching `data_raw/` | `data-facts` skill |
 | Submitting to Kaggle, checking leaderboard | `kaggle-submit` skill |
 | Building labels, development factors, trend/inflation | `actuarial-target` skill |
+| Choosing a split, judging overfit, is this number a valid gate | `model-validation` skill |
 
 For large read-only investigations, delegate to the `data-audit` or `model-audit`
 subagents and bring back only the conclusions.
