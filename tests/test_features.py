@@ -227,3 +227,52 @@ def test_experience_windows_bound_the_lookback():
     assert out.loc["r1", "cust_claims_4y"] == 3
     assert out.loc["r1", "cust_claims_all"] == 3
     assert out.loc["r1", "cust_cost_all"] == pytest.approx(7.0)
+
+
+# --- D-055: the two leakage boundaries that were not pinned at equality ----
+
+def test_denial_history_pinned_at_exact_period_start():
+    """D-031 / AGENTS.md rule 6: a denied claim dated exactly on `period_start`
+    belongs to that row's own period and must be invisible to it.
+
+    The existing denial test used mid-period dates, so a `loss < ps` -> `<= ps`
+    regression would have slipped through. This is the boundary case.
+    """
+    import src.dataset as ds
+
+    policies = pd.DataFrame([
+        _prow("r1", "p1", "c1", "2021-01-01"),
+        _prow("r2", "p1", "c1", "2022-01-01"),
+    ])
+    denied = pd.DataFrame([
+        {"claim_id": "d_edge", "policy_id": "p1",
+         "loss": pd.Timestamp("2022-01-01")},   # exactly r2.ps
+    ])
+    out = ds.denial_features(policies, denied).set_index("row_id")
+    assert out.loc["r2", "pol_denied_all"] == 0, (
+        "a denial dated exactly on period_start is the row's own outcome"
+    )
+    assert out.loc["r2", "cust_denied_all"] == 0
+    # r1 is BEFORE the denial, so it must see nothing either
+    assert out.loc["r1", "cust_denied_all"] == 0
+
+
+def test_rel_hist_pinned_at_pe_equals_ps():
+    """src/features.py: a source row whose period ends exactly on the target's
+    `period_start` must be excluded.
+
+    Its claims can be dated on or after the target's period_start, so including
+    it is leakage. The existing test used `pe >> ps`, so a `searchsorted`
+    `side="right"` regression would slip through.
+    """
+    train = pd.DataFrame([
+        _row("r1", "2021-01-01", "2022-01-01", 100.0, 1, "a"),   # pe == r2.ps
+        _row("r2", "2022-01-01", "2022-12-31", 0.0, 0, "a"),
+    ])
+    test = pd.DataFrame([_row("t1", "2025-01-01", "2025-12-31", 0.0, 0, "a")])
+    tr, _ = historical_relativities(train, test, ["lvl"])
+    # r2 must see only rows with pe < 2022-01-01, i.e. none of r1
+    assert tr.loc[tr.row_id == "r2", "lvl_hist_rate"].isna().all() or \
+           tr.loc[tr.row_id == "r2", "lvl_hist_rate"].iloc[0] != 100.0, (
+        "a source row ending exactly on period_start must not contribute"
+    )

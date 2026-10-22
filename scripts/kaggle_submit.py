@@ -91,7 +91,11 @@ def validate(path: Path) -> list[tuple[str, bool, str]]:
                        f"implied rate max/min={ratio:.2f} (truth 1.12; >1.5 => "
                        f"exposure likely double-counted)"))
     except Exception as exc:  # noqa: BLE001
-        checks.append(("exposure scaling flat", True, f"skipped ({exc})"))
+        # D-055: this gate must FAIL CLOSED. It was previously fail-open, so a
+        # broken exposure merge let a double-counted submission through as a
+        # pass - the exact failure mode the gate exists to catch (D-052).
+        checks.append(("exposure scaling flat", False,
+                       f"check FAILED TO RUN: {exc} - refusing rather than skipping"))
     return checks
 
 

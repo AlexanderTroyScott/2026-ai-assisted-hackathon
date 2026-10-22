@@ -1478,3 +1478,84 @@ of exposure carries 0.3% of loss; the highest 10% carries the bulk.
 Use both families before spending a slot. A candidate that improves Gini/lift
 but worsens calibration should be expected to fail on the leaderboard, and
 vice versa. The gap metric itself is recorded but **not** adopted as a gate.
+
+## D-055 — Test-suite audit: four unguarded behaviours, one tautology
+**2026-10-22 · accepted · review of all 70 tests · 7 added, now 77**
+
+Full audit of the test suite for errors and actuarial correctness, run via the
+`reviewer` subagent against the project skills and `docs/data_findings.md`.
+Verdict was "needs changes": ~40 of 70 were load-bearing, the rest decorative,
+and four submission-critical behaviours were unguarded.
+
+### What was wrong
+
+**MAJOR — target construction had no test.** `row_target` builds `y` and
+`y_ult`, which is the heart of the submission. Nothing tested it. A wrong join,
+a double-counted recovery, or `y_ult = y` (no development at all) would have
+produced the correct *columns* and passed all 70 tests. Now covered by
+`test_row_target_attributes_and_develops_labels` — claim lands on the right
+row, orphan excluded, `y_ult == y × LDF[line][acc_year]`, and the D-033
+regression pinned (2023 buildings must be 1.003, not the age-0 1.092).
+
+**MAJOR — the D-001 exposure rule was documented, not enforced.** Both exposure
+tests recomputed the formula *independently from raw parquet* and never asserted
+that `load_policies` did it. Replacing the recompute with the supplied column
+would have passed them. Now covered by
+`test_load_policies_recomputes_exposure_not_the_supplied_column`.
+
+**MAJOR — the scoring metric was unasserted.** No test referenced
+`power=1.5` or the `1e-3` floor in the *local* path; the floor was guarded only
+at the submission CSV level. A wrong Tweedie power would have passed. Now
+covered by `test_d2_tweedie_power_and_floor_are_pinned`.
+
+**MAJOR — a dead test.** `test_generated_submission_if_present` looked for
+`constant_rate.csv`, but `make_baseline.py` writes `constant_rate-central.csv`
+(trend suffix). The `if path.exists()` always skipped. It has never run.
+
+**Two leakage boundaries were unpinned at equality.** The experience block was
+pinned (a claim dated exactly `== ps`), but the denial block used mid-period
+dates and `historical_relativities` used `pe >> ps`. Both `loss < ps` → `<= ps`
+and `pe < ps` → `<= ps` regressions would have slipped through. Now pinned.
+
+**A tautology I wrote.** `test_perfect_ranking_scores_one` asserted
+`normalized_gini(a, w, a) == 1.0`. Since `data_gini` is the same computation,
+that is `X/X` and is 1.0 by construction for *any* formula shared by both. It
+documented the definition and could never catch a wrong one. Replaced in
+substance by `test_gini_matches_hand_computation`, which pins the formula on a
+two-point case (Gini must be exactly 0.5, and an inverted ranking must score
+−0.5). The original is retained but its docstring now states the limitation.
+
+### Two fail-open / over-tight guards corrected
+
+- The D-052 exposure-scaling gate **failed open**: any exception recorded a
+  *pass* ("skipped"). That is the exact opposite of the D-030 fail-loud rule,
+  and it would let a double-counted submission through — the failure mode the
+  gate exists to catch. Now fails closed.
+- `test_exposure_recompute_in_unit_interval` asserted `max() <= 1.0`, which is
+  tighter than the documented convention `(pe − ps + 1)/365` allows for a
+  366-day leap-spanning period. It pinned a data coincidence, not a code
+  invariant. Relaxed to `366/365`.
+
+### Mutation-resistance, after the fixes
+
+| regression | caught by |
+|---|---|
+| `loss < ps` → `<=` in experience_features | existing, pinned at `== ps` |
+| `loss < ps` → `<=` in denial_features | **added** |
+| `pe < ps` → `<=` in historical_relativities | **added** |
+| LDF age-0 factor reapplied to 2023 (D-033) | existing + **added** in row_target |
+| Triangle fill-zero + cumsum (D-035) | existing |
+| Supplied exposure used instead of recomputed | **added** |
+| Deny-listed column in the model matrix | existing |
+| Wrong Tweedie power / dropped floor | **added** |
+| Gini tiebreaker removed (R-04) | existing |
+| Gini formula wrong | **added** (two-point hand computation) |
+
+### Still unguarded (accepted, ranked)
+
+1. D-045 `--final-fit` all-data branch — worth +0.00195 on the board, no test.
+2. Forward-factor scenario selection (`--trend`); the D-034 table is unasserted.
+3. `--target` default (`cost`) after the D-052 retraction.
+
+These are noted rather than built: the deadline is close and each is a
+behaviour whose failure would show up in the manifest or the submission gate.

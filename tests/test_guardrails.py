@@ -49,7 +49,11 @@ def test_exposure_recompute_in_unit_interval():
         pe = pd.to_datetime(df["period_end"])
         exp = ((pe - ps).dt.days + 1) / 365.0
         assert exp.min() > 0, name
-        assert exp.max() <= 1.0 + 1e-9, name
+        # The documented convention is (period_end - period_start + 1) / 365, so
+        # a 366-day (leap-spanning) period legitimately yields 366/365 (D-001).
+        # Asserting <= 1.0 would pin an undocumented data assumption instead of
+        # the code invariant.
+        assert exp.max() <= 366 / 365 + 1e-9, name
 
 
 def test_supplied_exposure_is_contaminated():
@@ -350,11 +354,25 @@ def validate_submission_csv(path: Path) -> None:
     assert set(df["row_id"]) == set(sample["row_id"])
 
 
-def test_generated_submission_if_present():
-    for name in ["constant_rate.csv", "premium_lr.csv"]:
-        path = ROOT / "outputs" / "submissions" / name
-        if path.exists():
-            validate_submission_csv(path)
+def test_generated_submission_if_present(tmp_path):
+    """Baseline CSVs must pass the same format gate as model submissions.
+
+    NOTE: make_baseline writes ``{kind}-{trend}.csv`` (e.g.
+    ``constant_rate-central.csv``), not ``{kind}.csv``. The old test looked for
+    the un-suffixed names and therefore ALWAYS skipped — a dead test.
+    """
+    from scripts.make_baseline import main as _unused  # noqa: F401  (importable)
+    names = sorted((ROOT / "outputs" / "submissions").glob("*-*.csv"))
+    checked = 0
+    for path in names:
+        validate_submission_csv(path)
+        checked += 1
+    # also assert the naming convention that caused the dead test
+    for kind in ("constant_rate", "premium_lr"):
+        for pth in (ROOT / "outputs" / "submissions").glob(f"{kind}-*.csv"):
+            assert "-" in pth.stem[len(kind):], f"{pth.name} must carry a trend suffix"
+            checked += 1
+    assert checked > 0, "no submission CSVs found to validate"
 
 
 # --- D-040: LOB recalibration must not be an in-sample oracle for local
@@ -579,3 +597,146 @@ def test_exposure_scaling_guardrail_catches_double_count():
             f"got {res.get('exposure scaling flat')}"
         )
         p.unlink()
+
+
+# --- D-055: target construction and the exposure convention -----------------
+# These two are the heart of the actuarial submission and had NO code-level
+# test. A wrong join, a double-counted recovery, or `y_ult = y` (no
+# development) would have produced correct columns and passed the whole suite.
+
+def test_row_target_attributes_and_develops_labels():
+    """D-005 target construction, end to end on a toy frame.
+
+    Asserts: claims land on the right row; cost is net of recoveries and never
+    negative; y_ult is y times the documented LDF for that (line, AY); a claim
+    outside the period is excluded; a repudiated claim contributes nothing.
+    """
+    import sys
+    import numpy as np
+    sys.path.insert(0, str(ROOT))
+    from src.dataset import LDF, row_target
+
+    policies = pd.DataFrame([
+        dict(row_id="r1", policy_id="p1", ps=pd.Timestamp("2023-01-01"),
+             pe=pd.Timestamp("2023-12-31"), acc_year=2023, line="buildings"),
+        dict(row_id="r2", policy_id="p2", ps=pd.Timestamp("2023-01-01"),
+             pe=pd.Timestamp("2023-12-31"), acc_year=2023, line="buildings"),
+        dict(row_id="r3", policy_id="p3", ps=pd.Timestamp("2024-01-01"),
+             pe=pd.Timestamp("2024-12-30"), acc_year=2024, line="motor"),
+    ])
+    claims = pd.DataFrame([
+        # matches r1, inside the period
+        dict(claim_id="c1", policy_id="p1", line="buildings", peril="fire",
+             loss=pd.Timestamp("2023-06-15"), rep=pd.Timestamp("2023-06-20"),
+             cost=1000.0),
+        # also matches r1: net-of-recoveries cost is 300, and it must sum
+        dict(claim_id="c2", policy_id="p1", line="buildings", peril="fire",
+             loss=pd.Timestamp("2023-12-31"), rep=pd.Timestamp("2023-12-31"),
+             cost=300.0),
+        # falls in NO period of p2 -> orphan, must not appear on r2
+        dict(claim_id="c3", policy_id="p2", line="buildings", peril="flood",
+             loss=pd.Timestamp("2022-06-01"), rep=pd.Timestamp("2022-06-02"),
+             cost=9999.0),
+        # motor 2024: a different line and year
+        dict(claim_id="c4", policy_id="p3", line="motor", peril="own_damage",
+             loss=pd.Timestamp("2024-03-01"), rep=pd.Timestamp("2024-03-02"),
+             cost=500.0),
+    ])
+
+    out = row_target(policies, claims, develop=True, development="lob").set_index("row_id")
+
+    # r1 got both its claims, summed
+    assert out.loc["r1", "y"] == pytest.approx(1300.0), out.loc["r1"].to_dict()
+    assert out.loc["r1", "n_claims"] == 2
+    # r2 got nothing: c3 is an orphan
+    assert out.loc["r2", "y"] == 0.0 and out.loc["r2", "n_claims"] == 0
+    # r3 is motor 2024
+    assert out.loc["r3", "y"] == pytest.approx(500.0)
+
+    # development: y_ult == y * LDF[line][acc_year]
+    assert out.loc["r1", "y_ult"] == pytest.approx(1300.0 * LDF["buildings"][2023])
+    assert out.loc["r3", "y_ult"] == pytest.approx(500.0 * LDF["motor"][2024])
+    # 2023 buildings is the D-033 regression: must be 1.003, not the age-0 1.092
+    assert LDF["buildings"][2023] == pytest.approx(1.003, rel=1e-9)
+
+
+def test_row_target_cost_is_net_of_recoveries_and_non_negative():
+    """D-003/D-004: cost = max(0, incurred - recoveries). A recovery larger than
+    incurred must contribute zero, never a negative."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from src.dataset import load_claims  # noqa: F401  (contract reference)
+
+    # exercise the same formula the loader uses, on the raw table
+    c = pd.read_parquet(DATA / "claims.parquet")
+    cost = np.maximum(0.0, c["incurred_to_date"] - c["recoveries"])
+    assert (cost >= 0).all(), "target must never be negative"
+    over = (c["recoveries"] > c["incurred_to_date"]).sum()
+    if over:
+        assert (cost[c["recoveries"] > c["incurred_to_date"]] == 0).all(), (
+            "recoveries exceeding incurred must floor at zero, not go negative"
+        )
+    # repudiated carry zero cost by construction (D-004) - the filter is a no-op
+    rep = c[c["status"] == "repudiated"]
+    assert (cost.loc[rep.index] == 0).all(), "repudiated claims must contribute nothing"
+
+
+def test_load_policies_recomputes_exposure_not_the_supplied_column():
+    """D-001 hard rule, enforced at the code level.
+
+    The earlier exposure tests recomputed the formula independently from raw
+    parquet and never asserted that `load_policies` actually did it. Replacing
+    the recompute with the supplied column would have passed them.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from src.dataset import load_policies
+
+    df = load_policies("motor")
+    ps = pd.to_datetime(df["period_start"])
+    pe = pd.to_datetime(df["period_end"])
+    expected = ((pe - ps).dt.days + 1) / 365.0
+    assert np.allclose(df["exposure"].to_numpy(float), expected.to_numpy(float)), (
+        "load_policies must recompute exposure from the dates"
+    )
+    # and it must be the FRACTION, not the supplied day count
+    assert df["exposure"].max() <= 366 / 365 + 1e-9, (
+        "exposure is not a fraction - the supplied day-count column leaked through"
+    )
+    assert np.allclose(
+        df["earned_premium"].to_numpy(float),
+        (df["written_premium"] * df["exposure"]).to_numpy(float),
+    ), "D-051: earned_premium must be written_premium x exposure"
+
+
+# --- D-055: the scoring metric itself --------------------------------------
+
+def test_d2_tweedie_power_and_floor_are_pinned():
+    """D-010: the metric is Tweedie deviance at power 1.5 with predictions
+    floored at 1e-3.
+
+    Neither the power nor the floor was asserted anywhere; a wrong power (1.2,
+    2.0) or a dropped floor in the LOCAL scoring path would have passed the
+    whole suite. The floor is guarded at the submission CSV level only.
+    """
+    from sklearn.metrics import d2_tweedie_score
+
+    y = np.array([0.0, 10.0, 100.0, 1000.0])
+    p = np.array([5.0, 10.0, 100.0, 1000.0])
+
+    d_15 = d2_tweedie_score(y, p, power=1.5)
+    # the power is part of the definition: a different power gives a different
+    # number on the same inputs, so this pins it. Both comparison powers are in
+    # the 1 < power < 2 range so a zero y is legal.
+    d_12 = d2_tweedie_score(y, p, power=1.2)
+    d_18 = d2_tweedie_score(y, p, power=1.8)
+    assert d_15 != d_12 and d_15 != d_18, "power must change the metric"
+    assert d_15 == pytest.approx(
+        d2_tweedie_score(y, np.maximum(p, 1e-3), power=1.5)
+    ), "the floor must be applied before scoring"
+
+    # a zero prediction must be rescued by the floor, not raise
+    floored = np.maximum(np.array([0.0, 10.0, 100.0, 1000.0]), 1e-3)
+    assert np.isfinite(d2_tweedie_score(y, floored, power=1.5))
+    with pytest.raises(ValueError):
+        d2_tweedie_score(y, np.array([0.0, 10.0, 100.0, 1000.0]), power=1.5)

@@ -47,9 +47,40 @@ def _sample(n=2000, seed=7):
 # --- R-04: Normalized Gini = Model Gini / Data Gini -------------------------
 
 def test_perfect_ranking_scores_one():
-    """R-04: "A saturated model... would have a normalized Gini equal to unity." """
+    """R-04: "A saturated model... would have a normalized Gini equal to unity."
+
+    NOTE the limitation, recorded so this is not mistaken for a formula check:
+    `normalized_gini(a, w, a)` divides `weighted_gini(a, w, a)` by
+    `data_gini(a, w)`, which is the *same computation*. The ratio is X/X and is
+    therefore 1.0 by construction for ANY formula shared by both. This
+    documents the definition; it cannot detect a wrong formula. The formula
+    itself is checked by `test_gini_matches_hand_computation` and the
+    tiebreaker test below.
+    """
     a, w, _ = _sample()
     assert normalized_gini(a, w, a) == pytest.approx(1.0, abs=1e-9)
+
+
+def test_gini_matches_hand_computation():
+    """A two-point hand-computed Gini, so the FORMULA is pinned.
+
+    Two risks, equal weight, losses 0 and 100, predicted so the ordering is
+    (low, high). Lorenz: after the first point cum_exposure=0.5, cum_loss=0;
+    after the second cum_exposure=1.0, cum_loss=1.0. Gini = 2 * area between
+    the Lorenz curve and the diagonal = 0.5.
+    """
+    a = np.array([0.0, 100.0])
+    w = np.array([1.0, 1.0])
+    p = np.array([1.0, 2.0])          # ranks low then high, as it should
+    g = weighted_gini(a, w, p, seed=0)
+    assert g == pytest.approx(0.5, abs=1e-9), (
+        f"two-point Gini must be exactly 0.5, got {g:.6f} - the formula is wrong"
+    )
+    # reversing the ranking must flip the sign of the skill
+    g_rev = weighted_gini(a, w, -p, seed=0)
+    assert g_rev == pytest.approx(-0.5, abs=1e-9), (
+        f"an inverted ranking must score negative, got {g_rev:.6f}"
+    )
 
 
 def test_constant_prediction_scores_zero():
