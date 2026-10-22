@@ -45,6 +45,10 @@ negative results are as valuable as positive ones.
 | 21 | 2026-10-22 12:00 UTC | exp-025 | D-053 tuned hyperparams (leaves 16, lr 0.02) + marketing_segment; D-045 refit | biggest stable local gain: +0.0057 mean across both folds (2024 0.1352 / 2023 0.1420). Both folds rank it #1. Simpler model: fewer leaves consistently better. Guardrail passes (implied rate 1.44). | 0.1360 | - | — | clean | `3ae436d19cc3` |
 | 22 | 2026-10-22 16:01 UTC | exp-027 | D-056 occupation removed from the tree spec; exp-022 config otherwise | analysis run. Single change from exp-022: occupation dropped. Accuracy measured neutral (mean +0.0003, folds disagree); calibration better on both folds. Tests whether the calibration gain transfers. | 0.1327 | - | — | clean | `9539335aba0d` |
 | 23 | 2026-10-22 20:32 UTC | exp-028 | D-058 flood_zone only (drop river distance + elevation); D-045 full refit + all-data recalibration | analysis run. Single change from exp-027: drop distance_to_river_km and elevation_m, keep flood_zone. Tests the collinearity hypothesis - all three encode flood risk. Local D2 slightly lower (0.1318 vs 0.1327) but local has been unreliable all day. | 0.1318 | - | — | clean | `be48df10ac4e` |
+| 24 | 2026-10-22 22:21 UTC | exp-029 | exp-029: exp-027 config, seed 0 (occupation removed, corrected labels, D-045 refit) | second/third seed of the best config family; enables seed blending | 0.1324 | - | — | clean | `36826703681c` |
+| 25 | 2026-10-22 22:21 UTC | exp-030 | exp-030: exp-027 config, seed 2 (occupation removed, corrected labels, D-045 refit) | second/third seed of the best config family; enables seed blending | 0.1324 | - | — | clean | `07b012a56c75` |
+| 26 | 2026-10-22 22:24 UTC | blend-027030 | 2-seed ensemble: exp-027 + exp-030 (best two, occupation removed) | blend of the two best seeds of the exp-027 family | 0.1322 | - | — | clean | `de9ed2efeae2` |
+| 27 | 2026-10-22 22:24 UTC | blend-03seed | 3-seed ensemble: exp-027 + exp-029 + exp-030 (occupation removed) | full seed ensemble of the exp-027 family | 0.1321 | - | — | clean | `a478bded65cf` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -678,3 +682,29 @@ effects and the exp-024 double-count — not random.
 
 **Standings:** exp-027 **0.12436** (best) · exp-028 0.12255 · blend-2s 0.12260 ·
 exp-022 0.12249. 6 slots used, 4 remaining. Deadline 2026-10-23 16:00.
+
+### Seeds and blends of the exp-027 family (2026-10-22 22:21–22:25) — quota exhausted
+
+| # | tag | change | LB | Δ vs exp-027 |
+|---|---|---|---|---|
+| 19 | exp-029 | seed 0 | 0.12179 | −0.00257 |
+| 20 | exp-030 | seed 2 | 0.12247 | −0.00189 |
+| 21 | blend-027030 | 2-seed (027+030) | 0.12389 | −0.00047 |
+| 22 | exp-03seed | 3-seed (027+029+030) | 0.12344 | −0.00092 |
+
+**Family: 0.12179 / 0.12247 / 0.12436 → mean 0.12287, sd 0.00133.** exp-027 is
+~1.1 sd above the mean — a good draw. Report the mean as the configuration's
+true level, not the best draw.
+
+**The occupation removal survives like-for-like:** old family mean 0.12161
+(exp-021/022/023) vs new family mean **0.12287** (exp-027/029/030) =
+**+0.0018**, consistent with D-057's +0.00187.
+
+**Blending diluted the standout.** Both blends landed below exp-027. Compare the
+earlier blend-2s (0.12260, above both members 0.12150/0.12249) where variance
+reduction helped. Rule: ensembling helps when members are comparably good and
+hurts when one is a standout.
+
+**Quota: 10 of 10 used on 2026-10-22.** 10 fresh tomorrow, deadline 2026-10-23
+16:00. Best remains exp-027 (0.12436); best defensible estimate is the family
+mean 0.12287. Model-work queue exhausted — see D-059.

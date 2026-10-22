@@ -1734,3 +1734,67 @@ that nothing else shares.
   all three geo fields present.
 - Gap to leaderboard top: 0.12996 − 0.12436 = **0.0056**.
 - 6 slots used today, **4 remaining**. Deadline 2026-10-23 16:00.
+
+## D-059 — exp-027 is partly a lucky draw; the occupation gain survives on means
+**2026-10-22 · accepted · closes the seed question · quota exhausted**
+
+Used the four expiring slots on the exp-027 family: two more seeds and two
+blends. All 10 of today's slots are now spent.
+
+| run | change | LB |
+|---|---|---|
+| **exp-027** | seed 1 | **0.12436** |
+| blend-027030 | 2-seed (exp-027 + exp-030) | 0.12389 |
+| exp-03seed | 3-seed | 0.12344 |
+| exp-030 | seed 2 | 0.12247 |
+| exp-028 | flood_zone only | 0.12255 |
+| exp-029 | seed 0 | 0.12179 |
+
+### exp-027 is a good draw, not a better configuration
+
+The no-occupation family is 0.12179 / 0.12247 / 0.12436 — **mean 0.12287, sd
+0.00133, range 0.0026**. exp-027 sits ~1.1 sd above its own family mean.
+
+So 0.12436 should not be reported as "the score of the no-occupation model." It
+is the score of a favourable seed of that model. The honest figure for the
+configuration is the family mean.
+
+### But the occupation removal still holds
+
+Like-for-like, three seeds per family:
+
+| family | seeds | mean |
+|---|---|---|
+| with occupation (exp-021/022/023) | 0.12150 / 0.12249 / 0.12083 | 0.12161 |
+| **without occupation (exp-027/029/030)** | 0.12436 / 0.12179 / 0.12247 | **0.12287** |
+
+**+0.0018 on the means**, consistent with the +0.00187 claimed in D-057. The
+removal is a real improvement; exp-027's individual score is partly luck on top
+of it. D-057's caveat about the D-011 data-fix confound still stands.
+
+### Blending diluted the lucky draw
+
+2-seed 0.12389 and 3-seed 0.12344 both landed **below** exp-027. This is the
+opposite of the earlier blend-2s result (0.12260 vs best member 0.12249,
++0.0001), and the reason is the same in reverse: blend-2s combined two
+comparable runs (0.12150, 0.12249) with no standout, so variance reduction
+helped. Here one member is a good draw and averaging pulls it down.
+
+**Rule for the write-up:** ensembling helps when members are comparably good and
+hurts when one is a standout. More seeds is not automatically better — consistent
+with D-029 and with the earlier 3-seed blend underperforming the 2-seed one.
+
+### Standings and quota
+
+- **Best single run: exp-027, 0.12436** (a good draw).
+- **Best defensible estimate of the configuration: family mean 0.12287.**
+- Gap to leaderboard top (0.12996): 0.0056 on the best draw, 0.0071 on the mean.
+- **10 of 10 slots used today. 10 fresh tomorrow, deadline 16:00.**
+
+### Tomorrow
+
+The model-work queue is exhausted: features (3 sweeps), hyperparameters, rate
+target, calibration slope, C-3 blend, per-LOB split — all measured and rejected
+or marginal. What remains is the write-up (C-5 is drafted but now stale against
+D-053…D-059) and, if desired, a fresh look with tomorrow's slots after the
+evidence has settled.
