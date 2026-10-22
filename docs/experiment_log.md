@@ -41,6 +41,7 @@ negative results are as valuable as positive ones.
 | 17 | 2026-10-21 23:58 UTC | blend-2s | 2-seed ensemble of exp-021+exp-022 (corrected labels + D-045 refit) | seed average of the two best runs; variance reduction | 0.1329 | - | — | clean | `97fb01260e96` |
 | 18 | 2026-10-22 00:14 UTC | exp-023 | exp-021 config, seed 2 - third seed, corrected labels + D-045 refit | third seed of best config; human approved fresh window | 0.1320 | - | — | clean | `357fd1e58866` |
 | 19 | 2026-10-22 00:14 UTC | blend-3s | 3-seed ensemble: exp-021+022+023 (corrected labels + D-045 refit) | variance reduction across 3 seeds of the best config | 0.1326 | - | — | clean | `e6aa82c9f4e8` |
+| 20 | 2026-10-22 01:55 UTC | exp-024 | D-051 rate target + premium unit fix + earned_premium; D-045 refit | written_premium is ANNUANALISED not pro-rated. Fit y_ult/exposure with exposure weights, multiply back at scoring. +0.0038 honest D2 vs cost target. motor +0.0070. | 0.1365 | - | — | clean | `977c2bf34918` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).

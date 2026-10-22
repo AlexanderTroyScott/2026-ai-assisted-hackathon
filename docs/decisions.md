@@ -1331,3 +1331,79 @@ useless) — the 2-seed gain is small and not reliably monotone in the number of
 seeds. Do not assume more seeds is better.
 
 **Quota state:** 2 used on 2026-10-22, **8 remaining**.
+
+## D-052 — Rate target regressed: exposure double-counted
+**2026-10-22 · accepted · retracts the D-051 modelling half · exp-024**
+
+exp-024 combined D-051's premium-unit fix with a new rate target
+(`y_ult / exposure`, exposure weights, multiply back at scoring) plus the
+D-045 final refit. Local honest D² **0.1365** — the best we have ever measured.
+Leaderboard **0.06019**, below the constant-rate baseline. A collapse.
+
+### What went wrong
+
+`earned_premium = written_premium × exposure` is a feature, and `exposure` is a
+feature. With `target = rate` the model can therefore learn
+
+    rate_hat ~ earned_premium ~ written_premium × exposure
+
+and scoring then multiplies by exposure again. Net effect: **cost ∝ exposure²**.
+
+Measured implied rate (prediction ÷ exposure) by exposure band:
+
+| band | ≤0.3 | 0.3–0.6 | 0.6–0.9 | 0.9–1.0 | max/min |
+|---|---|---|---|---|---|
+| training truth | 437 | 430 | 417 | 389 | **1.12** |
+| exp-022 (cost target) | 395 | 456 | 463 | 426 | **1.17** ✓ |
+| fixA (cost target + data fixes) | 458 | 493 | 476 | 426 | **1.16** ✓ |
+| **exp-024 (rate target)** | **72** | **234** | **379** | **461** | **6.40** ✗ |
+
+Training has `corr(exposure, rate) = −0.0015` — the rate is flat, so any fitted
+positive slope is spurious.
+
+**Important correction to my own framing:** I first attributed this to the 2025
+test set having more partial-year rows. It does not — the exposure mix is
+nearly identical (≤0.3 band: 11.6% train vs 12.8% test). The failure is the
+double count, full stop.
+
+### Why local D² did not catch it
+
+Local honest D² preferred the rate target (0.1365 vs 0.1327) and was the best
+number we had produced. The leaderboard rejected it decisively. This is the
+sharpest possible confirmation of **D-025 / R-06** — a local gate that looks
+excellent can be measuring the wrong thing — and it cost a slot to learn.
+
+Note also that exp-022 was **already** learning `cost ∝ exposure` correctly
+(implied rate flat to 1.17). The rate target added nothing and broke it. The
+Tweedie tree with `exposure` as a feature recovers the product well enough.
+
+### What is kept from D-051
+
+The **data fixes are correct and retained**: `customer_id.str.zfill(8)` (motor
+leading zeros, 10% of rows), the 604 duplicate claims dropped, and
+`earned_premium` as a named quantity. The `premium_lr` benchmark correction is
+also right and stays — it moved **0.0758 → 0.1092** on the 2024 holdout, exactly
+as the audit predicted. `write_orphan_log` still asserts 414 because it reads
+the raw, un-deduplicated claims table by design.
+
+Only the **rate-target modelling change is retracted**. `--target` defaults back
+to `cost`; `rate` is kept behind the flag for diagnostics.
+
+### Guardrail added
+
+`kaggle_submit.py` now computes implied-rate flatness as a pre-submission check
+(fails above max/min 1.5 against a truth of 1.12). It reports
+
+- exp-024: **FAIL**, max/min 6.40
+- exp-022: **PASS**, max/min 1.17
+
+This is exactly the check that would have caught the regression before spending
+a slot. `tests/test_guardrails.py` pins it with synthetic flat vs squared
+submissions.
+
+### Standings
+
+Our best remains **blend-2s at 0.12260** (exp-021 + exp-022). One slot was
+wasted on exp-024. The premium-unit finding from D-051 is still valid and
+important — it is the *benchmark* and the *feature naming* that were wrong, not
+the tree's target formulation.

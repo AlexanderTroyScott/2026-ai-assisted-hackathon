@@ -64,6 +64,34 @@ def validate(path: Path) -> list[tuple[str, bool, str]]:
         got = set(df.loc[df["row_id"].str.startswith(pref), "row_id"])
         bad += len(got ^ ids)
     checks.append(("prefix/LOB consistency", bad == 0, f"{bad} mismatched ids"))
+
+    # D-052: exposure-scaling sanity. The training truth has a FLAT implied rate
+    # (cost/exposure) across exposure bands: 437/430/417/389, max/min = 1.12.
+    # A submission whose implied rate rises steeply with exposure is
+    # double-counting exposure and will collapse on the leaderboard even when
+    # local D2 looks excellent — that is exactly what exp-024 did (0.1365 local,
+    # 0.06019 LB). This check would have caught it before spending a slot.
+    try:
+        exp_rows = []
+        for ln, pre in (("motor", "M"), ("buildings", "B"), ("contents", "C")):
+            t = pd.read_parquet(DATA / f"test_{ln}.parquet",
+                                columns=["row_id", "period_start", "period_end"])
+            ps = pd.to_datetime(t["period_start"])
+            pe = pd.to_datetime(t["period_end"])
+            t = t.assign(exposure=((pe - ps).dt.days + 1) / 365.0)
+            exp_rows.append(t[["row_id", "exposure"]])
+        exp_df = pd.concat(exp_rows, ignore_index=True)
+        d = df.merge(exp_df, on="row_id", how="left")
+        d["implied_rate"] = d["prediction"] / d["exposure"].clip(lower=1e-3)
+        bands = pd.cut(d["exposure"], [0, 0.3, 0.6, 0.9, 1.01])
+        g = d.groupby(bands, observed=True)["implied_rate"].mean()
+        ratio = float(g.max() / g.min()) if g.min() > 0 else float("inf")
+        flat = ratio <= 1.5
+        checks.append(("exposure scaling flat", flat,
+                       f"implied rate max/min={ratio:.2f} (truth 1.12; >1.5 => "
+                       f"exposure likely double-counted)"))
+    except Exception as exc:  # noqa: BLE001
+        checks.append(("exposure scaling flat", True, f"skipped ({exc})"))
     return checks
 
 

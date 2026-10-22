@@ -40,7 +40,7 @@ BASE_FEATURES = [
     "exposure", "voluntary_excess", "compulsory_excess", "missed_payments_12m",
     "renewal_count", "days_quote_to_inception", "discount_applied", "written_premium",
     "new_business", "prior_claims_5y",
-    "premium_per_exposure", "age_band", "ncb_band", "vvg_log",
+    "earned_premium", "age_band", "ncb_band", "vvg_log",
     "policyholder_age", "sum_insured", "driver_age", "years_licensed", "ncb_years",
     "vehicle_value_group", "vehicle_age", "engine_size_cc", "annual_mileage",
     "telematics_opt_in",
@@ -105,7 +105,9 @@ def add_derived(df: pd.DataFrame) -> pd.DataFrame:
     with sharp jumps at driver age 25 and 70 and 3 flat NCB bands.
     """
     df = df.copy()
-    df["premium_per_exposure"] = df["written_premium"] / df["exposure"].clip(lower=1e-3)
+    # D-051: written_premium is ANNUALISED, so dividing by exposure gives an
+    # artefact (up to 916,241 on a 1-day row). earned_premium is built in
+    # load_policies as written_premium x exposure.
     age = df["driver_age"].fillna(df["policyholder_age"]).fillna(50)
     df["age_band"] = pd.cut(age, [0, 24, 69, 200], labels=[0, 1, 2]).astype(float)
     df["ncb_band"] = pd.cut(df["ncb_years"].fillna(0), [-1, 0, 4, 200], labels=[0, 1, 2]).astype(float)
@@ -269,6 +271,11 @@ def main() -> int:
                     help="2025 level scenario (D-009, still `proposed`)")
     ap.add_argument("--fold", default="2024", choices=sorted(FOLDS),
                     help="rolling-origin holdout year (D-006)")
+    ap.add_argument("--target", default="cost", choices=["rate", "cost"],
+                    help="D-052: 'cost' (default) fits total row cost. 'rate' is "
+                         "EXPERIMENTAL and regressed on the leaderboard (exp-024, "
+                         "0.06019) by double-counting exposure via earned_premium; "
+                         "kept for diagnostics only")
     ap.add_argument("--recency-lambda", type=float, default=0.0,
                     help="exp(lambda*(AY-train_max)) sample weights; >0 up-weights "
                          "recent accident years (D-041). 0 = uniform.")
@@ -307,9 +314,11 @@ def main() -> int:
     )
     pred_const = va["exposure"].to_numpy() * va["line"].map(lob_rate).to_numpy()
     lob_lr = tr.groupby("line").apply(
-        lambda g: g["y_ult"].sum() / g["written_premium"].sum(), include_groups=False
+        lambda g: g["y_ult"].sum() / g["earned_premium"].sum(), include_groups=False
     )
-    pred_prem = va["written_premium"].to_numpy() * va["line"].map(lob_lr).to_numpy()
+    # D-051: written_premium is annualised; the benchmark must use earned
+    # premium (rate x exposure) or it is unscaled for partial-year rows.
+    pred_prem = va["earned_premium"].to_numpy() * va["line"].map(lob_lr).to_numpy()
 
     def d2(p):
         return d2_tweedie_score(yv, np.maximum(p, 1e-3), power=1.5)
@@ -347,17 +356,36 @@ def main() -> int:
         imp = pd.Series(fmodel.feature_importances_, index=use).sort_values(ascending=False)
     else:
         model = lgb.LGBMRegressor(**params)
+        # D-051: written_premium is an annualised rate, so total row cost is
+        # `rate x exposure` — a PRODUCT. Trees are additive and learn products
+        # badly, and this handicaps the 35% of rows with exposure != 1. The
+        # fix is to fit the annual RATE with exposure as the weight, then
+        # multiply back outside the model (the formulation src/glm.py already
+        # uses). `--target cost` retains the old behaviour for A/B only.
+        exp_tr = tr["exposure"].to_numpy(float)
+        exp_va = va["exposure"].to_numpy(float)
+        if args.target == "rate":
+            y_fit = (tr["y_ult"].to_numpy() / np.clip(exp_tr, 1e-3, None))
+            y_eval = (va["y_ult"].to_numpy() / np.clip(exp_va, 1e-3, None))
+            w_fit = rec_w * np.clip(exp_tr, 1e-3, None)
+        else:
+            y_fit = tr["y_ult"].to_numpy()
+            y_eval = va["y_ult"].to_numpy()
+            w_fit = rec_w
         model.fit(
-            X_tr, tr["y_ult"], eval_set=[(X_va, va["y_ult"])],
+            X_tr, y_fit, eval_set=[(X_va, y_eval)],
             eval_metric="tweedie",
             callbacks=[lgb.early_stopping(80, verbose=False), lgb.log_evaluation(0)],
             categorical_feature=cats,
-            sample_weight=rec_w,
+            sample_weight=w_fit,
         )
-        p_raw = np.maximum(model.predict(X_va), 1e-3)
+        def _predict(m, X, expv):
+            r = np.maximum(m.predict(X), 1e-3)
+            return np.maximum(r * expv, 1e-3) if args.target == "rate" else r
+        p_raw = _predict(model, X_va, exp_va)
         best_iter = int(model.best_iteration_)
         imp = pd.Series(model.feature_importances_, index=use).sort_values(ascending=False)
-    print(f"model ({args.mode}, raw)  D2 = {d2(p_raw):+.4f}   (n_iter={best_iter})")
+    print(f"model ({args.mode}, target={args.target}, raw)  D2 = {d2(p_raw):+.4f}   (n_iter={best_iter})")
 
     # LOB recalibration (D-009/D-005) scales each LOB so predicted totals match
     # expected totals. WHERE those scales are fitted determines what the local
@@ -376,8 +404,14 @@ def main() -> int:
     # 2025 rows. So the oracle number is the right thing for the submission path
     # and the wrong thing for local model comparison.
     p_va_oracle = lob_recalibrate(p_raw, va["line"], actual=yv)
+    exp_tr_arr = tr["exposure"].to_numpy(float)
+    exp_all_arr = train["exposure"].to_numpy(float)
+    exp_te_arr = test["exposure"].to_numpy(float)
+    exp_va_arr = va["exposure"].to_numpy(float)
+    to_cost = (lambda r, e: np.maximum(r * e, 1e-3)) if args.target == "rate" else (lambda r, e: r)
     p_tr_raw = (np.maximum(fmodel.predict(X_tr), 1e-9) * np.maximum(smodel.predict(X_tr), 1e-3)
-                if args.mode == "freq_sev" else np.maximum(model.predict(X_tr), 1e-3))
+                if args.mode == "freq_sev"
+                else to_cost(np.maximum(model.predict(X_tr), 1e-3), exp_tr_arr))
     # Train-fitted scales applied to RAW holdout predictions. Passing
     # p_va_oracle here would apply two scales at once.
     p_va_oof = lob_recalibrate(p_raw, va["line"], ref_lines=tr["line"],
@@ -424,12 +458,12 @@ def main() -> int:
         p_ref = (np.maximum(fmodel.predict(X_va), 1e-9)
                  * np.maximum(smodel.predict(X_va), 1e-3))
     else:
-        p_te = np.maximum(final_model.predict(X_te), 1e-3)
-        p_ref = np.maximum(final_model.predict(X_va), 1e-3)
+        p_te = to_cost(np.maximum(final_model.predict(X_te), 1e-3), exp_te_arr)
+        p_ref = to_cost(np.maximum(final_model.predict(X_va), 1e-3), exp_va_arr)
     # LOB scales. After a final refit the anchor should also be all-data, so the
     # level is set on the full training book rather than the 2024 slice alone.
     if args.final_fit:
-        p_all = np.maximum(final_model.predict(X_all), 1e-3)
+        p_all = to_cost(np.maximum(final_model.predict(X_all), 1e-3), exp_all_arr)
         p_te = lob_recalibrate(p_te, test["line"], ref_lines=train["line"],
                                ref_pred=p_all, ref_actual=train["y_ult"].to_numpy())
     else:

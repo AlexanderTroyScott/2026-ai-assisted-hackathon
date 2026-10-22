@@ -107,14 +107,46 @@ def load_policies(line: str, split: str = "train") -> pd.DataFrame:
     df["ps"] = pd.to_datetime(df["period_start"])
     df["pe"] = pd.to_datetime(df["period_end"])
     df["exposure"] = ((df["pe"] - df["ps"]).dt.days + 1) / 365.0
+    # D-050: motor customer_id has lost its leading zeros on ~10% of rows, so
+    # the customers join fails and every demographic field comes back NaN.
+    # zfill(8) recovers 100% with zero collisions (measured 2026-10-22).
+    if "customer_id" in df.columns:
+        df["customer_id"] = df["customer_id"].astype(str).str.zfill(8)
+    # D-051: `written_premium` is an ANNUALISED rate, not the premium for this
+    # row's period — corr(written_premium, exposure) is ~0, and a 1-day row
+    # costs the same as a 365-day row. Earned premium for the row is the annual
+    # rate pro-rated by exposure. Everything downstream must use this.
+    df["earned_premium"] = df["written_premium"] * df["exposure"]
     df["acc_year"] = df["ps"].dt.year
     df["line"] = line
     df["is_test"] = split == "test"
     return df
 
 
+DEDUP_KEYS = ["policy_id", "line", "peril", "loss_date", "report_date", "status",
+              "paid_to_date", "incurred_to_date", "recoveries", "repairer_id",
+              "third_party_id"]
+
+
+def _dedup_claims(c: pd.DataFrame) -> pd.DataFrame:
+    """D-051: 604 claims are exact duplicates differing only in claim_id.
+
+    598 of the 604 extra copies carry 2022 loss dates, inflating 2022 claim cost
+    by 1.63% and double-counting the training label for that policy row. Drop
+    the later copy, keep the first.
+    """
+    keys = [k for k in DEDUP_KEYS if k in c.columns]
+    n0 = len(c)
+    c = c.drop_duplicates(subset=keys, keep="first").copy()
+    dropped = n0 - len(c)
+    if dropped:
+        print(f"  D-051 dropped {dropped} duplicate claim rows")
+    return c
+
+
 def load_claims() -> pd.DataFrame:
     c = pd.read_parquet(DATA / "claims.parquet")
+    c = _dedup_claims(c)
     c = c[c["status"] != "repudiated"].copy()
     c["loss"] = pd.to_datetime(c["loss_date"])
     c["rep"] = pd.to_datetime(c["report_date"])

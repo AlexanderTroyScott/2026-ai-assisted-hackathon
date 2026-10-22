@@ -537,3 +537,45 @@ def test_glm_denies_leakage_fields():
 
     leaked = (set(NUM_SPEC) | set(CAT_SPEC)) & DENYLIST
     assert not leaked, f"GLM spec carries deny-listed fields: {leaked}"
+
+
+def test_exposure_scaling_guardrail_catches_double_count():
+    """D-052: a submission whose implied rate rises with exposure is
+    double-counting exposure and collapses on the leaderboard.
+
+    exp-024 measured excellent local D2 (0.1365) and scored 0.06019 on the
+    board because it scaled by exposure twice. Training truth has a FLAT
+    implied rate (max/min 1.12); exp-024's was 6.40. This test pins the
+    diagnostic so it cannot be skipped again.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.kaggle_submit import validate
+
+    exp_rows = []
+    for ln in ("motor", "buildings", "contents"):
+        t = pd.read_parquet(DATA / f"test_{ln}.parquet",
+                            columns=["row_id", "period_start", "period_end"])
+        ps = pd.to_datetime(t["period_start"]); pe = pd.to_datetime(t["period_end"])
+        exp_rows.append(t.assign(exposure=((pe - ps).dt.days + 1) / 365.0)[["row_id", "exposure"]])
+    exp_df = pd.concat(exp_rows, ignore_index=True)
+
+    # a well-behaved submission: prediction proportional to exposure
+    good = exp_df.copy()
+    good["prediction"] = 400.0 * good["exposure"]
+    good = good[["row_id", "prediction"]]
+    # a double-counted one: prediction proportional to exposure^2
+    bad = exp_df.copy()
+    bad["prediction"] = 400.0 * bad["exposure"] ** 2
+    bad = bad[["row_id", "prediction"]]
+
+    for df, should_pass, label in ((good, True, "flat"), (bad, False, "double-counted")):
+        p = DATA.parent / "outputs" / f"_tmp_{label}.csv"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(p, index=False)
+        res = {name: ok for name, ok, _ in validate(p)}
+        assert res.get("exposure scaling flat") is should_pass, (
+            f"{label} submission: expected exposure scaling flat={should_pass}, "
+            f"got {res.get('exposure scaling flat')}"
+        )
+        p.unlink()
