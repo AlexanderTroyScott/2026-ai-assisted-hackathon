@@ -239,6 +239,12 @@ substantive changes in this work, in order:
 | **D-051 — data corrections** (annualised premium, customer_id padding, 604 duplicate claims) | Verified data defects, §2.2 above. | Benchmark corrected 0.076 → 0.109. Model effect neutral (−0.0004). |
 | **D-052 — rate target implemented then retracted** | Implemented to match the annualised-premium finding; collapsed on the leaderboard at 0.06019. Cause: `earned_premium` contains exposure, so the model scaled by exposure twice. | **Retracted.** Guardrail added (`kaggle_submit.py` implied-rate flatness) that would have caught it before submission. |
 | **D-053 — hyperparameter tuning** | Never previously tuned. | Local +0.0057 mean across both folds; **failed on the leaderboard** (0.11168). Not adopted. |
+| **D-054 — R-04 diagnostics built** | The suite produced no normalised Gini or lift charts; R-04 names the train-vs-holdout Gini gap as the overfit measure. | Toolkit built. **The gap does not predict leaderboard transfer** (inverted on the two configs tested). The *decomposition* does: Gini/lift measure ranking, calibration measures level, and our failures were level failures. |
+| **D-055 — test-suite audit** | Reviewer audit of all 70 tests. | Four submission-critical behaviours were unguarded (target construction, the exposure convention, the scoring metric, and a dead test) and one test was tautological. Fixed; 70 → 77 tests. |
+| **D-056 — `occupation` removed** | 64% of its dispersion is Student+Retired, i.e. driver age in disguise; it carried two diagnosed artefacts. | Accuracy neutral (mean +0.0003, folds disagreeing). **Calibration improved on both folds.** Removal confirmed on the leaderboard. |
+| **D-057 — exp-027** | Testing the D-056 change. | **0.12436**, our best draw. See §6 for the seed-family caveat. |
+| **D-058 — `flood_zone`-only** | Proposed that river distance and elevation were proxies for it. | **Refuted**: −0.00181. Elevation carries 1.2–1.8× residual signal *within* flood zones. |
+| **D-059 — seeds and blends** | Filling the expiring quota on the best config. | Family mean 0.12287, sd 0.00133. exp-027 is ~1.1 sd above its own mean. Blends diluted the standout. **Corrected:** the occupation gain is +0.00127 on means (1.14 pooled sd), not +0.0018. |
 
 **Professional judgement conflict (ASOP 9 §5.4).** The corrected label table (D-033/D-035)
 is the actuarially correct one and reproduces `data_findings.md` §5 exactly. It is
@@ -253,19 +259,47 @@ such.**
 
 ## 6. Results and diagnostics
 
-**Presented result:** `outputs/submissions/exp-021022-blend.csv`, a two-seed ensemble,
-**leaderboard 0.12260**. Single best run exp-022 at 0.12249. Both use the corrected label
-table and the D-045 final refit.
+**Presented result.** Our best single run is `exp-027`, leaderboard **0.12436**.
+The honest estimate of the *configuration* is the three-seed family mean
+**0.12287** (0.12179 / 0.12247 / 0.12436, sd 0.00133) — exp-027 sits ~1.1 sd
+above its own family mean and should be described as a favourable draw, not as
+the model's score. Gap to the leaderboard top (0.12996) is 0.0056 on the best
+draw and 0.0071 on the mean.
 
-Local diagnostics (train-fitted, out-of-sample): holdout D² ≈ 0.133 for the presented
-configuration family. Per-LOB roughly motor 0.075, buildings 0.111, contents 0.088.
+All presented runs use the corrected label table (D-033/D-035) and the D-045
+final refit.
 
-**Diagnostics not currently produced and identified as a gap (R-04):** normalized Gini
-(model Gini / data Gini) with train-versus-holdout gap, Lorenz curves, and lift charts
-on equal-exposure bins. R-04 identifies the train/test Gini gap as the overfit measure
-to watch; we compute neither. This is a documentation and diagnostic weakness.
+**The occupation removal, stated correctly.** Three seeds per family:
 
----
+| family | seeds | mean | sd |
+|---|---|---|---|
+| with occupation | 0.12150 / 0.12249 / 0.12083 | 0.12161 | 0.00084 |
+| **without occupation** | 0.12436 / 0.12179 / 0.12247 | **0.12287** | 0.00133 |
+
+Difference **+0.00127 (1.14 pooled sd)**. Directionally consistent — the mean
+and every single-run pairing favour removal — but **suggestive, not
+established**. (D-057 quoted +0.00187, which is the *single-run* figure;
+corrected in D-059.)
+
+**Diagnostics now produced** (R-04, added 2026-10-22). Fold 2024 holdout,
+presented config family: normalised Gini 0.4669, lift ratio 28.0, calibration
+MAE ~29 on a mean near 350. Lift chart monotone apart from one flat step
+(bin 5→6). Lorenz: the lowest-predicted 10% of exposure carries 0.3% of loss.
+
+Two properties of the model are worth stating plainly:
+
+- **Out-of-sample calibration ratio is 1.12–1.18** before LOB recalibration — the
+  model underpredicts the holdout by 12–18%. The per-LOB recalibration carries
+  that; it does not reflect the model's intrinsic level accuracy.
+- **Calibration slope is 1.15–1.22** — predictions are under-dispersed. Tested
+  and *not* corrected: a power transform that forces the slope to 1.0 reduces
+  Tweedie D² from 0.1303 to 0.1166 even with an oracle estimate. **D² prefers
+  the compressed predictions.** The slope is a descriptive property, not a defect
+  to fix under this metric.
+
+**Ensembling.** Blending seeds helped once (two comparable runs, +0.0001) and
+hurt once (a standout plus two weaker draws, −0.0005 to −0.001). Rule: variance
+reduction helps when members are comparably good and dilutes a lucky draw.
 
 ## 7. Reliance on others (ASOP 9 §5.8)
 
@@ -302,6 +336,25 @@ subsequently found to be incorrect and are recorded as retracted in `docs/decisi
   to monotone transforms — a tautology. Replaced with a Pearson test.
 - The `written_premium` collinearity alarm was an artefact of evaluating a logged field
   at its raw value.
+- **The "calibration slope is the biggest number on the table" framing was wrong.**
+  Measured directly: forcing the slope to 1.0 *reduces* Tweedie D² from 0.1303 to
+  0.1166, even with an oracle estimate. The metric prefers the compressed
+  predictions. The slope is descriptive, not a lever.
+- **The per-LOB model proposal was wrong.** The premise (different drivers per
+  line) was correct; the conclusion (separate models would help) was not.
+  Measured −0.0044 / −0.0040 on both folds, with worse calibration.
+- **The C-3 ensemble ceiling was overstated** in the first read by comparing a
+  recalibrated blend against an un-recalibrated baseline. Corrected: real gain
+  +0.0001, and the two models' errors correlate at 0.999.
+- **An arithmetic error in D-059**: the occupation-removal gain on family means
+  is +0.00127 (1.14 pooled sd), not the "+0.0018" claimed. That figure was the
+  single-run delta carried across without recomputation.
+
+Five self-corrections in the session that produced this model. The pattern is
+consistent and worth stating: **single measurements and small samples get
+over-read.** What caught these: independent subagent audit, a second measurement
+before acting, and comparing family means rather than best draws. Where that
+discipline was not applied, an over-claim followed.
 
 **Verification discipline.** Every conclusion that reaches this report was recomputed
 from `data_raw/` (AGENTS.md rule 1) or attributed to a named source. Independent
@@ -317,28 +370,43 @@ not as a conclusion to be accepted.
 
 ## 8. Disclosures and limitations
 
-1. **The target is a documented lower bound** (A4). Development factors capture late
-   reporting but not adverse development on open claims. Open-claim share is 20.4% for
-   2024 against 3.2% for 2023, and 2024 open claims carry mean case ≈ 7.7k versus
-   21–27k for mature open claims. The 2024 anchor may therefore be understated.
-2. **The 2025 level factor is unratified** (A6). It is carried by every submission and
-   remains `proposed`.
-3. **2025 weather is realised data** (A12). In scope by explicit human decision on the
-   ground of equal availability, and disclosed here for the reader's judgement.
-4. **The 2024 slice is a selection set, not a holdout** (A14). Model choices were made
-   against it. The leaderboard is the only untouched evaluation.
-5. **Local D² does not reliably rank candidates** (A15), documented twice by direct
-   measurement.
-6. **Normalised Gini and lift-chart diagnostics are not produced** (§6) — a gap against
-   R-04.
-7. **The single largest claim** (motor bodily injury, 11,894,277) is 10.6× the next
-   largest, 73× the p99.9, and 1.59% of the entire book. It is internally coherent
-   (open, third-party-only cover, case reserve at the 15th percentile of open claims)
-   and is **retained**. It materially affects one occupation cell and is not removed.
-8. **Several decisions remain `proposed`** and are not professional conclusions: D-009
-   (level factor) and the C-1…C-5 method candidates that have not been adopted.
-
----
+1. **The target is a documented lower bound** (A4). Development factors capture
+   late reporting but not adverse development on open claims. Open-claim share is
+   20.4% for 2024 against 3.2% for 2023; 2024 open claims carry mean case ≈ 7.7k
+   versus 21–27k for mature open claims. **This is the largest open actuarial
+   question in the work.**
+2. **The 2025 level factor is unratified** (A6). Carried by every submission,
+   still `proposed`.
+3. **2025 weather is realised data** (A12). In scope by explicit human decision
+   on the ground of equal availability. Measured effect of removal ≤ +0.0005,
+   not separable from noise. Disclosed for the reader's judgement.
+4. **The 2024 slice is a selection set, not a holdout** (A14). The leaderboard is
+   the only untouched evaluation.
+5. **Local D² does not reliably rank candidates** (A15), documented **four**
+   times by direct measurement. Its failures have been specific (level and
+   calibration effects, one target-formulation error) rather than random, but it
+   must not alone justify a submission.
+6. **Our best single run is partly a lucky draw.** exp-027 (0.12436) sits ~1.1 sd
+   above its three-seed family mean (0.12287). Quote the mean as the
+   configuration's level. The occupation removal is **+0.00127 on family means
+   (1.14 pooled sd)** — suggestive, not established. (D-057's +0.00187 is the
+   single-run figure; corrected in D-059.)
+7. **The model is under-dispersed and this is not corrected.** Calibration slope
+   1.15–1.22. Forcing it to 1.0 costs ~0.014 of Tweedie D² — the metric prefers
+   compressed predictions. Disclosed because an examiner may reasonably ask why
+   predictions are narrow relative to the observed spread.
+8. **The single largest claim** (motor bodily injury, 11,894,277) is 10.6× the
+   next largest, 73× the p99.9, and 1.59% of the book. Internally coherent and
+   **retained**. It materially affects one occupation cell — one reason
+   occupation left the model.
+9. **Approaches tested and rejected** (each measured, not assumed): frequency ×
+   severity split; seed averaging; per-peril development; recency weighting;
+   hyperparameter simplification; a rate-transformed target; log transforms for
+   the tree; `make_model`; feature pruning (three sweeps); the calibration-slope
+   correction; C-3 GLM/LGBM blending; separate per-LOB models. Record:
+   `docs/decisions.md` D-023 through D-059.
+10. **Still `proposed`**, i.e. not professional conclusions: D-009 (level
+    factor) and candidates C-1 and C-4.
 
 ## 9. Deviation from standard (ASOP 9 Section 6)
 

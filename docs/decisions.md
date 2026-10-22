@@ -1798,3 +1798,32 @@ target, calibration slope, C-3 blend, per-LOB split — all measured and rejecte
 or marginal. What remains is the write-up (C-5 is drafted but now stale against
 D-053…D-059) and, if desired, a fresh look with tomorrow's slots after the
 evidence has settled.
+
+### Correction to D-059 — arithmetic error
+
+D-059 states the occupation removal is "+0.0018 on the means". **That is wrong.**
+The correct figure is **+0.00127**.
+
+| family | seeds | mean | sd |
+|---|---|---|---|
+| with occupation | 0.12150 / 0.12249 / 0.12083 | 0.12161 | 0.00084 |
+| without occupation | 0.12436 / 0.12179 / 0.12247 | 0.12287 | 0.00133 |
+| **difference** | | **+0.00127** | |
+
+Effect is **1.14 pooled sd**, not the ~2 sd implied by the earlier wording.
+
+The 0.0018 figure came from the *single-run* comparison, exp-027 (0.12436) minus
+exp-022 (0.12249) = 0.00187. I carried that across to the mean comparison without
+recomputing. Both numbers are real; they answer different questions, and only the
+mean comparison is the like-for-like one.
+
+**Restated conclusion:** the occupation removal is directionally supported
+(both the mean and every single-run pairing favour removal) but the strength is
+**suggestive, not established** — ~1.1 sd on three seeds per side. D-057's
+original +0.00187 was a single-run figure and should be quoted as such.
+
+This is the fifth self-correction in this working session (after D-039, D-040's
+12× claim, D-048's parity over-claim, and the occupation-instability finding).
+The pattern is consistent: single measurements and small samples get over-read.
+Recorded here rather than quietly fixed, because the retraction record is itself
+part of the reliance disclosure required by ASOP 9 §5.8.
