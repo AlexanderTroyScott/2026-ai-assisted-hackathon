@@ -42,6 +42,8 @@ negative results are as valuable as positive ones.
 | 18 | 2026-10-22 00:14 UTC | exp-023 | exp-021 config, seed 2 - third seed, corrected labels + D-045 refit | third seed of best config; human approved fresh window | 0.1320 | - | — | clean | `357fd1e58866` |
 | 19 | 2026-10-22 00:14 UTC | blend-3s | 3-seed ensemble: exp-021+022+023 (corrected labels + D-045 refit) | variance reduction across 3 seeds of the best config | 0.1326 | - | — | clean | `e6aa82c9f4e8` |
 | 20 | 2026-10-22 01:55 UTC | exp-024 | D-051 rate target + premium unit fix + earned_premium; D-045 refit | written_premium is ANNUANALISED not pro-rated. Fit y_ult/exposure with exposure weights, multiply back at scoring. +0.0038 honest D2 vs cost target. motor +0.0070. | 0.1365 | - | — | clean | `977c2bf34918` |
+| 21 | 2026-10-22 12:00 UTC | exp-025 | D-053 tuned hyperparams (leaves 16, lr 0.02) + marketing_segment; D-045 refit | biggest stable local gain: +0.0057 mean across both folds (2024 0.1352 / 2023 0.1420). Both folds rank it #1. Simpler model: fewer leaves consistently better. Guardrail passes (implied rate 1.44). | 0.1360 | - | — | clean | `3ae436d19cc3` |
+| 22 | 2026-10-22 16:01 UTC | exp-027 | D-056 occupation removed from the tree spec; exp-022 config otherwise | analysis run. Single change from exp-022: occupation dropped. Accuracy measured neutral (mean +0.0003, folds disagree); calibration better on both folds. Tests whether the calibration gain transfers. | 0.1327 | - | — | clean | `9539335aba0d` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -627,3 +629,30 @@ of the label table.
 
 **State:** 7 slots used, 3 remaining. Best single run and best defensible model
 are now the same run (exp-022, 0.12249).
+
+### exp-027 — occupation removed (D-056); NEW BEST (2026-10-22 16:01)
+
+| # | timestamp | tag | change | local D² (honest) | LB | Δ vs exp-022 | sha256 |
+|---|---|---|---|---|---|---|---|
+| 17 | 16:01 | exp-027 | **occupation removed** | 0.1327 | **0.12436** | **+0.00187** | `9539335aba0d0bce` |
+
+**New best leaderboard result**, overtaking blend-2s (0.12260).
+
+Selected on **calibration**, not local D² — which called it neutral (mean
++0.0003, folds disagreeing). Calibration improved on both folds (ratio
+1.143→1.120 / 1.185→1.155; slope 1.189→1.158 / 1.224→1.149), and D-054 had
+established that our leaderboard failures are calibration failures rather than
+ranking failures. It transferred. **First time today a non-local-D²
+justification has worked.**
+
+Attribution caveat: exp-027 differs from exp-022 by occupation removal *and*
+the D-051 data corrections. Those measured neutral locally (fixA 0.1327 vs
+0.1331), so most of the +0.0019 is likely occupation — but it is not a clean
+single-change comparison.
+
+Also reverted the D-053 tuned hyperparameters as the default (leaves 16, lr
+0.02, which failed at 0.11168) back to the scoring configuration (leaves 64,
+lr 0.04).
+
+**Standings:** exp-027 **0.12436** (best) · blend-2s 0.12260 · exp-022 0.12249 ·
+exp-021 0.12150. 5 slots used, 5 remaining. Deadline 2026-10-23 16:00.

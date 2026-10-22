@@ -1613,3 +1613,64 @@ out-of-sample level calibration is poor.
 No slot spent. The change is in the code path and will be reflected in the next
 run; it is not reflected in `blend-2s` (0.12260), which remains our best
 leaderboard result and which *does* include occupation.
+
+## D-057 — Removing `occupation` is our new best; calibration-first reasoning worked
+**2026-10-22 · accepted · exp-027 · new best 0.12436**
+
+exp-027 = exp-022's configuration with `occupation` removed (D-056). Leaderboard
+**0.12436**, against exp-022's **0.12249** — **+0.00187**. This is our best
+result to date, overtaking blend-2s (0.12260).
+
+| run | change | LB |
+|---|---|---|
+| **exp-027** | occupation removed | **0.12436** |
+| blend-2s | exp-021 + exp-022 ensemble | 0.12260 |
+| exp-022 | seed 1, occupation present | 0.12249 |
+| exp-021 | seed 0, occupation present | 0.12150 |
+
+### Why this one transferred when the others did not
+
+exp-024 and exp-025 both had strong local evidence and both failed. exp-027 was
+**not** justified by local D² — which measured it as neutral (mean +0.0003,
+folds disagreeing in direction). It was justified by **calibration**:
+
+| config | fold | honest D² | cal ratio | cal slope |
+|---|---|---|---|---|
+| with occupation | 2024 | 0.1308 | 1.1431 | 1.1887 |
+| with occupation | 2023 | 0.1349 | 1.1849 | 1.2244 |
+| **without** | 2024 | 0.1298 | **1.1196** | **1.1576** |
+| **without** | 2023 | **0.1365** | **1.1545** | **1.1489** |
+
+Calibration improved on **both** folds. And D-054 had established that our
+leaderboard failures are calibration failures, not ranking failures (exp-025
+outranked exp-022 on normalised Gini and lift on both folds and lost 0.011).
+
+So the change was selected on the diagnostic that D-054 identified as the one
+that predicts transfer, and it transferred. That is the first time today a
+non-local-D² justification has worked. **The D-054 decomposition — ranking
+versus level — is the tool that found this.**
+
+### Attribution caveat
+
+exp-027 and exp-022 differ by two things, not one: `occupation` removal **and**
+the D-051 data corrections (customer_id zero-padding, 604 duplicate claims
+dropped, `earned_premium` replacing `premium_per_exposure`). The D-051 fixes
+measured neutral locally (fixA 0.1327 vs 0.1331), so the bulk of +0.0019 is
+likely the occupation removal — but this is not a clean single-change
+comparison and should not be reported as one.
+
+### Also fixed while producing this run
+
+The D-053 tuned hyperparameters (leaves 16, lr 0.02) were still the *default* in
+`run_experiment.py` despite exp-025 having failed on the board at 0.11168.
+Promoting them was premature. Defaults are reverted to the configuration that
+produced our best result (leaves 64, lr 0.04); the tuned values are recorded in
+a comment and must be opted into explicitly.
+
+### Standing
+
+- **Best single run and best presented model: exp-027, 0.12436**, corrected
+  labels, D-045 refit, occupation excluded.
+- The earlier `blend-2s` (0.12260) is superseded but remains a valid ensemble
+  of the with-occupation family.
+- 5 slots used today, **5 remaining**.

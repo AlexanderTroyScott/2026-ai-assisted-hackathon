@@ -342,10 +342,18 @@ def main() -> int:
     X_tr, X_va, use, cats = align(tr, va, cols, CAT_FEATURES)
     params = dict(
         objective="tweedie", tweedie_variance_power=1.5,
-        # D-053: tuned 2026-10-22 by a 3-round sweep gated on out-of-time
-        # stability (both the 2024 and 2023 folds must agree). Fewer leaves
-        # is consistently better: 64 -> 31 -> 16 improves, 128 -> 256 collapses.
-        n_estimators=3000, learning_rate=0.02, num_leaves=16,
+        # Defaults are the configuration that produced our best leaderboard
+        # result (exp-021/022 -> blend-2s, 0.12260).
+        #
+        # D-053 swept hyperparameters gated on out-of-time stability and found
+        # fewer leaves consistently better locally (64 -> 31 -> 16 improves,
+        # 128 -> 256 collapses). Those were promoted here and FAILED on the
+        # leaderboard (exp-025, 0.11168), so they are reverted to the scoring
+        # configuration and recorded as a negative result in D-054/D-053. The
+        # tuned values are kept below for reference and must be opted into
+        # explicitly, not used by default:
+        #   n_estimators=3000, learning_rate=0.02, num_leaves=16
+        n_estimators=2500, learning_rate=0.04, num_leaves=64,
         min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
         bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
     )
