@@ -1,0 +1,12 @@
+{
+  "tag": "diag-f2024",
+  "fold": "2024",
+  "features": "base,premium,experience,weather,flags,relativity,address,customer",
+  "seed": 0,
+  "normalized_gini_train": 0.5395689553297447,
+  "normalized_gini_holdout": 0.4668972903476331,
+  "gap": 0.07267166498211158,
+  "lift_distance": 3.3726733127052846,
+  "lift_ratio": 27.99563458876431,
+  "calibration_mae": 29.219813932945705
+}

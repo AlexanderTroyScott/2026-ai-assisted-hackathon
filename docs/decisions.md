@@ -1407,3 +1407,74 @@ Our best remains **blend-2s at 0.12260** (exp-021 + exp-022). One slot was
 wasted on exp-024. The premium-unit finding from D-051 is still valid and
 important — it is the *benchmark* and the *feature naming* that were wrong, not
 the tree's target formulation.
+
+## D-054 — R-04 diagnostics built; the Gini gap does not predict transfer
+**2026-10-22 · accepted · closes the C-5 diagnostic gap · negative result on the gap itself**
+
+C-5's checklist identified that we produced no normalised Gini or lift charts,
+and R-04 names the **train-versus-holdout normalised-Gini gap** as the overfit
+measure to watch. Built: `src/diagnostics.py`, `scripts/run_diagnostics.py`,
+`tests/test_diagnostics.py` (18 tests). No submission slots spent.
+
+### The method, as R-04 specifies it
+
+`normalized_gini = model Gini / data Gini`, sorted by **predicted** values with
+a **seeded random tiebreaker**. The tiebreaker is not optional — R-04 warns
+that a stable sort on data previously ordered by actuals makes tied predictions
+inherit that order and score like a perfect ranking. Measured: a constant
+predictor scores **0.9453** with a stable sort on pre-sorted data (identical to
+the data Gini) versus **~0.06** with the tiebreaker. The test asserts the
+contrast, not an absolute threshold.
+
+Lift charts use equal-exposure bins per R-04, always on holdout.
+
+### The gap does NOT predict leaderboard transfer
+
+Two configurations with known leaderboard scores were compared:
+
+| config | nGini train | nGini holdout | **gap** | lift | **LB** |
+|---|---|---|---|---|---|
+| A = exp-022 (leaves 64, lr 0.04) | 0.5695 / 0.5761 | 0.4614 / 0.4694 | **+0.1074** | 26.6 / 24.9 | **0.12249** |
+| B = exp-025 (leaves 16, lr 0.02, + marketing_segment) | 0.5396 / 0.5329 | 0.4669 / 0.4851 | **+0.0602** | 28.0 / 31.9 | **0.11168** |
+
+The diagnostic says B generalises **better** (smaller gap). The leaderboard says
+B is **worse**. **The gap is inverted and does not rank these two.**
+
+R-04's own worked example used gaps of 0.0106 and 0.0201; ours are 0.06–0.11,
+3–5× larger, but the sample is 1.8M rows with a heavy tail versus their small
+datasets, so the absolute level is not directly comparable. Only the *ordering*
+was testable, and it fails.
+
+### What the diagnostics DO buy: a decomposition
+
+B has **higher** holdout normalised Gini (0.4669/0.4851 vs 0.4614/0.4694) and
+**higher** lift (28.0/31.9 vs 26.6/24.9) on both folds — it genuinely ranks
+risks better — and still lost 0.011 on the leaderboard.
+
+That is only explicable one way: **exp-025 failed on level, not on
+discrimination.** Which is exactly what the direct diagnosis showed — its
+predicted total was 5.6% lower and it under-predicted low-exposure rows.
+
+This is the useful result. Gini and lift are rank-based and structurally blind
+to level; D² is not. Splitting the two tells you *which* one failed:
+
+- **discrimination** → normalised Gini, lift ratio, Lorenz
+- **level / calibration** → the measures added here: `calibration_ratio`
+  (Σactual/Σpredicted), `calibration_slope` (regression of actual on predicted
+  through the origin), `calibration_in_large`
+
+Guardrail added: a test asserting a uniform scale leaves normalised Gini
+unchanged while moving the calibration ratio — the exact exp-025 failure mode.
+
+### Measured on our presented model (exp-022 family)
+
+Holdout, fold 2024: normalised Gini 0.4669, lift ratio 28.0, calibration MAE
+29.2 on a mean near 350 (~8%). Lift chart is monotone apart from one flat step
+(bin 5 → 6), which R-04 treats as acceptable. Lorenz: the lowest-predicted 10%
+of exposure carries 0.3% of loss; the highest 10% carries the bulk.
+
+### Standing guidance
+
+Use both families before spending a slot. A candidate that improves Gini/lift
+but worsens calibration should be expected to fail on the leaderboard, and
+vice versa. The gap metric itself is recorded but **not** adopted as a gate.
