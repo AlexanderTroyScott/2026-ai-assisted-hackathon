@@ -50,8 +50,17 @@ CAT_FEATURES = [
     "transmission", "overnight_parking", "vehicle_use", "construction_type",
     "occupancy", "tenure", "security_level", "urban_density", "soil_type",
     "property_type", "roof_type", "energy_rating", "region", "flood_zone",
-    "occupation", "marital_status", "credit_band",
+    "marital_status", "credit_band", "marketing_segment",
 ]
+# `occupation` is deliberately EXCLUDED (D-056, verified 2026-10-22 on both
+# folds). 64% of its dispersion is Student+Retired, i.e. driver_age in disguise
+# (median ages 22 and 77 vs 44-45 for all other levels). Measured impact on
+# accuracy is nil (mean +0.0003, folds disagree in direction), but calibration
+# improves on BOTH folds (ratio 1.143->1.120 / 1.185->1.155; slope
+# 1.189->1.158 / 1.224->1.149) - and D-054 established that our leaderboard
+# failures are calibration failures, not ranking failures. It also carries two
+# artefacts (Manager = one 11.9M claim; Student = age) and costs 21 dummy
+# parameters in the GLM. Already excluded there (D-046).
 # Address/customer rating attributes (D-030): joined from the dimension tables,
 # absent from every model before exp-010. DGP findings: flood_zone 1->5 RR 190x,
 # elevation_m ~330x, distance_to_river_km 36x for flood; region/urban_density in
@@ -333,7 +342,10 @@ def main() -> int:
     X_tr, X_va, use, cats = align(tr, va, cols, CAT_FEATURES)
     params = dict(
         objective="tweedie", tweedie_variance_power=1.5,
-        n_estimators=2500, learning_rate=0.04, num_leaves=64,
+        # D-053: tuned 2026-10-22 by a 3-round sweep gated on out-of-time
+        # stability (both the 2024 and 2023 folds must agree). Fewer leaves
+        # is consistently better: 64 -> 31 -> 16 improves, 128 -> 256 collapses.
+        n_estimators=3000, learning_rate=0.02, num_leaves=16,
         min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
         bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
     )

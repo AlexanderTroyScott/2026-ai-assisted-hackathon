@@ -1559,3 +1559,57 @@ two-point case (Gini must be exactly 0.5, and an inverted ranking must score
 
 These are noted rather than built: the deadline is close and each is a
 behaviour whose failure would show up in the manifest or the submission gate.
+
+## D-056 — `occupation` removed from the tree specification
+**2026-10-22 · accepted · human-directed · verified on both folds**
+
+Human asked why `occupation` is still in the model given it is largely an age
+proxy. Verified and removed. The GLM already excluded it (D-046); the tree did
+not, and there was no good reason for the asymmetry.
+
+### What occupation actually is
+
+64% of its dispersion is Student and Retired — `driver_age` in disguise (median
+driver age 22 and 77, against 44–45 for all seventeen other levels). It is not
+*purely* a proxy: the mid-18 levels are identical on age, licence and NCB and
+still show a 1.24× spread, with an age × occupation interaction (1.52× at 17–25
+falling to 1.13× at 35–50). But that residual is small.
+
+It also carried two artefacts we had already diagnosed: **Manager's 1.62× is a
+single 11.9M claim** (D-041), and **Student's 1.81× is the age effect**.
+
+### Measured, both folds (out-of-time gate)
+
+| config | fold | honest D² | Gini gap | cal ratio | cal slope |
+|---|---|---|---|---|---|
+| with occupation | 2024 | 0.1308 | 0.1117 | 1.1431 | 1.1887 |
+| with occupation | 2023 | 0.1349 | 0.1017 | 1.1849 | 1.2244 |
+| **without** | 2024 | 0.1298 | 0.1077 | **1.1196** | **1.1576** |
+| **without** | 2023 | **0.1365** | 0.1136 | **1.1545** | **1.1489** |
+
+**Accuracy is a wash** — mean +0.0003 for removal, and the two folds disagree
+in direction (occupation helps on 2024, hurts on 2023). Not a measured effect.
+
+**Calibration improves on both folds** — ratio toward 1.0 (1.143→1.120,
+1.185→1.155) and slope toward 1.0 (1.189→1.158, 1.224→1.149). This is the axis
+that matters: **D-054 established that our leaderboard failures are calibration
+failures, not ranking failures** (exp-025 outranked exp-022 on normalised Gini
+and lift on both folds and still lost 0.011).
+
+So the change is neutral on accuracy and positive on the property that has
+actually been costing us — plus it removes a credibility liability.
+
+### Also surfaced by this measurement
+
+Both configurations show an out-of-sample **calibration ratio of 1.12–1.18** —
+the model underpredicts the holdout by 12–18% before the LOB recalibration is
+applied. The recalibration is therefore carrying a material amount of the work.
+This does not hurt the submission directly (the submission uses holdout-anchored
+scales) but it is a real property of the model and worth knowing: the intrinsic
+out-of-sample level calibration is poor.
+
+### Not submitted
+
+No slot spent. The change is in the code path and will be reflected in the next
+run; it is not reflected in `blend-2s` (0.12260), which remains our best
+leaderboard result and which *does* include occupation.
