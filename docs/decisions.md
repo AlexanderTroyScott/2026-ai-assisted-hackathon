@@ -1275,3 +1275,59 @@ stable" observation should be withdrawn.
 | exp-021 | 0.12150 | corrected labels + refit, seed 0 |
 
 Best *single* run and best *defensible* model are now the same run.
+
+## D-049 — Seed 3 landed low; D-048's margin claim needs softening
+**2026-10-22 · accepted · corrects D-048 · new best 0.12260**
+
+Quota reset window used for exp-023 (seed 2 of the corrected-labels + refit
+config) and the seed ensembles.
+
+| run | score | note |
+|---|---|---|
+| **blend-2s (exp-021+022)** | **0.12260** | **new best** |
+| exp-022 | 0.12249 | seed 1 |
+| blend-3s (021+022+023) | 0.12232 | dragged by exp-023 |
+| exp-020 | 0.12173 | mis-keyed best |
+| exp-021 | 0.12150 | seed 0 |
+| **exp-023** | **0.12083** | seed 2 — weak draw |
+
+Two things fall out.
+
+**1. Our best submission is now 0.12260**, the two-seed ensemble, on the
+actuarially correct model. Best single run and best defensible model remain
+the same family.
+
+**2. D-048 overstated the margin and must be softened.** It claimed the
+corrected mean beat the mis-keyed mean by +0.00097, "about 1.3 pooled seed sd",
+on n=2 vs n=3. With seed 2 added the picture is:
+
+| config | seeds | mean | sd |
+|---|---|---|---|
+| corrected + refit | 0.12150, 0.12249, 0.12083 | 0.12161 | 0.00086 |
+| mis-keyed, no refit | 0.12113, 0.12024, 0.12173 | 0.12103 | 0.00075 |
+
+Mean gap is now **+0.00058 on n=3 vs n=3 — under one pooled sd**. The
+direction still holds on every measure (mean, best, best-blend) but the
+strength is "suggestive", not the "strong directional evidence" D-048 claimed.
+
+What is **not** weakened:
+- Corrected mean > mis-keyed mean (0.12161 vs 0.12103)
+- Corrected best > mis-keyed best (0.12249 vs 0.12173)
+- Corrected blend > anything on the mis-keyed side (0.12260 vs 0.12173)
+- **D-045's refit gain remains the dominant effect** (+0.002), far larger than
+  either the label effect (~0.0006) or the seed band (~0.0008)
+
+So the D-044 presentation decision stands — the corrected table is not worse
+and is on the right side of every comparison — but the language should be
+"at least as good, probably better" rather than "better".
+
+This is the fourth correction of an over-read today (after D-039, D-040's 12×
+claim, and the occupation instability). The pattern: n=2 looks conclusive, n=3
+isn't. Worth stating plainly in the write-up rather than burying.
+
+**Ensembling note:** 2-seed (0.12260) beat 3-seed (0.12232). Averaging in a
+weak draw hurts. This is consistent with D-029 (seed averaging measured
+useless) — the 2-seed gain is small and not reliably monotone in the number of
+seeds. Do not assume more seeds is better.
+
+**Quota state:** 2 used on 2026-10-22, **8 remaining**.

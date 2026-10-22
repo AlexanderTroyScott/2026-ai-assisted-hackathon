@@ -38,6 +38,9 @@ negative results are as valuable as positive ones.
 | 14 | 2026-10-21 14:49 UTC | exp-020 | exp-010 config, seed 2, PRE-D-033 label table (control) - third point on old-labels seed band [D-041] | FINAL slot today (5 reserved for the human). Completes the seed-band estimate on the old-labels side where variance is largest. | 0.1346 | - | — | clean | `e28fcebeaac8` |
 | 15 | 2026-10-21 19:54 UTC | exp-021 | D-045 final refit on ALL training years incl. 2024 (was fitting AY<=2023 only) | single primary change = refit scope. Diagnostic: adding most recent train year (2022->2023) is +0.0022 honest local D2, outside the D-025 band. 2024 was 26% of training rows and unused in fit. | 0.1331 | - | — | clean | `a68c5a47d9a4` |
 | 16 | 2026-10-21 23:20 UTC | exp-022 | exp-021 config, seed 1 - second seed to firm up the label-parity claim [D-045][D-048] | identical to exp-021 apart from seed. Tests whether 0.12150 was a lucky draw; the parity claim in D-045 rests on n=1 vs a 3-seed band. | 0.1328 | - | — | clean | `510e0e367a6a` |
+| 17 | 2026-10-21 23:58 UTC | blend-2s | 2-seed ensemble of exp-021+exp-022 (corrected labels + D-045 refit) | seed average of the two best runs; variance reduction | 0.1329 | - | — | clean | `97fb01260e96` |
+| 18 | 2026-10-22 00:14 UTC | exp-023 | exp-021 config, seed 2 - third seed, corrected labels + D-045 refit | third seed of best config; human approved fresh window | 0.1320 | - | — | clean | `357fd1e58866` |
+| 19 | 2026-10-22 00:14 UTC | blend-3s | 3-seed ensemble: exp-021+022+023 (corrected labels + D-045 refit) | variance reduction across 3 seeds of the best config | 0.1326 | - | — | clean | `e6aa82c9f4e8` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
