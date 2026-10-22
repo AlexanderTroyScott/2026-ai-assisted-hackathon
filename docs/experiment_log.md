@@ -44,6 +44,7 @@ negative results are as valuable as positive ones.
 | 20 | 2026-10-22 01:55 UTC | exp-024 | D-051 rate target + premium unit fix + earned_premium; D-045 refit | written_premium is ANNUANALISED not pro-rated. Fit y_ult/exposure with exposure weights, multiply back at scoring. +0.0038 honest D2 vs cost target. motor +0.0070. | 0.1365 | - | — | clean | `977c2bf34918` |
 | 21 | 2026-10-22 12:00 UTC | exp-025 | D-053 tuned hyperparams (leaves 16, lr 0.02) + marketing_segment; D-045 refit | biggest stable local gain: +0.0057 mean across both folds (2024 0.1352 / 2023 0.1420). Both folds rank it #1. Simpler model: fewer leaves consistently better. Guardrail passes (implied rate 1.44). | 0.1360 | - | — | clean | `3ae436d19cc3` |
 | 22 | 2026-10-22 16:01 UTC | exp-027 | D-056 occupation removed from the tree spec; exp-022 config otherwise | analysis run. Single change from exp-022: occupation dropped. Accuracy measured neutral (mean +0.0003, folds disagree); calibration better on both folds. Tests whether the calibration gain transfers. | 0.1327 | - | — | clean | `9539335aba0d` |
+| 23 | 2026-10-22 20:32 UTC | exp-028 | D-058 flood_zone only (drop river distance + elevation); D-045 full refit + all-data recalibration | analysis run. Single change from exp-027: drop distance_to_river_km and elevation_m, keep flood_zone. Tests the collinearity hypothesis - all three encode flood risk. Local D2 slightly lower (0.1318 vs 0.1327) but local has been unreliable all day. | 0.1318 | - | — | clean | `be48df10ac4e` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -656,3 +657,24 @@ lr 0.04).
 
 **Standings:** exp-027 **0.12436** (best) · blend-2s 0.12260 · exp-022 0.12249 ·
 exp-021 0.12150. 5 slots used, 5 remaining. Deadline 2026-10-23 16:00.
+
+### exp-028 — flood_zone only (2026-10-22 20:32)
+
+| # | tag | change | local D² (honest) | LB | Δ vs exp-027 | sha256 |
+|---|---|---|---|---|---|---|
+| 18 | exp-028 | drop river distance + elevation, keep flood_zone | 0.1318 | **0.12255** | **−0.00181** | `be48df10ac4e5e46` |
+
+Human proposal: flood_zone is the real signal and the other two are proxies for
+it. **Refuted.** Keeping all three is better by 0.00181; exp-027 stays best.
+
+The redundancy test had predicted this — elevation carries 1.2–1.8× residual
+spread *within* flood zones, and flood_zone is missing on 41,827 rows carrying a
+2.0× book rate where elevation is present. The collinearity story (removing any
+one of the three helps) did not survive contact with the leaderboard.
+
+Local D² agreed in sign and roughly in size (−0.0009 local, −0.0018 LB), so
+local was reliable here. Its failures have been specific — level/calibration
+effects and the exp-024 double-count — not random.
+
+**Standings:** exp-027 **0.12436** (best) · exp-028 0.12255 · blend-2s 0.12260 ·
+exp-022 0.12249. 6 slots used, 4 remaining. Deadline 2026-10-23 16:00.

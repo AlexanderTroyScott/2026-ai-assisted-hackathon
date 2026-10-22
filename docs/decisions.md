@@ -1674,3 +1674,63 @@ a comment and must be opted into explicitly.
 - The earlier `blend-2s` (0.12260) is superseded but remains a valid ensemble
   of the with-occupation family.
 - 5 slots used today, **5 remaining**.
+
+## D-058 — `flood_zone` alone is worse: the geo cluster is not the problem
+**2026-10-22 · accepted · refutes the collinearity hypothesis · exp-028**
+
+Human proposed that `flood_zone` is what we are really after and that
+`distance_to_river_km` and `elevation_m` are proxies for it, so dropping the
+continuous pair should be safe or better. Tested. It is worse.
+
+| run | geo features | LB |
+|---|---|---|
+| **exp-027** | flood_zone + river + elevation | **0.12436** |
+| exp-028 | **flood_zone only** | **0.12255** |
+
+**−0.00181.** exp-027 remains our best.
+
+### What the pre-submission evidence said
+
+The symmetric redundancy test had already argued against this. Measured residual
+spread *within* flood zones:
+
+| within flood_zone | river spread | elevation spread |
+|---|---|---|
+| 1 | 1.11× | 1.23× |
+| 2 | 1.06× | 1.61× |
+| 3 | 1.06× | 1.62× |
+| 4 | 1.03× | 1.81× |
+
+`elevation_m` carries 1.2–1.8× residual signal *inside* every flood zone — it is
+not a proxy, it refines the zone. And `flood_zone` is missing on 41,827 policy
+rows carrying a 2.0× book rate, where elevation is present on every one.
+
+The sweep also warned: dropping elevation was mixed, and the only configuration
+that improved D² on both folds *and* looked plausible (`flood_zone only`) had
+calibration improving on one fold and worsening on the other. It did not clear
+the bar that selected `occupation`.
+
+**Local D² got this one right** — exp-028 measured 0.1318 against exp-027's
+0.1327 before submission, and the board agreed in sign and roughly in size
+(−0.0009 local, −0.0018 LB). Worth recording: local D² is not uniformly
+unreliable. Its failures have been specific (level/calibration effects, the
+exp-024 double-count), not random.
+
+### What this settles
+
+The geo cluster is **not** a collinearity problem. All three fields earn their
+place: `flood_zone` carries the big 7.4× residual, `elevation_m` refines it
+within zones and covers the missing-flood-zone rows, `distance_to_river_km` is
+the weakest but its removal also measurably worsens calibration.
+
+Combined with the earlier sweep and the replication screen, **the feature set is
+now closed.** Every field has been measured for removal; the only removal that
+worked was `occupation`, and it had a specific pathology (age proxy + artefacts)
+that nothing else shares.
+
+### Standings
+
+- **Best: exp-027, 0.12436** — corrected labels, D-045 refit, occupation excluded,
+  all three geo fields present.
+- Gap to leaderboard top: 0.12996 − 0.12436 = **0.0056**.
+- 6 slots used today, **4 remaining**. Deadline 2026-10-23 16:00.
