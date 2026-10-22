@@ -125,7 +125,7 @@ play. Deadline 2026-10-23 16:00 — queue by expected value per remaining slot.
 | C-2 | ~~Tweedie GLM benchmark~~ **MEASURED — see D-046** (Tweedie 1.5, log link, exposure weights, 112 terms) | R-02 App. C, R-03 §5.2 | benchmark/credibility; second leg of C-3 | holdout D² **0.1206** vs LGBM raw 0.1303 ⇒ gap **0.0097**, inside the 0.01 gate. Relativities in `outputs/metrics/glm-001_relativities.csv`. `occupation` excluded (D-047). |
 | C-3 | **Form ensemble** (GLM + LGBM, R-03 §9.3) — not seed averaging (closed by D-029) but averaging across *model families* | R-03 §9.3 | prediction blend | blend weight swept locally; must beat exp-010's 0.1342 outside the tie band |
 | C-4 | **Cape Cod / expected-claims cross-checks** on the development factors (credibility-weighted LDFs) | R-01 Ch. 8/10 | development diagnostics | documentation/credibility only unless it moves labels measurably |
-| C-5 | **ASOP 9 documentation pass** on the final write-up: data, assumptions, methods, diagnostics, disclosures checklist | R-01 App. C | documentation (judging axis, 15%) | no model change; checklist against `docs/` trail |
+| C-5 | ~~ASOP 9 documentation pass~~ **DONE — `docs/actuarial_report.md`** (2026-10-22), structured against ASOP 9 §§1–6 as reproduced in R-01 App. C | R-01 App. C | documentation (judging axis) | no model change. Includes the §5.8 reliance-on-AI disclosure and the Section 6 deviation statement. |
 
 **Status:** all `proposed`. C-1 and C-3 are the only ones with a plausible
 score lever; C-2/C-4/C-5 are credibility plays that do not compete for quota.
