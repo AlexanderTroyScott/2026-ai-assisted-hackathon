@@ -248,3 +248,8 @@ market price simulation for FX, commodities and equity indices with a
 Cox–Ingersoll–Ross rate generator and option-implied forward curves. Nothing to
 do with gradient boosting machines or with insurance ratemaking. Supplied in
 error via acronym collision.
+
+**Status 2026-10-22 (final):** C-1 measured (D-060) — a principled no-op, gap
++0.0002. C-2 measured (D-046). C-3 measured (error correlation 0.999, recorded in
+the D-059 session) — refuted. C-4 would follow C-1 by construction. C-5 done
+(`docs/actuarial_report.md`). **The candidate queue is empty.**

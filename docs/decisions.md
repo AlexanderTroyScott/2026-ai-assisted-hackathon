@@ -1827,3 +1827,71 @@ This is the fifth self-correction in this working session (after D-039, D-040's
 The pattern is consistent: single measurements and small samples get over-read.
 Recorded here rather than quietly fixed, because the retraction record is itself
 part of the reliance disclosure required by ASOP 9 §5.8.
+
+## D-060 — C-1 measured: Bornhuetter-Ferguson is a principled no-op
+**2026-10-22 · accepted · promotes C-1 from candidate to measured · no submission**
+
+C-1 was the last actuarially-defensible untested lever — BF labels blending
+chain-ladder development with an a-priori `premium × ELR` for the immature 2024
+year. Built and measured. It does nothing.
+
+### The calculation
+
+ELR from mature (2021–22) developed loss ratios: motor 1.066, buildings 1.299,
+contents 0.828. Credibility `(1 − 1/CDF)` applied only to immature years:
+
+| LOB | AY | credibility | CL ult | BF ult | BF/CL |
+|---|---|---|---|---|---|
+| motor | 2024 | 0.206 | 114.15M | 116.10M | +1.7% |
+| buildings | 2024 | 0.084 | 73.55M | 73.08M | −0.6% |
+| contents | 2024 | 0.042 | 18.29M | 18.28M | 0.0% |
+| all mature years | | ≈0 | | | 1.000 |
+
+Only 2024 changes, and by less than 2%. The reason: motor 2024's developed LR
+(0.984) already sits close to the mature ELR (1.066), so the blend — weighted
+by the 20.6% credibility — moves it by only 1.7%.
+
+### The gate (D-028 protocol: skill-vs-baseline gap, not raw D²)
+
+| development | fold | model D² | baseline D² | GAP |
+|---|---|---|---|---|
+| lob (chain-ladder) | 2024 | 0.1304 | 0.0790 | 0.0515 |
+| lob | 2023 | 0.1353 | 0.0877 | 0.0476 |
+| bf | 2024 | 0.1313 | 0.0796 | 0.0517 |
+| bf | 2023 | 0.1353 | 0.0877 | 0.0476 |
+
+**Gap moves +0.0002 at most.** BF does not clear the bar. No slot.
+
+### What this closes
+
+The IBNER / development-adequacy question has been open since D-040. It is now
+answered: the chain-ladder development is **adequate**. The 7.7k open-claim
+signal is real, but it is *not* under-reservation in a way that changes the
+labels — the mature-year ELR and the developed LR already agree to within the
+credibility weighting, so BF's correction is ~1.7% on one year and zero
+elsewhere.
+
+C-1 is retained in the code as `development="bf"` for completeness, but the
+default stays `lob`. C-4 (Cape Cod cross-check) would arrive at the same place
+by construction, since it differs only in how the a-priori is credibility-
+weighted, and here the credibility is ~0 for every mature year.
+
+### The strategic conclusion
+
+Every lever has now been measured:
+
+| lever | result |
+|---|---|
+| feature pruning (3 sweeps) | only `occupation` helped (+0.0013 on means) |
+| hyperparameters | failed (exp-025) |
+| rate target | failed (exp-024) |
+| calibration slope | refuted — fixing it costs D² |
+| C-3 GLM/LGBM blend | refuted — errors 99.9% correlated |
+| per-LOB models | refuted — −0.004 both folds |
+| **C-1 BF labels** | **no-op (+0.0002 gap)** |
+
+The remaining 0.0056 gap is not in features, model form, target development, or
+data. The most likely explanations are external to anything we can measure from
+here: a fundamentally different model class, external data, or a target
+formulation the leader has found and we have not. That is the honest position,
+and it is now documented rather than speculated about.

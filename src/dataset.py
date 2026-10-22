@@ -101,6 +101,19 @@ def forward_factors(scenario: str = "central") -> dict:
 FORWARD_FACTOR = forward_factors("central")
 
 
+# D-060: Bornhuetter-Ferguson scale factors, keyed (LOB, AY). BF ultimate =
+# observed + (1 - 1/CDF) x ELR x earned_premium, ELR from the mature (2021-22)
+# developed loss ratio. Scale = BF/chain-ladder ultimate, applied to labels.
+# Measured: only 2024 is material (motor +1.7%, buildings -0.6%); every mature
+# year has credibility ~0 so the scale is 1.0. Chain-ladder and BF agree to
+# within ~2%, so this is a small refinement, not a level shift.
+BF_SCALE = {
+    "motor":     {2021: 1.000, 2022: 1.000, 2023: 1.000, 2024: 1.017},
+    "buildings": {2021: 1.000, 2022: 1.000, 2023: 1.000, 2024: 0.994},
+    "contents":  {2021: 1.000, 2022: 1.000, 2023: 1.000, 2024: 1.000},
+}
+
+
 def load_policies(line: str, split: str = "train") -> pd.DataFrame:
     name = f"policies_{line}" if split == "train" else f"test_{line}"
     df = pd.read_parquet(DATA / f"{name}.parquet")
@@ -301,6 +314,19 @@ def row_target(policies: pd.DataFrame, claims: pd.DataFrame, develop: bool = Tru
             ay = policies["acc_year"].to_numpy()
             for year, f in LDF[ln].items():
                 factor[mask & (ay == year)] = f
+        # D-060: Bornhuetter-Ferguson blends the chain-ladder development with an
+        # a-priori (premium x ELR) for immature years. The scale is ~1.0 except
+        # 2024 (motor +1.7%, buildings -0.6%) because mature years have zero
+        # credibility and the developed LR already sits near the mature ELR.
+        if development == "bf":
+            bf = policies["line"].map({ln: pd.Series(BF_SCALE[ln]) for ln in BF_SCALE})
+            bf_arr = np.ones(len(policies), dtype=float)
+            for ln in BF_SCALE:
+                mask = policies["line"].to_numpy() == ln
+                ay = policies["acc_year"].to_numpy()
+                for year, f in BF_SCALE[ln].items():
+                    bf_arr[mask & (ay == year)] = f
+            factor = factor * bf_arr
         out["y_ult"] = out["y"] * factor
     else:
         out["y_ult"] = out["y"]
@@ -358,7 +384,7 @@ ADDRESS_COLS = [
 ]
 CUSTOMER_COLS = [
     "occupation", "marital_status", "household_size", "credit_band",
-    "prior_claims_5y", "licence_points", "years_at_address", "customer_since_year",
+    "prior_claims_5y", "licence_points", "years_at_address", "customer_since_year", "marketing_segment",
 ]
 
 
