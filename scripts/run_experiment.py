@@ -274,17 +274,23 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True)
     ap.add_argument("--features", default="base,premium")
-    ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev"])
-    ap.add_argument("--development", default="lob", choices=["lob", "peril", "bf", "split"])
+    ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev", "per_lob"])
+    ap.add_argument("--development", default="lob", choices=["lob", "peril", "bf", "split", "ht_motor"])
+    ap.add_argument("--norm-rel", action="store_true",
+                    help="D-065: normalize _hist_rate and _hist_freq within (line, acc_year) to mean 1.0")
     ap.add_argument("--trend", default="central", choices=["premium", "low", "central", "high"],
                     help="2025 level scenario (D-009, still `proposed`)")
     ap.add_argument("--fold", default="2024", choices=sorted(FOLDS),
                     help="rolling-origin holdout year (D-006)")
     ap.add_argument("--target", default="cost", choices=["rate", "cost"],
-                    help="D-052: 'cost' (default) fits total row cost. 'rate' is "
-                         "EXPERIMENTAL and regressed on the leaderboard (exp-024, "
-                         "0.06019) by double-counting exposure via earned_premium; "
-                         "kept for diagnostics only")
+                    help="D-063: 'rate' fits y_ult/exposure with exposure weights and drops "
+                         "earned_premium; 'cost' fits total row cost.")
+    ap.add_argument("--num-leaves", type=int, default=None,
+                    help="override LGBM num_leaves (default: 64 for tweedie, 6 for per_lob)")
+    ap.add_argument("--lr", type=float, default=None,
+                    help="override LGBM learning_rate (default: 0.04)")
+    ap.add_argument("--l2", type=float, default=None,
+                    help="override LGBM lambda_l2 (default: 3.0 for tweedie, 5.0 for per_lob)")
     ap.add_argument("--recency-lambda", type=float, default=0.0,
                     help="exp(lambda*(AY-train_max)) sample weights; >0 up-weights "
                          "recent accident years (D-041). 0 = uniform.")
@@ -339,101 +345,113 @@ def main() -> int:
     import lightgbm as lgb
 
     cols = feature_cols(args.features)
-    X_tr, X_va, use, cats = align(tr, va, cols, CAT_FEATURES)
+    if args.target == "rate" and "earned_premium" in cols:
+        # D-063: written_premium is already an annualised rate; earned_premium is
+        # written_premium x exposure, which is a total-cost feature, not a rate feature.
+        cols = [c for c in cols if c != "earned_premium"]
+    X_all, X_te, use, cats = align(train, test, cols, CAT_FEATURES)
+    if args.norm_rel:
+        hist_cols = [c for c in use if "_hist_rate" in c or "_hist_freq" in c]
+        for c in hist_cols:
+            grp_tr = X_all[c].groupby([train["line"], train["acc_year"]]).transform("mean")
+            X_all[c] = X_all[c] / grp_tr.replace(0, 1.0)
+            grp_te = X_te[c].groupby(test["line"]).transform("mean")
+            X_te[c] = X_te[c] / grp_te.replace(0, 1.0)
+    X_tr = X_all.loc[tr.index]
+    X_va = X_all.loc[va.index]
+    default_leaves = 6 if args.mode == "per_lob" else 64
+    default_l2 = 5.0 if args.mode == "per_lob" else 3.0
     params = dict(
         objective="tweedie", tweedie_variance_power=1.5,
-        # Defaults are the configuration that produced our best leaderboard
-        # result (exp-021/022 -> blend-2s, 0.12260).
-        #
-        # D-053 swept hyperparameters gated on out-of-time stability and found
-        # fewer leaves consistently better locally (64 -> 31 -> 16 improves,
-        # 128 -> 256 collapses). Those were promoted here and FAILED on the
-        # leaderboard (exp-025, 0.11168), so they are reverted to the scoring
-        # configuration and recorded as a negative result in D-054/D-053. The
-        # tuned values are kept below for reference and must be opted into
-        # explicitly, not used by default:
-        #   n_estimators=3000, learning_rate=0.02, num_leaves=16
-        n_estimators=2500, learning_rate=0.04, num_leaves=64,
+        n_estimators=2500,
+        learning_rate=args.lr if args.lr is not None else 0.04,
+        num_leaves=args.num_leaves if args.num_leaves is not None else default_leaves,
         min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
-        bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
+        bagging_freq=1,
+        lambda_l2=args.l2 if args.l2 is not None else default_l2,
+        verbose=-1, random_state=args.seed,
     )
-    # D-041: recency weighting. The 2025 scoring population is the newest year,
-    # and the DGP findings document non-stationary relativities (ncb=0 freq rel
-    # 1.60 -> 2.53; age 17-24 2.03 -> 1.74). Uniform training weights let 2021
-    # pull the fit as hard as 2023. Note the D-033 label bug was accidentally
-    # doing this job by inflating 2023 labels, which is why removing it cost
-    # leaderboard score -- this replaces that accident with an explicit knob.
     rec_w = np.exp(args.recency_lambda * (tr["acc_year"].to_numpy() - train_max_year))
     rec_w = rec_w / rec_w.mean()
     if args.recency_lambda:
         print(f"recency lambda={args.recency_lambda}: sample-weight range "
               f"{rec_w.min():.3f}..{rec_w.max():.3f}")
 
+    exp_tr_arr = tr["exposure"].to_numpy(float)
+    exp_va_arr = va["exposure"].to_numpy(float)
+    exp_all_arr = train["exposure"].to_numpy(float)
+    exp_te_arr = test["exposure"].to_numpy(float)
+    to_cost = (lambda r, e: np.maximum(r * e, 1e-3)) if args.target == "rate" else (lambda r, e: r)
+
+    def _fit_target_weights(y_arr: np.ndarray, exp_arr: np.ndarray, rw: np.ndarray):
+        if args.target == "rate":
+            w = np.clip(exp_arr, 1e-3, None)
+            return y_arr / w, rw * w, [w]
+        return y_arr, rw, None
+
     if args.mode == "freq_sev":
         p_raw, fmodel, smodel, use, cats = fit_freq_sev(tr, va, cols, CAT_FEATURES, seed=args.seed)
         model = smodel
         best_iter = int(fmodel.best_iteration_)
         imp = pd.Series(fmodel.feature_importances_, index=use).sort_values(ascending=False)
+        p_tr_raw = np.maximum(fmodel.predict(X_tr), 1e-9) * np.maximum(smodel.predict(X_tr), 1e-3)
+    elif args.mode == "per_lob":
+        lob_models = {}
+        lob_active_cols = {}
+        lob_best_iters = {}
+        p_raw = np.zeros(len(va), dtype=float)
+        p_tr_raw = np.zeros(len(tr), dtype=float)
+        imp_accum = pd.Series(0.0, index=use)
+        for ln in LINES:
+            m_tr_ln = (tr["line"] == ln).to_numpy()
+            m_va_ln = (va["line"] == ln).to_numpy()
+            sub_tr = X_tr.loc[m_tr_ln]
+            c_ln = [c for c in use if sub_tr[c].nunique(dropna=False) > 1]
+            cat_ln = [c for c in cats if c in c_ln]
+            lob_active_cols[ln] = (c_ln, cat_ln)
+            m_ln = lgb.LGBMRegressor(**params)
+            y_fit_ln, w_fit_ln, _ = _fit_target_weights(
+                tr.loc[m_tr_ln, "y_ult"].to_numpy(float), exp_tr_arr[m_tr_ln], rec_w[m_tr_ln]
+            )
+            y_eval_ln, _, w_eval_ln = _fit_target_weights(
+                va.loc[m_va_ln, "y_ult"].to_numpy(float), exp_va_arr[m_va_ln], np.ones(m_va_ln.sum())
+            )
+            m_ln.fit(
+                X_tr.loc[m_tr_ln, c_ln], y_fit_ln,
+                sample_weight=w_fit_ln,
+                eval_set=[(X_va.loc[m_va_ln, c_ln], y_eval_ln)],
+                eval_sample_weight=w_eval_ln,
+                eval_metric="tweedie",
+                callbacks=[lgb.early_stopping(60, verbose=False), lgb.log_evaluation(0)],
+                categorical_feature=cat_ln,
+            )
+            lob_models[ln] = m_ln
+            lob_best_iters[ln] = max(int(m_ln.best_iteration_), 50)
+            p_raw[m_va_ln] = to_cost(np.maximum(m_ln.predict(X_va.loc[m_va_ln, c_ln]), 1e-3), exp_va_arr[m_va_ln])
+            p_tr_raw[m_tr_ln] = to_cost(np.maximum(m_ln.predict(X_tr.loc[m_tr_ln, c_ln]), 1e-3), exp_tr_arr[m_tr_ln])
+            imp_accum[c_ln] += m_ln.feature_importances_
+        best_iter = int(np.mean(list(lob_best_iters.values())))
+        imp = imp_accum.sort_values(ascending=False)
+        print(f"per_lob best_iters={lob_best_iters}")
     else:
         model = lgb.LGBMRegressor(**params)
-        # D-051: written_premium is an annualised rate, so total row cost is
-        # `rate x exposure` — a PRODUCT. Trees are additive and learn products
-        # badly, and this handicaps the 35% of rows with exposure != 1. The
-        # fix is to fit the annual RATE with exposure as the weight, then
-        # multiply back outside the model (the formulation src/glm.py already
-        # uses). `--target cost` retains the old behaviour for A/B only.
-        exp_tr = tr["exposure"].to_numpy(float)
-        exp_va = va["exposure"].to_numpy(float)
-        if args.target == "rate":
-            y_fit = (tr["y_ult"].to_numpy() / np.clip(exp_tr, 1e-3, None))
-            y_eval = (va["y_ult"].to_numpy() / np.clip(exp_va, 1e-3, None))
-            w_fit = rec_w * np.clip(exp_tr, 1e-3, None)
-        else:
-            y_fit = tr["y_ult"].to_numpy()
-            y_eval = va["y_ult"].to_numpy()
-            w_fit = rec_w
+        y_fit, w_fit, _ = _fit_target_weights(tr["y_ult"].to_numpy(float), exp_tr_arr, rec_w)
+        y_eval, _, w_eval = _fit_target_weights(va["y_ult"].to_numpy(float), exp_va_arr, np.ones(len(va)))
         model.fit(
             X_tr, y_fit, eval_set=[(X_va, y_eval)],
+            eval_sample_weight=w_eval,
             eval_metric="tweedie",
             callbacks=[lgb.early_stopping(80, verbose=False), lgb.log_evaluation(0)],
             categorical_feature=cats,
             sample_weight=w_fit,
         )
-        def _predict(m, X, expv):
-            r = np.maximum(m.predict(X), 1e-3)
-            return np.maximum(r * expv, 1e-3) if args.target == "rate" else r
-        p_raw = _predict(model, X_va, exp_va)
+        p_raw = to_cost(np.maximum(model.predict(X_va), 1e-3), exp_va_arr)
+        p_tr_raw = to_cost(np.maximum(model.predict(X_tr), 1e-3), exp_tr_arr)
         best_iter = int(model.best_iteration_)
         imp = pd.Series(model.feature_importances_, index=use).sort_values(ascending=False)
     print(f"model ({args.mode}, target={args.target}, raw)  D2 = {d2(p_raw):+.4f}   (n_iter={best_iter})")
 
-    # LOB recalibration (D-009/D-005) scales each LOB so predicted totals match
-    # expected totals. WHERE those scales are fitted determines what the local
-    # number means (D-040):
-    #
-    #   * fitted on the holdout and scored on the holdout => in-sample ORACLE.
-    #     Measured worth +0.0020..+0.0029 of local D2, i.e. the size of the
-    #     whole D-025 tie band, and structurally blind to LOB-level miss. This
-    #     is NOT a generalisation estimate and must not be used to compare runs
-    #     on anything level-shaped.
-    #   * fitted on the TRAIN side and applied to the holdout => out-of-sample,
-    #     the honest local metric.
-    #
-    # The submission still uses the holdout-fitted scale carried to the test
-    # set, which is correct: 2024 developed truth is the right level anchor for
-    # 2025 rows. So the oracle number is the right thing for the submission path
-    # and the wrong thing for local model comparison.
     p_va_oracle = lob_recalibrate(p_raw, va["line"], actual=yv)
-    exp_tr_arr = tr["exposure"].to_numpy(float)
-    exp_all_arr = train["exposure"].to_numpy(float)
-    exp_te_arr = test["exposure"].to_numpy(float)
-    exp_va_arr = va["exposure"].to_numpy(float)
-    to_cost = (lambda r, e: np.maximum(r * e, 1e-3)) if args.target == "rate" else (lambda r, e: r)
-    p_tr_raw = (np.maximum(fmodel.predict(X_tr), 1e-9) * np.maximum(smodel.predict(X_tr), 1e-3)
-                if args.mode == "freq_sev"
-                else to_cost(np.maximum(model.predict(X_tr), 1e-3), exp_tr_arr))
-    # Train-fitted scales applied to RAW holdout predictions. Passing
-    # p_va_oracle here would apply two scales at once.
     p_va_oof = lob_recalibrate(p_raw, va["line"], ref_lines=tr["line"],
                                ref_pred=p_tr_raw, ref_actual=tr["y_ult"].to_numpy())
 
@@ -449,46 +467,65 @@ def main() -> int:
 
     print("top features:", ", ".join(f"{k}={v}" for k, v in imp.head(12).items()))
 
-    # ---- D-045: final fit on ALL training years ----
-    # The holdout is only for model selection. Once the tree count is chosen,
-    # leaving the holdout out of the fit throws away the most recent 26% of the
-    # book (2024: 626,190 rows), which is also the year closest to the 2025
-    # scoring population. Standard practice is to refit on everything before
-    # deploying. Local D2 above is still the honest out-of-sample number for
-    # this config family; it is NOT re-measurable after refitting.
-    final_model = model
-    if args.final_fit and args.mode != "freq_sev":
-        n_fix = max(int(best_iter), 50)
-        print(f"\nD-045 final refit on ALL {len(train):,} training rows "
-              f"(AY 2021-2024) with fixed n_estimators={n_fix}")
-        X_all, X_te, _, _ = align(train, test, cols, CAT_FEATURES)
-        final_model = lgb.LGBMRegressor(
-            objective="tweedie", tweedie_variance_power=1.5,
-            n_estimators=n_fix, learning_rate=0.04, num_leaves=64,
-            min_data_in_leaf=200, feature_fraction=0.8, bagging_fraction=0.8,
-            bagging_freq=1, lambda_l2=3.0, verbose=-1, random_state=args.seed,
-        )
-        final_model.fit(X_all, train["y_ult"], categorical_feature=cats)
+    # ---- D-045 / D-063: final fit on ALL training years ----
+    rec_w_all = np.exp(args.recency_lambda * (train["acc_year"].to_numpy() - train["acc_year"].max()))
+    rec_w_all = rec_w_all / rec_w_all.mean()
 
-    # ---- score the test set ----
-    X_all, X_te, _, _ = align(train, test, cols, CAT_FEATURES)
     if args.mode == "freq_sev":
         p_te = (np.maximum(fmodel.predict(X_te), 1e-9)
                 * np.maximum(smodel.predict(X_te), 1e-3))
         p_ref = (np.maximum(fmodel.predict(X_va), 1e-9)
                  * np.maximum(smodel.predict(X_va), 1e-3))
-    else:
-        p_te = to_cost(np.maximum(final_model.predict(X_te), 1e-3), exp_te_arr)
-        p_ref = to_cost(np.maximum(final_model.predict(X_va), 1e-3), exp_va_arr)
-    # LOB scales. After a final refit the anchor should also be all-data, so the
-    # level is set on the full training book rather than the 2024 slice alone.
-    if args.final_fit:
-        p_all = to_cost(np.maximum(final_model.predict(X_all), 1e-3), exp_all_arr)
-        p_te = lob_recalibrate(p_te, test["line"], ref_lines=train["line"],
-                               ref_pred=p_all, ref_actual=train["y_ult"].to_numpy())
-    else:
         p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
                                ref_pred=p_ref, ref_actual=yv)
+    elif args.mode == "per_lob":
+        p_te = np.zeros(len(test), dtype=float)
+        if args.final_fit:
+            print(f"\nD-045/D-063 per-LOB final refit on ALL {len(train):,} training rows "
+                  f"(AY 2021-2024) with fixed n_estimators={lob_best_iters}")
+            p_all = np.zeros(len(train), dtype=float)
+            for ln in LINES:
+                m_all_ln = (train["line"] == ln).to_numpy()
+                m_te_ln = (test["line"] == ln).to_numpy()
+                c_ln, cat_ln = lob_active_cols[ln]
+                f_params = dict(params, n_estimators=lob_best_iters[ln])
+                f_ln = lgb.LGBMRegressor(**f_params)
+                y_all_ln, w_all_ln, _ = _fit_target_weights(
+                    train.loc[m_all_ln, "y_ult"].to_numpy(float), exp_all_arr[m_all_ln], rec_w_all[m_all_ln]
+                )
+                f_ln.fit(X_all.loc[m_all_ln, c_ln], y_all_ln, sample_weight=w_all_ln, categorical_feature=cat_ln)
+                p_all[m_all_ln] = to_cost(np.maximum(f_ln.predict(X_all.loc[m_all_ln, c_ln]), 1e-3), exp_all_arr[m_all_ln])
+                p_te[m_te_ln] = to_cost(np.maximum(f_ln.predict(X_te.loc[m_te_ln, c_ln]), 1e-3), exp_te_arr[m_te_ln])
+            p_te = lob_recalibrate(p_te, test["line"], ref_lines=train["line"],
+                                   ref_pred=p_all, ref_actual=train["y_ult"].to_numpy())
+        else:
+            for ln in LINES:
+                m_te_ln = (test["line"] == ln).to_numpy()
+                c_ln, _ = lob_active_cols[ln]
+                p_te[m_te_ln] = to_cost(np.maximum(lob_models[ln].predict(X_te.loc[m_te_ln, c_ln]), 1e-3), exp_te_arr[m_te_ln])
+            p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
+                                   ref_pred=p_raw, ref_actual=yv)
+    else:
+        final_model = model
+        if args.final_fit:
+            n_fix = max(int(best_iter), 50)
+            print(f"\nD-045/D-063 final refit on ALL {len(train):,} training rows "
+                  f"(AY 2021-2024) with fixed n_estimators={n_fix}")
+            final_params = dict(params, n_estimators=n_fix)
+            final_model = lgb.LGBMRegressor(**final_params)
+            y_all_fit, w_all_fit, _ = _fit_target_weights(
+                train["y_ult"].to_numpy(float), exp_all_arr, rec_w_all
+            )
+            final_model.fit(X_all, y_all_fit, sample_weight=w_all_fit, categorical_feature=cats)
+        p_te = to_cost(np.maximum(final_model.predict(X_te), 1e-3), exp_te_arr)
+        p_ref = to_cost(np.maximum(final_model.predict(X_va), 1e-3), exp_va_arr)
+        if args.final_fit:
+            p_all = to_cost(np.maximum(final_model.predict(X_all), 1e-3), exp_all_arr)
+            p_te = lob_recalibrate(p_te, test["line"], ref_lines=train["line"],
+                                   ref_pred=p_all, ref_actual=train["y_ult"].to_numpy())
+        else:
+            p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
+                                   ref_pred=p_ref, ref_actual=yv)
     fwd_tab = forward_factors(args.trend)
     fwd = test["line"].map(fwd_tab).to_numpy()
     # Forward factor is applied because labels are on an accident-year basis and

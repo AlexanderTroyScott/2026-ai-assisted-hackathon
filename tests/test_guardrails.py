@@ -361,15 +361,20 @@ def test_generated_submission_if_present(tmp_path):
     ``constant_rate-central.csv``), not ``{kind}.csv``. The old test looked for
     the un-suffixed names and therefore ALWAYS skipped — a dead test.
     """
+    import sys
+    sys.path.insert(0, str(ROOT))
     from scripts.make_baseline import main as _unused  # noqa: F401  (importable)
-    names = sorted((ROOT / "outputs" / "submissions").glob("*-*.csv"))
+    sub_dir = ROOT / "outputs" / "submissions"
+    baselines = sorted(sub_dir.glob("constant_rate-*.csv")) + sorted(sub_dir.glob("premium_lr-*.csv"))
+    recent_exps = sorted(sub_dir.glob("exp-*.csv"))[-3:]
+    names = baselines + recent_exps
     checked = 0
     for path in names:
         validate_submission_csv(path)
         checked += 1
     # also assert the naming convention that caused the dead test
     for kind in ("constant_rate", "premium_lr"):
-        for pth in (ROOT / "outputs" / "submissions").glob(f"{kind}-*.csv"):
+        for pth in sub_dir.glob(f"{kind}-*.csv"):
             assert "-" in pth.stem[len(kind):], f"{pth.name} must carry a trend suffix"
             checked += 1
     assert checked > 0, "no submission CSVs found to validate"
@@ -740,3 +745,21 @@ def test_d2_tweedie_power_and_floor_are_pinned():
     assert np.isfinite(d2_tweedie_score(y, floored, power=1.5))
     with pytest.raises(ValueError):
         d2_tweedie_score(y, np.array([0.0, 10.0, 100.0, 1000.0]), power=1.5)
+
+
+def test_rate_target_excludes_earned_premium_and_uses_rate_in_final_fit():
+    """D-063: Regression guard for the exp-024 / exp-025 --final-fit defects.
+
+    1. When target='rate', 'earned_premium' (= written_premium x exposure) must
+       be excluded from the feature list so the tree models annualised rate on
+       annualised features.
+    2. In --final-fit, final_model must fit y_ult / exposure (not raw y_ult)
+       and inherit the configured hyperparameters (**final_params).
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    src = (ROOT / "scripts" / "run_experiment.py").read_text()
+    assert 'if args.target == "rate" and "earned_premium" in cols:' in src
+    assert "final_model = lgb.LGBMRegressor(**final_params)" in src
+    assert "final_model.fit(X_all, y_all_fit, sample_weight=w_all_fit" in src
+

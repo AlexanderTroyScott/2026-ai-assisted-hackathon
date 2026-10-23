@@ -313,6 +313,47 @@ def row_target(policies: pd.DataFrame, claims: pd.DataFrame, develop: bool = Tru
         out = policies[["row_id"]].join(agg, on="row_id").fillna(
             {"y": 0.0, "y_ult": 0.0, "n_claims": 0, "n_theft": 0, "n_large": 0})
         return out
+    if develop and development == "ht_motor":
+        # D-065: Horvitz-Thompson DatexPeril reporting completeness + open-claim
+        # recovery/IBNER adjustment on Motor; uniform LOB LDF on Buildings/Contents.
+        merged = merged.copy()
+        c_mature = claims[claims["loss"].dt.year.isin([2021, 2022])].copy()
+        c_mature["lag"] = (c_mature["rep"] - c_mature["loss"]).dt.days
+        lag_dist = {(ln, pr): g["lag"].to_numpy() for (ln, pr), g in c_mature.groupby(["line", "peril"])}
+        val_cutoff = pd.Timestamp("2024-12-30")
+        rem_days = (val_cutoff - merged["loss"]).dt.days.to_numpy()
+        p_rep = np.array([
+            max(np.mean(lag_dist.get((ln, pr), np.zeros(1)) <= d), 0.25)
+            for ln, pr, d in zip(merged["line"], merged["peril"], rem_days)
+        ])
+        raw_ht = 1.0 / p_rep
+        if "status" in merged.columns:
+            is_open = (merged["status"] == "open").to_numpy()
+            pr_arr = merged["peril"].to_numpy()
+            ln_arr = merged["line"].to_numpy()
+            ibner = np.ones(len(merged), dtype=float)
+            ibner[is_open & (ln_arr == "motor") & (pr_arr == "own_damage")] = 0.76
+            ibner[is_open & (ln_arr == "motor") & (pr_arr == "theft")] = 0.96
+            ibner[is_open & (ln_arr == "motor") & (pr_arr == "bodily_injury")] = 1.25
+            raw_ht = raw_ht * ibner
+        lob_f = np.array([LDF.get(ln, {}).get(ay, 1.0) for ln, ay in zip(merged["line"], merged["acc_year"])])
+        df_tmp = pd.DataFrame({"line": merged["line"], "ay": merged["acc_year"], "wc": merged["cost"] * raw_ht, "c": merged["cost"]})
+        wavg = df_tmp.groupby(["line", "ay"]).apply(lambda g: g["wc"].sum() / max(g["c"].sum(), 1e-9), include_groups=False)
+        avg_ht = np.array([wavg.get((ln, ay), 1.0) for ln, ay in zip(merged["line"], merged["acc_year"])])
+        merged["cost_dev"] = np.where(
+            merged["line"].to_numpy() == "motor",
+            merged["cost"].to_numpy() * lob_f * raw_ht / np.where(avg_ht > 0, avg_ht, 1.0),
+            merged["cost"].to_numpy() * lob_f,
+        )
+        agg = merged.groupby("row_id").agg(
+            y=("cost", "sum"), y_ult=("cost_dev", "sum"),
+            n_claims=("claim_id", "count"),
+            n_theft=("peril", lambda s: int((s == "theft").sum())),
+            n_large=("cost", lambda s: int((s > 10_000).sum())),
+        )
+        out = policies[["row_id"]].join(agg, on="row_id").fillna(
+            {"y": 0.0, "y_ult": 0.0, "n_claims": 0, "n_theft": 0, "n_large": 0})
+        return out
     agg = merged.groupby("row_id").agg(
         y=("cost", "sum"), n_claims=("claim_id", "count"),
         n_theft=("peril", lambda s: int((s == "theft").sum())),
