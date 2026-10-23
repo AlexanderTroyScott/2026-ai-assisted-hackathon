@@ -56,6 +56,7 @@ negative results are as valuable as positive ones.
 | 32 | 2026-10-23 21:20 UTC | exp-037 | D-065 per-LOB rate LGBM (lv=6) + year-normalized historical relativities | D-065 normalizes _hist_rate and _hist_freq within (line, acc_year) to mean 1.0, removing inflation & IBNR drift (+0.00052 honest D2 over exp-033) | 0.1405 | **0.12587** (Priv 0.13502) | −0.00094 vs exp-033 | clean | `57b3aaa127c6` |
 | 33 | 2026-10-23 21:20 UTC | exp-038 | D-065 4-model ensemble: 35% exp-037 (norm-rel per-LOB LGBM) + 35% exp-035 (per-LOB XGB) + 15% exp-033 + 15% exp-032 | D-064/D-065 ensemble combining year-normalized per-LOB LGBM, per-LOB XGBoost (depth=3), and pooled LGBM rate models | 0.1410 | **0.12721** (Priv 0.13563) | −0.00032 vs exp-036 | clean | `f2418464525e` |
 | 34 | 2026-10-23 21:21 UTC | exp-035 | D-064 per-LOB XGBoost rate model (max_depth=3, no_rel) | Standalone per-LOB XGBoost rate model (tweedie p=1.5, max_depth=3, no relativity cols) | 0.1401 | **0.12700** (Priv 0.13509) | standalone XGB | clean | `a354d7148c88` |
+| 35 | 2026-10-23 22:42 UTC | emerging-exp-001 | D-066 Part 2 transfer learning + credibility-shrinkage offset adaptation (5-Fold CV D2 0.14045) | Part 2 emerging market: Developed 2.41M-row prior + Offset Per-LOB LGBM (lv=3, min_leaf=600, l2=100) | 0.1405 | - | — | clean | `477fa66d8c22` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
