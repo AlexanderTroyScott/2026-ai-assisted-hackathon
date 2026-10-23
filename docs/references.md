@@ -354,3 +354,64 @@ Schedule P aggregate triangle: paid% and reported% of ultimate by maturity,
 then age-to-age/age-to-ultimate for both paid and incurred. Confirms the paid
 pattern is the cleaner signal, but requires the paid/IBNR triangle by maturity —
 i.e. the valuation-date history our single-snapshot dataset does not provide.
+
+---
+
+## Curated bibliography (human-provided, 2026-10-23) — 40 items in 6 tiers
+
+Recorded verbatim from the human's list. Several are already R-xx entries; the
+rest are logged here as a working bibliography with a relevance flag for our
+specific task (predict expected ultimate net cost per 2025 policy, Tweedie D²).
+
+### Already in R-xx (no action)
+Friedland (R-01) · GLM for Insurance Rating (R-02/R-03) · Tail Factor Working
+Party (R-12) · Korn curve-fitting (R-15) · Ghezzi Beyond B-S (R-08) · DuVall
+(R-07) · Colella-Jones four-algorithm ratemaking (digested, in R-06 discussion) ·
+Kuo BMDN (R-09) · Boor individual-claim distributions (R-16) · Archer implied
+patterns (R-17) · CAS Statement of Principles (R-01 appendix).
+
+### New, but blocked by our single-snapshot data (need valuation history /
+close_date / paid triangle)
+- England & Verrall, *Stochastic Claims Reserving* (Mack, bootstrap, prediction
+  error) — needs the triangle's process variance.
+- IFoA *Practitioner's Introduction to Stochastic Reserving* — same.
+- SOA *Comparison of IBNR Methods* (BF/Cape Cod/GLM survey) — methods need paid
+  + incurred by maturity.
+- Struhuss, *Using Best Practices to Determine a Best Reserve Estimate*.
+- *Adjusting Incurred Loss for Simultaneous Shifts in Payment Patterns and Case
+  Reserve Adequacy* (Berquist-Sherman / Fleming-Mayer) — the case-adequacy test
+  we want, needs payment history.
+- *On the Accuracy of Loss Reserving Methodology* — method comparison.
+- Clark, *Reserving with Incomplete Exposure Information* (LDF ↔ Cape Cod ↔ BF
+  link) — conceptual, we measured BF a no-op (D-060).
+- Brosius, *Loss Development Using Credibility*.
+- BF Initial Expected Loss Ratio Working Party.
+- Improved Parametric Tail Factor Models (2025).
+- Meyers Bayesian MCMC; Gesmann & Morris compartmental models; unifying
+  triangle-based reserving; chainladder-in-Python guide.
+
+### Directly relevant to OUR per-policy prediction (worth a look if time allows)
+- Guszcza & Lommele, *Loss Reserving Using Claim-Level Data* — individual-claims
+  reserving, the closest to our granular setting.
+- Korn et al., *Comprehensive Non-Aggregated Stochastic Approach to Loss
+  Reserving*.
+- Richman & Balona, *The Actuary and IBNR Techniques: A Machine Learning
+  Approach* — ML for individual-claim IBNR.
+- Merz & Wüthrich, *Double Chain Ladder* — the classical ↔ granular link; the
+  rigorous form of our split development (D-061).
+- Werner & Modlin, *Basic Ratemaking* — exposure, trends, LDFs in pricing.
+- *Alternative to Tweedie in Pure Premium GLM* (two-part frequency × severity) —
+  we measured this worse (D-023), but the paper is the reference for why.
+- *A Bayesian Model for Estimating Long Tailed Excess of Loss* — thresholds /
+  excess layers; relevant because our metric is tail-dominated.
+
+### Data handling
+- *Completing and Using Schedule P* (paid/incurred net of salvage & subrogation)
+  — maps to our "net of recoveries" convention (D-003).
+
+**Note on the human's suggested skill split** (emergence features / baseline
+ultimates / per-policy ultimates / GLM freq-sev): this is the right decomposition
+for a full reserving *and* ratemaking pipeline. For our competition — predict
+expected ultimate cost per 2025 policy — steps (3) and (4) are the relevant ones,
+and step (3)'s individual-claims methods are the ones that need the payment
+history we lack.
