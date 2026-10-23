@@ -1,0 +1,17 @@
+{
+  "name": "emerging-exp-001",
+  "market": "emerging",
+  "rows_train": 109296,
+  "rows_test": 209063,
+  "d2_constant": 0.08039000298115051,
+  "d2_premium_lr": 0.10964584469598815,
+  "d2_emerging_only": 0.10733719850817092,
+  "d2_developed_prior_zero": 0.1385538713842528,
+  "d2_offset_adapted": 0.14045140342770168,
+  "d2_credibility_blend_final": 0.14015185028063903,
+  "per_lob_d2": {
+    "motor": 0.07079504783385848,
+    "buildings": 0.10514789768247657,
+    "contents": 0.10449655541750591
+  }
+}

@@ -2111,3 +2111,54 @@ and open claims may still develop"*) established three empirical properties in
    Public / `0.13563` Private in the 4-model blend (`exp-038`). `exp-036`
    (`0.12753` Public / `0.13570` Private) remains our top leaderboard submission.
 
+## D-066 — Part 2 (`emerging/`): Cross-market transfer learning + credibility-shrinkage offset adaptation & office premium build-up
+**2026-10-23 · accepted · verified on 5-Fold Policy-Grouped CV and guarded by `tests/test_emerging.py`**
+
+Part 2 (`iaa-ai-assisted-hackathon-2026-part-2`) introduces the `emerging/`
+market: 2 training years (`2023–2024`, `109,296` rows, `9,102` matched
+non-repudiated claims) and `209,063` test rows in `2025`, where **76.0% of 2025
+rows are `new_business == True`** due to a broker portfolio takeover in
+`2025-01-02..2025-01-15`.
+
+### Empirical findings (`docs/emerging_market_report.md`)
+
+1. **Schema canonicalisation recovers 100% of shared factors:**
+   - The 80 free-text `occupation` values in `emerging/customers.parquet` map
+     100% to the 20 standard occupations of `developed/` via
+     `.str.strip().str.lower().str.removeprefix('self-employed').str.strip()`,
+     plus a binary `is_self_employed` flag.
+   - Local `construction_type` codes (`BRK`, `STN`, `WOD`, `MIX`) map 1-to-1 to
+     (`brick`, `stone`, `timber`, `non_standard`).
+   - Continuous ages in `developed/` map directly to `emerging/`'s 5 bands
+     (`17-24`, `25-34`, `35-49`, `50-64`, `65+`) and midpoint `age_num`.
+   - `emerging/` shares the same data defects as `developed/`: 114 training rows
+     with `exposure > 1.5` (days unit error), annualised `written_premium`
+     (`corr(wp, exposure) ≈ 0`), and `sum_insured > 1e7` artefacts.
+2. **Severe pricing misalignments in `emerging/`:**
+   - `flood_zone` is completely unpriced in Contents (`written_premium` flat at
+     `125–128 CU` while observed cost rises 6.6× from `63.2` to `417.7 CU`).
+   - Motor `driver_age_band = 25-34` is priced like `35-64` (`462 CU`) but has
+     LR `0.912` (vs `0.60–0.62`).
+   - Motor `gender = M` has +34% higher claim rate than `F` (`467.4` vs `347.7
+     CU`) while `written_premium` differs by only +3%.
+3. **Transfer learning beats `emerging`-only trees by +0.033 D²:**
+   On 5-Fold Policy-Grouped CV over `emerging/` (`109,296` rows):
+   - `constant_rate`: `+0.08039`
+   - `premium_lr`: `+0.10965`
+   - `emerging_only_lgbm` (`lv=6`): `+0.10734` (1,000 claims per property line
+     is too thin for a standalone 50-feature tree)
+   - `developed_prior_zero` (2.41M-row `developed/` prior recalibrated to
+     `emerging/` LOB totals): **`+0.13855`**
+   - **`offset_adapted_lgbm` (`init_score = log(dev_prior_cal)`, `lv=3,
+     min_leaf=600, l2=100` on emerging adaptation factors):** **`+0.14045`**
+     (`motor +0.07080, buildings +0.10515, contents +0.10450`).
+4. **Deliverables built and verified (`pytest -q`):**
+   - `src/emerging.py`, `scripts/run_emerging.py`, `tests/test_emerging.py`
+   - Validated Part 2 submission: `outputs/submissions/emerging-exp-001.csv`
+     (`209,063` rows, all validation gates PASS; not uploaded pending human
+     confirmation per AGENTS.md rule 2).
+   - 20-policy Office Premium build-up:
+     `outputs/metrics/emerging_reference_office_premiums.csv` and
+     `docs/emerging_market_report.md` §5.
+
+

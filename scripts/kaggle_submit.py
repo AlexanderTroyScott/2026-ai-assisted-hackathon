@@ -31,12 +31,28 @@ COMP = "iaa-ai-assisted-hackathon-2026-part-1"
 EXPECTED_ROWS = 626_639
 FLOOR = 1e-3
 
+MARKET_CONFIG = {
+    "developed": {
+        "data_dir": ROOT / "developed",
+        "comp": "iaa-ai-assisted-hackathon-2026-part-1",
+        "expected_rows": 626_639,
+    },
+    "emerging": {
+        "data_dir": ROOT / "emerging",
+        "comp": "iaa-ai-assisted-hackathon-2026-part-2",
+        "expected_rows": 209_063,
+    },
+}
+
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def validate(path: Path) -> list[tuple[str, bool, str]]:
+def validate(path: Path, market: str = "developed") -> list[tuple[str, bool, str]]:
+    cfg = MARKET_CONFIG[market]
+    data_dir = cfg["data_dir"]
+    expected_rows = cfg["expected_rows"]
     checks: list[tuple[str, bool, str]] = []
     try:
         df = pd.read_csv(path, dtype={"row_id": str})
@@ -44,14 +60,14 @@ def validate(path: Path) -> list[tuple[str, bool, str]]:
         return [("CSV readable", False, str(exc))]
 
     checks.append(("columns", list(df.columns) == ["row_id", "prediction"], f"{list(df.columns)}"))
-    checks.append(("row count", len(df) == EXPECTED_ROWS, f"{len(df)} expected {EXPECTED_ROWS}"))
+    checks.append(("row count", len(df) == expected_rows, f"{len(df)} expected {expected_rows}"))
     checks.append(("no duplicate row_id", df["row_id"].is_unique, f"{int(df['row_id'].duplicated().sum())} dups"))
     checks.append(("no NaN", not df.isna().any().any(), f"{int(df.isna().sum().sum())} NaN"))
     checks.append(("strictly positive", bool((df["prediction"] >= FLOOR).all()),
                    f"min={df['prediction'].min()} floor={FLOOR}"))
     checks.append(("numeric prediction", pd.api.types.is_numeric_dtype(df["prediction"]), str(df["prediction"].dtype)))
 
-    sample = pd.read_parquet(DATA / "sample_submission.parquet")
+    sample = pd.read_parquet(data_dir / "sample_submission.parquet")
     checks.append(("row_id set == sample", set(df["row_id"]) == set(sample["row_id"]),
                    f"{len(set(df['row_id']) ^ set(sample['row_id']))} differing ids"))
 
@@ -59,22 +75,16 @@ def validate(path: Path) -> list[tuple[str, bool, str]]:
     prefixes = {"M": "motor", "B": "buildings", "C": "contents"}
     bad = 0
     for pref, line in prefixes.items():
-        src = pd.read_parquet(DATA / f"test_{line}.parquet", columns=["row_id"])
+        src = pd.read_parquet(data_dir / f"test_{line}.parquet", columns=["row_id"])
         ids = set(src["row_id"])
         got = set(df.loc[df["row_id"].str.startswith(pref), "row_id"])
         bad += len(got ^ ids)
     checks.append(("prefix/LOB consistency", bad == 0, f"{bad} mismatched ids"))
 
-    # D-052: exposure-scaling sanity. The training truth has a FLAT implied rate
-    # (cost/exposure) across exposure bands: 437/430/417/389, max/min = 1.12.
-    # A submission whose implied rate rises steeply with exposure is
-    # double-counting exposure and will collapse on the leaderboard even when
-    # local D2 looks excellent — that is exactly what exp-024 did (0.1365 local,
-    # 0.06019 LB). This check would have caught it before spending a slot.
     try:
         exp_rows = []
         for ln, pre in (("motor", "M"), ("buildings", "B"), ("contents", "C")):
-            t = pd.read_parquet(DATA / f"test_{ln}.parquet",
+            t = pd.read_parquet(data_dir / f"test_{ln}.parquet",
                                 columns=["row_id", "period_start", "period_end"])
             ps = pd.to_datetime(t["period_start"])
             pe = pd.to_datetime(t["period_end"])
@@ -91,9 +101,6 @@ def validate(path: Path) -> list[tuple[str, bool, str]]:
                        f"implied rate max/min={ratio:.2f} (truth 1.12; >1.5 => "
                        f"exposure likely double-counted)"))
     except Exception as exc:  # noqa: BLE001
-        # D-055: this gate must FAIL CLOSED. It was previously fail-open, so a
-        # broken exposure merge let a double-counted submission through as a
-        # pass - the exact failure mode the gate exists to catch (D-052).
         checks.append(("exposure scaling flat", False,
                        f"check FAILED TO RUN: {exc} - refusing rather than skipping"))
     return checks
@@ -135,12 +142,12 @@ def log_submission(tag: str, message: str, local_d2: str, digest: str, lb_score:
                 LOG_MD.write_text(text.replace(marker, marker + "\n" + line, 1))
 
 
-def fetch_our_score() -> tuple[str, str]:
+def fetch_our_score(comp: str = COMP) -> tuple[str, str]:
     """Return (score of our latest submission, 'posted') from our own submission
     list. Never take the board maximum — that is another team's score."""
     try:
         out = subprocess.run(
-            ["kaggle", "competitions", "submissions", "-c", COMP, "--csv"],
+            ["kaggle", "competitions", "submissions", "-c", comp, "--csv"],
             capture_output=True, text=True, timeout=60, check=False,
         ).stdout
     except Exception:  # noqa: BLE001
@@ -153,7 +160,7 @@ def fetch_our_score() -> tuple[str, str]:
     return (score, "posted")
 
 
-def check_quota() -> int:
+def check_quota(comp: str = COMP) -> int:
     """Print the daily submission quota; return the number of slots left today.
 
     User-directed hold rule: if the quota has reset to 10 (fresh window), do not
@@ -165,14 +172,14 @@ def check_quota() -> int:
              "from kaggle.api.kaggle_api_extended import KaggleApi;"
              "a=KaggleApi(); a.authenticate();"
              "l=a.competition_get_submission_limits(%r);"
-             "print(l.num_today, l.num_allowed_now)" % COMP],
+             "print(l.num_today, l.num_allowed_now)" % comp],
             capture_output=True, text=True, timeout=60, check=False,
         ).stdout.split()
         # The `kaggle` package prints a version warning to stdout on import, so
         # filter to the numeric tokens (the two limit values come last).
         nums = [t for t in out if t.lstrip("-").isdigit()]
         num_today, allowed = int(nums[0]), int(nums[1])
-        print(f"  quota           used today {num_today}/10, remaining {allowed}")
+        print(f"  quota           used today {num_today}, remaining {allowed}")
         return allowed
     except Exception as exc:  # noqa: BLE001
         print(f"  quota           UNAVAILABLE ({exc}) — refuse to submit blind")
@@ -182,6 +189,8 @@ def check_quota() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True, type=Path)
+    ap.add_argument("--market", default="developed", choices=["developed", "emerging"],
+                    help="target competition market ('developed' = Part 1, 'emerging' = Part 2)")
     ap.add_argument("--tag", default="untagged")
     ap.add_argument("--message", default="")
     ap.add_argument("--local-d2", default="n/a")
@@ -196,16 +205,17 @@ def main() -> int:
         print(f"ERROR: {args.input} not found")
         return 1
 
-    checks = validate(args.input)
+    target_comp = MARKET_CONFIG[args.market]["comp"]
+    checks = validate(args.input, market=args.market)
     width = max(len(c[0]) for c in checks)
-    print("\nValidation gate")
+    print(f"\nValidation gate ({args.market} -> {target_comp})")
     ok = True
     for name, passed, detail in checks:
         ok &= passed
         print(f"  {name:<{width}}  {'PASS' if passed else 'FAIL'}   {detail}")
     digest = sha256(args.input)
     print(f"  {'sha256':<{width}}  {digest}")
-    allowed = check_quota()
+    allowed = check_quota(target_comp)
 
     if not ok:
         print("\nREFUSING TO SUBMIT — validation failed. Fix the generating code, not the CSV.")
@@ -227,9 +237,9 @@ def main() -> int:
         print("Re-run with --ack-quota-reset if a human has approved spending a fresh window.")
         return 1
 
-    print(f"\nUploading {args.input.name} to {COMP} with message: {args.message!r}")
+    print(f"\nUploading {args.input.name} to {target_comp} with message: {args.message!r}")
     proc = subprocess.run(
-        ["kaggle", "competitions", "submit", "-c", COMP,
+        ["kaggle", "competitions", "submit", "-c", target_comp,
          "-f", str(args.input), "-m", args.message or args.tag],
         capture_output=True, text=True, timeout=180, check=False,
     )
@@ -238,7 +248,7 @@ def main() -> int:
         print("Upload failed — nothing logged.")
         return proc.returncode
 
-    score, rank = fetch_our_score()
+    score, rank = fetch_our_score(target_comp)
     log_submission(args.tag, args.message, args.local_d2, digest, score, rank, args.notes)
     print(f"\nLogged to docs/experiment_log.md  (leaderboard: score={score} rank={rank})")
     print("Note: the leaderboard may take a few minutes to reflect a new submission.")
