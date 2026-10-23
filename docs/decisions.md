@@ -1895,3 +1895,47 @@ data. The most likely explanations are external to anything we can measure from
 here: a fundamentally different model class, external data, or a target
 formulation the leader has found and we have not. That is the honest position,
 and it is now documented rather than speculated about.
+
+## D-061 — Split development: develop only open claims (Boor / R-16)
+**2026-10-23 · accepted · first positive result from the development-papers thread**
+
+The Boor paper (R-16) identified a bias we had not seen: the ultimate cost of an
+individual claim is a *distribution*, and applying a **uniform** LDF to a row's
+total cost is biased — closed claims are final (`paid == incurred`) and need no
+development, while open claims need **more** than the aggregate factor (the
+aggregate averages the two).
+
+Measured, the implied open-claim development factor per (LOB, AY):
+
+| LOB | AY | open% | LDF (uniform) | implied F_open |
+|---|---|---|---|---|
+| motor | 2024 | 36.6% | 1.259 | **1.708** |
+| buildings | 2024 | 35.5% | 1.092 | **1.259** |
+| contents | 2024 | 18.4% | 1.044 | **1.239** |
+| motor | 2023 | 25.3% | 1.030 | 1.119 |
+
+So the uniform LDF over-develops the closed ~63% of 2024 (which is final) and
+under-develops the open ~37% (which will strengthen). Since open claims are the
+*large* ones, this is a shape bias in exactly the tail where Tweedie D² lives.
+
+**Implementation.** `development="split"` builds `y_ult = y_closed + y_open ×
+OPEN_LDF(line, AY)`. The open factor is implied by the aggregate chain-ladder
+total, so the book-level ultimate is preserved and only the per-row allocation
+changes.
+
+**Gate (D-028 protocol, both folds):**
+
+| dev | fold | model D² | baseline D² | GAP | cal ratio |
+|---|---|---|---|---|---|
+| lob | 2024 | 0.1304 | 0.0790 | 0.0515 | 1.1342 |
+| lob | 2023 | 0.1353 | 0.0877 | 0.0476 | 1.1513 |
+| **split** | 2024 | 0.1289 | 0.0759 | **0.0530** | **1.1268** |
+| **split** | 2023 | 0.1358 | 0.0878 | **0.0480** | **1.1475** |
+
+Gap improves on both folds (+0.0015 / +0.0004), and calibration ratio moves
+toward 1.0 on both — the axis D-054 established as predictive of leaderboard
+transfer. Small but consistent, and mechanistically grounded.
+
+This is the first positive result from the reserve-adequacy / development-papers
+investigation (R-07 through R-17). BF (D-060) was a no-op; the uniform-vs-open
+split is not.

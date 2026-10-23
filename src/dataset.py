@@ -107,6 +107,20 @@ FORWARD_FACTOR = forward_factors("central")
 # Measured: only 2024 is material (motor +1.7%, buildings -0.6%); every mature
 # year has credibility ~0 so the scale is 1.0. Chain-ladder and BF agree to
 # within ~2%, so this is a small refinement, not a level shift.
+# D-061 / R-16 (Boor): the ultimate of an individual claim is a distribution,
+# and applying a UNIFORM LDF to a row's total cost is biased -- closed claims
+# are final (paid == incurred) and need no development, while open claims need
+# MORE than the aggregate factor (the aggregate averages the two). The implied
+# open-claim factor is (total x LDF - closed) / open per (LOB, AY), computed
+# 2026-10-22. open% for 2024 is 36.6% / 35.5% / 18.4% for motor/buildings/
+# contents, so the bias is concentrated in the tail (open claims are the large
+# ones). Values where open ~ 0 are set to 1.0 (no effect).
+OPEN_LDF = {
+    "motor":     {2021: 1.000, 2022: 1.028, 2023: 1.119, 2024: 1.708},
+    "buildings": {2021: 1.000, 2022: 1.000, 2023: 1.037, 2024: 1.259},
+    "contents":  {2021: 1.000, 2022: 1.000, 2023: 1.283, 2024: 1.239},
+}
+
 BF_SCALE = {
     "motor":     {2021: 1.000, 2022: 1.000, 2023: 1.000, 2024: 1.017},
     "buildings": {2021: 1.000, 2022: 1.000, 2023: 1.000, 2024: 0.994},
@@ -164,7 +178,7 @@ def load_claims() -> pd.DataFrame:
     c["loss"] = pd.to_datetime(c["loss_date"])
     c["rep"] = pd.to_datetime(c["report_date"])
     c["cost"] = np.maximum(0.0, c["incurred_to_date"] - c["recoveries"])
-    return c[["claim_id", "policy_id", "line", "peril", "loss", "rep", "cost"]]
+    return c[["claim_id", "policy_id", "line", "peril", "loss", "rep", "cost", "status"]]
 
 
 def load_denied_claims() -> pd.DataFrame:
@@ -333,6 +347,50 @@ def row_target(policies: pd.DataFrame, claims: pd.DataFrame, develop: bool = Tru
     return out
 
 
+def row_target_split(policies: pd.DataFrame, claims: pd.DataFrame,
+                     develop: bool = True) -> pd.DataFrame:
+    """D-061 / R-16 (Boor): develop only the OPEN portion of a row.
+
+    Closed claims are final (`paid == incurred`) and need no development; open
+    claims need more than the aggregate LDF (which averages the two). Applying
+    the uniform LDF to the row total over-develops closed claims and
+    under-develops open claims -- a shape bias in the tail, where D2 lives.
+
+    y_ult = y_closed + y_open x OPEN_LDF(line, AY), with the open factor implied
+    by the aggregate chain-ladder total: (total x LDF - closed) / open.
+    """
+    key = ["row_id", "policy_id", "ps", "pe", "acc_year", "line"]
+    merged = policies[key].merge(claims, on=["policy_id", "line"], how="inner")
+    merged = merged[(merged["loss"] >= merged["ps"]) & (merged["loss"] <= merged["pe"])]
+
+    dup = merged.groupby("claim_id").size()
+    if (dup > 1).any():
+        raise SystemExit(f"FATAL: {(dup > 1).sum()} claims match more than one policy row")
+
+    is_open = (merged["status"] == "open").to_numpy()
+    merged = merged.copy()
+    merged["y_closed"] = np.where(is_open, 0.0, merged["cost"])
+    merged["y_open"] = np.where(is_open, merged["cost"], 0.0)
+    agg = merged.groupby("row_id").agg(
+        y=("cost", "sum"), y_closed=("y_closed", "sum"), y_open=("y_open", "sum"),
+        n_claims=("claim_id", "count"),
+    )
+    out = policies[["row_id", "line", "acc_year"]].join(agg, on="row_id").fillna(
+        {"y": 0.0, "y_closed": 0.0, "y_open": 0.0, "n_claims": 0})
+
+    if develop:
+        opf = np.ones(len(policies), dtype=float)
+        for ln in OPEN_LDF:
+            mask = (policies["line"].to_numpy() == ln)
+            ay = policies["acc_year"].to_numpy()
+            for year, f in OPEN_LDF[ln].items():
+                opf[mask & (ay == year)] = f
+        out["y_ult"] = out["y_closed"] + out["y_open"] * opf
+    else:
+        out["y_ult"] = out["y"]
+    return out
+
+
 def experience_features(policies: pd.DataFrame, claims: pd.DataFrame) -> pd.DataFrame:
     """Strictly lagged claim history (D-014): only losses before period_start.
 
@@ -435,7 +493,12 @@ def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
         feats = feats.merge(denial_features(pol, load_denied_claims()), on="row_id", how="left")
         df = pol.merge(feats, on="row_id", how="left")
         if split == "train":
-            tgt = row_target(pol, claims, develop=True, development=development)
+            if development == "split":
+                tgt = row_target_split(pol, claims, develop=True)
+                tgt = tgt.assign(n_claims=tgt["n_claims"]).reindex(
+                    columns=["row_id", "y", "y_ult", "n_claims"])
+            else:
+                tgt = row_target(pol, claims, develop=True, development=development)
             df = df.merge(tgt[["row_id", "y", "y_ult", "n_claims"]], on="row_id", how="left")
         frames.append(df)
     return pd.concat(frames, ignore_index=True)

@@ -275,7 +275,7 @@ def main() -> int:
     ap.add_argument("--name", required=True)
     ap.add_argument("--features", default="base,premium")
     ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev"])
-    ap.add_argument("--development", default="lob", choices=["lob", "peril", "bf"])
+    ap.add_argument("--development", default="lob", choices=["lob", "peril", "bf", "split"])
     ap.add_argument("--trend", default="central", choices=["premium", "low", "central", "high"],
                     help="2025 level scenario (D-009, still `proposed`)")
     ap.add_argument("--fold", default="2024", choices=sorted(FOLDS),

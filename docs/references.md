@@ -253,3 +253,104 @@ error via acronym collision.
 +0.0002. C-2 measured (D-046). C-3 measured (error correlation 0.999, recorded in
 the D-059 session) — refuted. C-4 would follow C-1 by construction. C-5 done
 (`docs/actuarial_report.md`). **The candidate queue is empty.**
+
+## R-07 — DuVall, *Testing for Shifts in Reserve Adequacy*
+**CAS Proceedings LXXIX, 1992 · Richard M. DuVall**
+<https://www.casact.org/sites/default/files/database/proceed_proceed92_92001.pdf>
+
+Regression models that test for shifts/trends in loss development factors, as an
+objective alternative to the subjective Berquist-Sherman judgment. Models the
+LDF as a function of age, then introduces dummy/trend terms on the LDF
+parameters and tests significance; if a shift is detected, restates early
+valuations to be consistent with recent reserving practice.
+
+**Core diagnostic it inherits from Berquist-Sherman:** compare the growth rate
+of the *per-claim reserve for open claims* against the growth rate of the
+*per-claim cost for closed claims* over the experience years. If reserving is
+consistent the two grow at the same rate; unequal rates indicate a shift in
+reserve adequacy.
+
+**Requires:** a loss triangle of reported losses at **annual valuation dates**.
+
+## R-08 — Ghezzi, *Loss Reserving Without Loss Development Patterns — Beyond Berquist-Sherman*
+**CAS Forum, 2001 · Thomas L. Ghezzi, FCAS, MAAA**
+<https://www.casact.org/sites/default/files/database/forum_01fforum_01ff043.pdf>
+
+For situations where case-reserving and/or settlement-rate changes have made
+historical development patterns inappropriate for projecting immature years.
+Where B-S *restates prior years* to the current basis, Ghezzi **restates the
+current diagonal to the level implied by the older years' estimates**, on an
+*implied ultimate* basis — eliminating the need to apply (possibly wrong)
+development patterns to the less-mature years. Uses reported/closed/paid claim
+counts in addition to loss triangles.
+
+**Key empirical finding (Scenario with case-reserve strengthening):** the
+**incurred** projection overstates ultimate ($796.0M vs $766.5M actual), while
+the **paid** projection equals actual. Incurred development is contaminated by
+reserve-adequacy shifts; paid development is the cleaner signal.
+
+**Requires:** valuation-date history plus claim-count (reported/closed/paid)
+triangles — i.e. `close_date`, which our dataset does not have.
+
+## R-10 — Cook, *Trend and Loss Development Factors*
+**CAS Proceedings LVII, 1970 · Charles F. Cook**
+Classic on the conceptual confusion between trend and development factors — the
+data base a factor is derived from versus the purpose it serves. Background for
+the trend-vs-development separation we already follow (D-007/D-008).
+
+## R-11 — Murphy, *Unbiased Loss Development Factors*
+**CAS Forum, Spring 1994 · Daniel W. Murphy, FCAS, MAAA**
+<https://www.casact.org/sites/default/files/database/forum_94spforum_94spf183.pdf>
+
+Mathematical framework for whether the loss development technique is biased, and
+which link-ratio estimator is best (we use volume-weighted). Relevant to whether
+our chain-ladder LDFs are unbiased in the sense that matters.
+
+## R-12 — CAS Tail Factor Working Party, *The Estimation of Loss Development Tail Factors*
+**CAS E-Forum, Fall 2013 · Herman, Shapland (co-chairs) et al.**
+<https://www.casact.org/sites/default/files/database/forum_13fforum_02-tail-factors-working-party.pdf>
+
+Authoritative treatment of the tail beyond the observable triangle — exactly the
+age-4+ development question raised by the human. Confirms the tail is a real,
+separately-estimated quantity (we measured it negligible here: 6 claims / 0.1M
+beyond age 3).
+
+## R-13 — Spore, *Techniques for the Conversion of Loss Development Factors*
+**CAS Forum, Spring 1998 · Louis Spore, ACAS, MAAA**
+<https://www.casact.org/sites/default/files/database/forum_98sforum_98sf373.pdf>
+
+Accident-year vs policy-year development factors and their conversion. Relevant
+because our `acc_year` is keyed to policy start year.
+
+## R-14 — Blumsohn & Laufer, *Unstable Loss Development Factors*
+**CAS E-Forum, Spring 2009 · Gary Blumsohn, FCAS, Ph.D., Michael Laufer, FCAS, MAAA**
+<https://www.casact.org/sites/default/files/database/forum_09spforum_01blumsohn.pdf>
+
+How actuaries handle unstable triangles. Relevant to the declining motor f(0→1)
+we observed (1.268 → 1.233 → 1.173).
+
+## R-15 — Korn, *Strategies for Modeling Loss Development: Curve Fitting, Credibility, and Layer Adjustments*
+**CAS · Uri Korn**
+<https://www.casact.org/sites/default/files/2021-07/Strategies-Modeling-Loss-Korn.pdf>
+
+Smoothing splines and credibility for loss development curves; layer-adjusted
+development. Relevant to the size/layer dependence of development.
+
+## R-16 — Boor, *[Best Paper 2017] — on individual-claim loss development distributions*
+**CAS · Joseph Boor**
+<https://www.casact.org/sites/default/files/2021-02/2017_Best-Paper_Boor.pdf>
+
+**The one that matters for us.** *"The ultimate cost of an unpaid individual
+claim follows a probability distribution… when actuaries apply loss development
+factors to individual claims, they often create biased estimates of excess loss
+costs."* Applying an aggregate LDF uniformly to individual claims is biased,
+especially in the tail/layers — and our target applies `y_ult = y × LDF` to every
+row's total, closed claims included.
+
+## R-17 — Archer Actuarial, *How to Calculate Implied Development Patterns*
+**Practitioner note, April 2025 · <https://archeractuarial.com>**
+Worked example of the Ghezzi (R-08) implied-development-pattern method on a
+Schedule P aggregate triangle: paid% and reported% of ultimate by maturity,
+then age-to-age/age-to-ultimate for both paid and incurred. Confirms the paid
+pattern is the cleaner signal, but requires the paid/IBNR triangle by maturity —
+i.e. the valuation-date history our single-snapshot dataset does not provide.
