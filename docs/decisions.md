@@ -1963,3 +1963,43 @@ model.
 
 Best remains **exp-027 at 0.12436** (uniform LDF, occupation removed, corrected
 labels, D-045 refit). 1 slot used 2026-10-23, 9 remaining, deadline 16:00.
+
+## D-062 — Frequency-severity separate development is an identity (no-op)
+**2026-10-23 · measured, not submitted (nothing to submit)**
+
+The human proposed developing claim count and severity separately (Friedland
+count-severity). Measured 2026-10-23 from the raw claims:
+
+| LOB | cost age0→ult | count age0→ult | implied severity | own-ladder severity* |
+|---|---|---|---|---|
+| motor | 1.184 | 1.061 | 1.116 | 8.32 (mix-biased) |
+| buildings | 1.065 | 1.056 | 1.009 | 2.59 (mix-biased) |
+| contents | 1.031 | 1.031 | 0.999 | 2.87 (mix-biased) |
+
+\* the naive average-severity chain ladder is invalid for ratios (Freidland's
+well-known mix-bias); the *consistent* count-severity method has
+`cost_LDF ≡ count_LDF × severity_LDF`.
+
+**Therefore, per row:**
+
+```
+y_ult = count × count_LDF × (y/count) × severity_LDF
+      = count × count_LDF × (y/count) × (cost_LDF/count_LDF)
+      = y × cost_LDF        # exactly the D-005 uniform factor
+```
+
+Frequency-severity development with the consistent (implied) severity factor is
+**bit-for-bit identical** to the uniform LDF we already use. It changes nothing
+— there is no new target, so no submission slot was spent.
+
+**What it *does* tell us** (recorded for the write-up): motor's 1.18 development
+is ~6% late *reporting* (count) and ~12% *case strengthening* (severity), while
+buildings/contents are almost entirely count-side (severity component ~1.0 —
+open building/contents claims barely strengthen). That asymmetry is *why* motor
+is where the split development (D-061) showed the largest (non-transferring)
+effect.
+
+The only genuinely granular development is per-peril (already `development=
+'peril'`, measured skill-neutral in D-028). **The development axis is now
+exhausted**: lob / peril / bf / split / freq-sev are all measured, and none beat
+the uniform LDF. Best remains exp-027 0.12436.
