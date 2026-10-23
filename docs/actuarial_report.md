@@ -242,9 +242,12 @@ substantive changes in this work, in order:
 | **D-054 — R-04 diagnostics built** | The suite produced no normalised Gini or lift charts; R-04 names the train-vs-holdout Gini gap as the overfit measure. | Toolkit built. **The gap does not predict leaderboard transfer** (inverted on the two configs tested). The *decomposition* does: Gini/lift measure ranking, calibration measures level, and our failures were level failures. |
 | **D-055 — test-suite audit** | Reviewer audit of all 70 tests. | Four submission-critical behaviours were unguarded (target construction, the exposure convention, the scoring metric, and a dead test) and one test was tautological. Fixed; 70 → 77 tests. |
 | **D-056 — `occupation` removed** | 64% of its dispersion is Student+Retired, i.e. driver age in disguise; it carried two diagnosed artefacts. | Accuracy neutral (mean +0.0003, folds disagreeing). **Calibration improved on both folds.** Removal confirmed on the leaderboard. |
-| **D-057 — exp-027** | Testing the D-056 change. | **0.12436**, our best draw. See §6 for the seed-family caveat. |
+| **D-057 — exp-027** | Testing the D-056 change. | **0.12436**, our best draw prior to D-063. See §6 for the seed-family caveat. |
 | **D-058 — `flood_zone`-only** | Proposed that river distance and elevation were proxies for it. | **Refuted**: −0.00181. Elevation carries 1.2–1.8× residual signal *within* flood zones. |
 | **D-059 — seeds and blends** | Filling the expiring quota on the best config. | Family mean 0.12287, sd 0.00133. exp-027 is ~1.1 sd above its own mean. Blends diluted the standout. **Corrected:** the occupation gain is +0.00127 on means (1.14 pooled sd), not +0.0018. |
+| **D-063 — `--final-fit` defects fixed; Per-LOB + Pooled `rate` models** | `--final-fit` had hardcoded `train["y_ult"]` (causing exposure double-counting in `exp-024`) and hardcoded `num_leaves=64, lr=0.04` (causing 6× tree-budget overfitting in `exp-025`). Fixed both and implemented shallow Per-LOB `rate` LGBM (`num_leaves=6`). | **+0.0078 honest OOF D²** (`0.1322 → 0.1400`), **Public LB 0.12681 / Private LB 0.13531** (`exp-033`, +0.00547 Private over `exp-027`); 70/30 Per-LOB + Pooled blend (`exp-034`) reaches **0.12707 Public / 0.13536 Private**. |
+| **D-064 — Multi-family rate ensemble (Per-LOB XGBoost + LGBM)** | Retracts D-060's residual-correlation rejection of model-form blending. Adds Per-LOB XGBoost Tweedie rate model (`max_depth=3, no_rel`, solo `0.12700` Public / `0.13509` Private, `exp-035`). | **New Best (`exp-036`): 0.12753 Public / 0.13570 Private** (+0.00317 Public / +0.00586 Private over `exp-027`; honest OOF D² **0.14076**). |
+| **D-065 — Horvitz-Thompson Date×Peril development & year-normalized relativities** | Addresses 31 Dec 2024 reporting truncation and open-claim recovery/IBNER asymmetry on Motor (`development="ht_motor"`), plus year-normalized historical relativities (`--norm-rel`, `exp-037`/`exp-038`). | Censored age-0 backtest Motor D² `0.0860 → 0.0871`; `exp-038` 4-model ensemble scores **0.12721 Public / 0.13563 Private**. |
 
 **Professional judgement conflict (ASOP 9 §5.4).** The corrected label table (D-033/D-035)
 is the actuarially correct one and reproduces `data_findings.md` §5 exactly. It is
@@ -259,12 +262,29 @@ such.**
 
 ## 6. Results and diagnostics
 
-**Presented result.** Our best single run is `exp-027`, leaderboard **0.12436**.
-The honest estimate of the *configuration* is the three-seed family mean
-**0.12287** (0.12179 / 0.12247 / 0.12436, sd 0.00133) — exp-027 sits ~1.1 sd
-above its own family mean and should be described as a favourable draw, not as
-the model's score. Gap to the leaderboard top (0.12996) is 0.0056 on the best
-draw and 0.0071 on the mean.
+**Presented result (updated 2026-10-23, D-063/D-064).** Our best submission is
+`exp-036` (multi-family rate ensemble: 40% Per-LOB XGBoost `max_depth=3` + 42%
+Per-LOB LightGBM `num_leaves=6` + 18% Pooled LightGBM `num_leaves=16`, all
+modelling annualised rate `y_ult / exposure` with exposure weights and
+reconstructed as `exposure × rate`), scoring **0.12753 Public / 0.13570
+Private** (honest Fold 2024 OOF D² **0.14076**). Its individual components also
+substantially outperform the prior cost-target baseline (`exp-027`, `0.12436`
+Public / `0.12984` Private):
+- `exp-033` (Per-LOB LightGBM rate `num_leaves=6`): **0.12681 Public / 0.13531 Private** (OOF D² 0.14002)
+- `exp-035` (Per-LOB XGBoost rate `max_depth=3`): **0.12700 Public / 0.13509 Private** (OOF D² 0.14014)
+- `exp-034` (70% `exp-033` + 30% Pooled LightGBM rate `exp-032`): **0.12707 Public / 0.13536 Private** (OOF D² 0.14033)
+- `exp-038` (4-model rate ensemble incl. `exp-037`): **0.12721 Public / 0.13563 Private** (OOF D² 0.14095)
+
+Calibration on the Fold 2024 holdout improves markedly under the rate
+formulation: out-of-sample calibration ratio improves from `1.12–1.18` (cost
+target) to **`0.989–1.005`**, calibration slope improves from `1.15–1.22` to
+**`1.006–1.010`**, and exposure-band implied-rate flatness is **`1.13–1.14`**
+(matching the training truth of `1.12`).
+
+**Prior cost-target baseline (`exp-027`).** Prior to D-063, our best single run
+on the cost target was `exp-027`, leaderboard **0.12436** (`0.12984` Private),
+with three-seed family mean **0.12287** (0.12179 / 0.12247 / 0.12436, sd
+0.00133).
 
 All presented runs use the corrected label table (D-033/D-035) and the D-045
 final refit.

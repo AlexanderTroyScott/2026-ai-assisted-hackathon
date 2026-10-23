@@ -332,3 +332,51 @@ effect on the next opencode restart.
 
 **Human decided.** Second-opinion code review as a standing workflow step, on a
 different model family than the primary agent.
+
+## Session 11 — 2026-10-23 · Code & actuarial audit: `--final-fit` bugfixes, Per-LOB rate models, and multi-family ensemble (`D-063`..`D-065`)
+
+**Asked.** Audit the repository, challenge prior assumptions, investigate the
+31 December 2024 valuation cutoff (*"Some 2024 claims had not been reported by
+then, and open claims may still develop"*), and implement and submit
+improvements.
+
+**AI did.**
+- Audited `scripts/run_experiment.py` and found two critical implementation bugs
+  in `--final-fit` (lines 460–472) that had caused `exp-024` (`--target rate`)
+  and `exp-025` (`D-053` shallow-tree hyperparameters) to collapse on the
+  leaderboard (`0.06019` and `0.11168`):
+  1. `final_model.fit(X_all, train["y_ult"])` ignored `args.target == "rate"`
+     (fitting total cost instead of rate `y_ult / exposure` and omitting
+     exposure weights), after which `to_cost` multiplied by `exposure` a second
+     time (`cost ∝ exposure²`).
+  2. `final_model` hardcoded `num_leaves=64, learning_rate=0.04` instead of
+     inheriting `**params`, causing `exp-025` to train `num_leaves=64, lr=0.04`
+     for `590` trees (~6× over-budget).
+- Audited `claims.parquet` around the 31 Dec 2024 cutoff: verified that open
+  motor `own_damage` and `theft` claims carry `0.00%` booked recoveries (versus
+  `30% × 80% = 24%` on closed `own_damage`), explaining why `exp-031` (`D-061`
+  uniform open-claim multiplier) over-inflated open `own_damage` claims by
+  2.25×; implemented Horvitz-Thompson Date×Peril inverse reporting probability
+  + open-claim recovery/IBNER development (`development="ht_motor"` in
+  `src/dataset.py`).
+- Implemented `--mode per_lob` (shallow `num_leaves=6` Tweedie rate models per
+  LOB on active line features, dropping `earned_premium` when `target == "rate"`)
+  and a Per-LOB XGBoost Tweedie rate model (`max_depth=3`, `no_rel`), plus a
+  regression test in `tests/test_guardrails.py`.
+
+**Verified.** Tested across both rolling-origin folds (`Fold 2024` OOF D²
+`0.13223 → 0.14076`; `Fold 2023` OOF D² `0.13624 → 0.14350`), exposure-band
+flatness gate (`1.13–1.14` vs truth `1.12`), and confirmed on the live Kaggle
+leaderboard (`exp-033` `0.12681` Public / `0.13531` Private; `exp-034` `0.12707`
+Public / `0.13536` Private; `exp-035` `0.12700` Public / `0.13509` Private;
+**`exp-036` `0.12753` Public / `0.13570` Private** — +0.00317 Public and
++0.00586 Private over `exp-027`).
+
+**Human decided.** Approved implementing the fixes, submitting to Kaggle,
+updating documentation, and pushing commits to GitHub.
+
+**Output.** `src/dataset.py`, `scripts/run_experiment.py`,
+`tests/test_guardrails.py`, `docs/decisions.md` (D-063..D-065),
+`docs/experiment_log.md`, `docs/actuarial_report.md`, and submissions
+`exp-033`..`exp-038`.
+

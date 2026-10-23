@@ -2003,3 +2003,111 @@ The only genuinely granular development is per-peril (already `development=
 'peril'`, measured skill-neutral in D-028). **The development axis is now
 exhausted**: lob / peril / bf / split / freq-sev are all measured, and none beat
 the uniform LDF. Best remains exp-027 0.12436.
+
+## D-063 — Correction to D-052/D-053/D-060: `--final-fit` defects fixed; Per-LOB + Pooled `rate` models (+0.0055 Private LB)
+**2026-10-23 · accepted · retracts D-052, D-053, and D-060 per-LOB conclusions · exp-033, exp-034**
+
+Audit of `scripts/run_experiment.py` revealed two implementation defects in the
+`--final-fit` block (lines 460–472) that had caused `exp-024` (`--target rate`)
+and `exp-025` (`D-053` shallow-tree hyperparameters) to fail on the leaderboard:
+
+1. **Why `exp-024` (`--target rate`) collapsed to `0.06019`:**
+   In `exp-024`, the validation model fitted `y_ult / exposure` with exposure
+   weights (`0.1365` honest local D²), but `--final-fit` hardcoded
+   `final_model.fit(X_all, train["y_ult"])` (fitting total **cost**, not rate,
+   without exposure weights), and line 481 (`to_cost`) then multiplied the
+   predicted cost by `exposure` a second time (`cost ∝ exposure²`, exposure-band
+   ratio `6.40`). Furthermore, `earned_premium = written_premium × exposure` had
+   been left in the feature matrix while `written_premium` is already the
+   annualised rate.
+2. **Why `exp-025` (`num_leaves=16, lr=0.02`) collapsed to `0.11168`:**
+   In `exp-025`, the validation model used `num_leaves=16, lr=0.02` and stopped
+   at `best_iter = 590` trees (`+0.0057` local D² across both folds), but
+   `--final-fit` hardcoded `num_leaves=64, learning_rate=0.04` and trained it for
+   `n_fix = 590` trees (~6× the optimal ~100-tree budget for `num_leaves=64,
+   lr=0.04`), which reduces 2024 holdout raw D² from `0.1298` to `0.1012`.
+3. **Why per-LOB models appeared worse in D-060:**
+   They were tested on the raw `cost` target with `num_leaves=64` (4× too deep
+   for single-LOB sample sizes) and retained constant dummy columns from the
+   other lines.
+
+### Fixes implemented (`scripts/run_experiment.py`, guarded by `tests/test_guardrails.py`)
+
+- When `--target rate` is selected, `earned_premium` is excluded from the
+  feature list, `eval_sample_weight=[exposure]` is passed to `fit()`, and
+  `--final-fit` fits `y_ult / exposure` with `sample_weight = exposure` and
+  `**final_params`.
+- Added `--mode per_lob` fitting separate shallow Tweedie rate models per LOB
+  (`num_leaves=6, lambda_l2=5.0`) on each line's active features.
+
+### Measured results (Fold 2024, Fold 2023, and Leaderboard)
+
+| run | config | Fold 2024 OOF D² | Fold 2023 OOF D² | Public LB | Private LB | Δ vs exp-027 |
+|---|---|---:|---:|---:|---:|---:|
+| exp-027 | pooled cost target (`lv=64, lr=0.04`) | 0.13223 | 0.13624 | 0.12436 | 0.12984 | — |
+| exp-032 | pooled rate target (`lv=16, lr=0.04`) | 0.13832 | — | — | — | — |
+| **exp-033** | **per-LOB rate LGBM (`lv=6, lr=0.05`)** | **0.14002** | **0.14350** | **0.12681** | **0.13531** | **+0.00245 Pub / +0.00547 Priv** |
+| **exp-034** | **70% exp-033 + 30% exp-032** | **0.14033** | — | **0.12707** | **0.13536** | **+0.00271 Pub / +0.00552 Priv** |
+
+Calibration slope improves from `1.158` (`exp-027`) to `1.010` (`exp-033`),
+calibration ratio improves from `1.121` to `0.989`, and exposure-band flatness
+is `1.13–1.14` (vs truth `1.12`). Crucially, with the `--final-fit` bugs fixed,
+honest local OOF D² ranks models accurately again.
+
+## D-064 — Multi-family rate ensemble: Per-LOB XGBoost + Per-LOB LGBM + Pooled LGBM (New Best: 0.12753 Public / 0.13570 Private)
+**2026-10-23 · accepted · retracts D-060's error-correlation rejection of C-3 · exp-035, exp-036**
+
+D-060 rejected model-form blending on the ground that `corr(y - p_1, y - p_2) =
+0.999`. Because ~90% of rows have `y = 0` and `Var(y) ≈ 100 × Var(p)`, residual
+correlation `corr(y - p_1, y - p_2)` is dominated by `Var(y)` by mathematical
+identity for any two predictors with $R^2 \approx 0.05$.
+
+Tested a standalone **Per-LOB XGBoost Tweedie rate model** (`objective=
+'reg:tweedie'`, `tweedie_variance_power=1.5`, `max_depth=3`, `learning_rate=0.05`,
+`min_child_weight=200`, `reg_lambda=5.0`, excluding `_hist_rate`/`_hist_freq`
+target-encoding columns so the second model family has zero target-encoding
+drift between 2024 and 2025).
+
+| run | config | Fold 2024 OOF D² | Public LB | Private LB |
+|---|---|---:|---:|---:|
+| exp-035 | Per-LOB XGBoost rate (`depth=3, no_rel`) | 0.14014 | 0.12700 | 0.13509 |
+| exp-034 | 70% Per-LOB LGBM + 30% Pooled LGBM | 0.14033 | 0.12707 | 0.13536 |
+| **exp-036** | **40% exp-035 (XGB) + 42% exp-033 (Per-LOB LGBM) + 18% exp-032 (Pooled LGBM)** | **0.14076** | **0.12753** | **0.13570** |
+
+`exp-036` outperforms every constituent model on both local OOF D² (`0.14076`)
+and on both Public (`0.12753`) and Private (`0.13570`) leaderboards.
+
+## D-065 — 31 Dec 2024 valuation cutoff: Horvitz-Thompson Date×Peril development & year-normalized relativities
+**2026-10-23 · accepted · measured in censored age-0 backtest and on the leaderboard · exp-037, exp-038**
+
+Investigation of the competition brief's central valuation statement (*"Claims
+are valued at 31 December 2024. Some 2024 claims had not been reported by then,
+and open claims may still develop"*) established three empirical properties in
+`claims.parquet`:
+
+1. **Motor `bodily_injury` drives 2024 IBNR and IBNER:**
+   `bodily_injury` has a 127-day median reporting lag (56.6% analytical 2024
+   reporting completeness vs 94%–98% on short-tail perils) and its 2024 mean
+   `incurred_to_date` declines monotonically from Q1 (`20,094`, 70% open) to Q4
+   (`14,735`, 93% open) due to immature open case estimates.
+2. **Open motor `own_damage` and `theft` claims carry zero booked recoveries:**
+   0.00% of open claims have `recoveries > 0`, whereas 30.0% of closed
+   `own_damage` claims recover 80% of incurred (`net = 0.76 × incurred`) and
+   13.2% of closed `theft` claims recover 30% (`net = 0.96 × incurred`). This
+   explains why `exp-031` (`D-061`, uniform open-claim multiplier `1.708`)
+   over-inflated open `own_damage` claims by 2.25× and regressed on the board.
+3. **Horvitz-Thompson Date×Peril development (`development="ht_motor"` in `src/dataset.py`):**
+   In a controlled censored-valuation backtest (`2021–2022` censored at
+   `2022-12-31` predicting mature `2023` truth), weighting age-0 Motor claims by
+   inverse reporting probability $1 / \max(F_{\text{peril}}(\text{val\_date} -
+   \text{loss\_date}), 0.25)$ improved out-of-sample Motor D² from `0.08604`
+   (uniform LOB LDF) to `0.08706` (vs `0.08856` uncensored Oracle, closing 40%–81%
+   of the Oracle gap depending on feature set), while uniform LOB LDF matched the
+   Oracle on Buildings and Contents.
+4. **Year-normalized historical relativities (`--norm-rel`, `exp-037` / `exp-038`):**
+   Normalizing `<col>_hist_rate` and `<col>_hist_freq` within `(line, acc_year)`
+   to mean `1.0` improved Fold 2024 OOF D² from `0.14002` to `0.14054`, and
+   scored `0.12587` Public / `0.13502` Private solo (`exp-037`) and `0.12721`
+   Public / `0.13563` Private in the 4-model blend (`exp-038`). `exp-036`
+   (`0.12753` Public / `0.13570` Private) remains our top leaderboard submission.
+

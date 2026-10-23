@@ -49,6 +49,13 @@ negative results are as valuable as positive ones.
 | 25 | 2026-10-22 22:21 UTC | exp-030 | exp-030: exp-027 config, seed 2 (occupation removed, corrected labels, D-045 refit) | second/third seed of the best config family; enables seed blending | 0.1324 | - | — | clean | `07b012a56c75` |
 | 26 | 2026-10-22 22:24 UTC | blend-027030 | 2-seed ensemble: exp-027 + exp-030 (best two, occupation removed) | blend of the two best seeds of the exp-027 family | 0.1322 | - | — | clean | `de9ed2efeae2` |
 | 27 | 2026-10-22 22:24 UTC | blend-03seed | 3-seed ensemble: exp-027 + exp-029 + exp-030 (occupation removed) | full seed ensemble of the exp-027 family | 0.1321 | - | — | clean | `a478bded65cf` |
+| 28 | 2026-10-23 01:06 UTC | exp-031 | D-061 split development: develop open claims only (Boor R-16) | first positive result from the development-papers thread. y_ult = y_closed + y_open x OPEN_LDF. Gap +0.0015/+0.0004 on both folds, cal ratio toward 1.0. Human-directed fresh-window submission. | 0.1309 | **0.12301** (Priv 0.12928) | −0.00135 | clean | `d85a2c1969dd` |
+| 29 | 2026-10-23 19:50 UTC | exp-033 | D-063 per-LOB rate LGBM (lv=6, lr=0.05) + final-fit rate bugfix | D-063 fixes final_model rate target & params; per-LOB rate LGBM lv=6 (+0.0078 honest D2 over exp-027, motor +0.0114) | 0.1400 | **0.12681** (Priv **0.13531**) | **+0.00245** vs exp-027 (+0.00547 Priv) | clean | `7ceacd8f551e` |
+| 30 | 2026-10-23 19:59 UTC | exp-034 | D-063 70/30 blend of per-LOB rate LGBM (exp-033) + pooled rate LGBM (exp-032) | 70% exp-033 (per_lob lv=6 rate) + 30% exp-032 (pooled lv=16 rate); honest OOF D2 0.14033 | 0.1403 | **0.12707** (Priv **0.13536**) | **+0.00026** (+0.00005 Priv) | clean | `6fc43e4e5fbd` |
+| 31 | 2026-10-23 20:18 UTC | exp-036 | D-064 multi-family blend: 40% per-LOB XGBoost (depth=3, no_rel) + 42% per-LOB LGBM (lv=6) + 18% pooled LGBM (lv=16) | D-064 adds per-LOB XGBoost rate model (0.14014 solo) to exp-034 LGBM rate blend; honest OOF D2 0.14076 | 0.1408 | **0.12753** (Priv **0.13570**) | **+0.00046** (+0.00034 Priv) | clean | `0039b77f4d8a` |
+| 32 | 2026-10-23 21:20 UTC | exp-037 | D-065 per-LOB rate LGBM (lv=6) + year-normalized historical relativities | D-065 normalizes _hist_rate and _hist_freq within (line, acc_year) to mean 1.0, removing inflation & IBNR drift (+0.00052 honest D2 over exp-033) | 0.1405 | **0.12587** (Priv 0.13502) | −0.00094 vs exp-033 | clean | `57b3aaa127c6` |
+| 33 | 2026-10-23 21:20 UTC | exp-038 | D-065 4-model ensemble: 35% exp-037 (norm-rel per-LOB LGBM) + 35% exp-035 (per-LOB XGB) + 15% exp-033 + 15% exp-032 | D-064/D-065 ensemble combining year-normalized per-LOB LGBM, per-LOB XGBoost (depth=3), and pooled LGBM rate models | 0.1410 | **0.12721** (Priv 0.13563) | −0.00032 vs exp-036 | clean | `f2418464525e` |
+| 34 | 2026-10-23 21:21 UTC | exp-035 | D-064 per-LOB XGBoost rate model (max_depth=3, no_rel) | Standalone per-LOB XGBoost rate model (tweedie p=1.5, max_depth=3, no relativity cols) | 0.1401 | **0.12700** (Priv 0.13509) | standalone XGB | clean | `a354d7148c88` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -708,3 +715,36 @@ hurts when one is a standout.
 **Quota: 10 of 10 used on 2026-10-22.** 10 fresh tomorrow, deadline 2026-10-23
 16:00. Best remains exp-027 (0.12436); best defensible estimate is the family
 mean 0.12287. Model-work queue exhausted — see D-059.
+
+### D-063 / D-064 / D-065 — `--final-fit` rate & hyperparameter bugfixes, Per-LOB rate models, and XGBoost + LGBM multi-family ensemble (2026-10-23)
+
+Audit of `scripts/run_experiment.py` identified two critical defects in the
+`--final-fit` block (lines 460–472) that had caused `exp-024` (`--target rate`)
+and `exp-025` (`D-053` shallow-tree hyperparameters) to collapse on the
+leaderboard (`0.06019` and `0.11168`):
+1. `final_model.fit(X_all, train["y_ult"])` ignored `args.target == "rate"`,
+   fitting total cost instead of annualised rate `y_ult / exposure` and omitting
+   exposure weights, after which `to_cost` multiplied by `exposure` a second
+   time (`cost ∝ exposure²`).
+2. `final_model` hardcoded `learning_rate=0.04, num_leaves=64` instead of
+   inheriting `**params`, so `exp-025` trained `num_leaves=64, lr=0.04` for
+   `n_fix = 590` trees (~6× over-budget).
+
+Fixing both defects, excluding `earned_premium` when `target == "rate"`,
+fitting shallow per-LOB rate models (`num_leaves=6, lambda_l2=5.0`), and
+blending across model families (Per-LOB LightGBM + Pooled LightGBM + Per-LOB
+XGBoost `max_depth=3`) produced our largest leaderboard gain of the competition:
+
+| # | tag | config | Fold 2024 OOF D² | Public LB | Private LB | Δ vs exp-027 (Public / Private) |
+|---|---|---|---:|---:|---:|---:|
+| 22 | exp-027 | prior best (pooled cost target, `lv=64`) | 0.13223 | 0.12436 | 0.12984 | — |
+| 29 | exp-033 | Per-LOB rate LGBM (`lv=6, lr=0.05`) + `--final-fit` fix | 0.14002 | 0.12681 | 0.13531 | +0.00245 / +0.00547 |
+| 30 | exp-034 | 70% exp-033 (Per-LOB LGBM) + 30% exp-032 (Pooled LGBM `lv=16`) | 0.14033 | 0.12707 | 0.13536 | +0.00271 / +0.00552 |
+| 34 | exp-035 | Per-LOB rate XGBoost (`max_depth=3`, `no_rel`) solo | 0.14014 | 0.12700 | 0.13509 | +0.00264 / +0.00525 |
+| **31** | **exp-036** | **40% exp-035 (XGB) + 42% exp-033 (Per-LOB LGBM) + 18% exp-032 (Pooled LGBM)** | **0.14076** | **0.12753** | **0.13570** | **+0.00317 / +0.00586** |
+| 32 | exp-037 | Per-LOB rate LGBM (`lv=6`) + `--norm-rel` | 0.14054 | 0.12587 | 0.13502 | +0.00151 / +0.00518 |
+| 33 | exp-038 | 35% exp-037 + 35% exp-035 + 15% exp-033 + 15% exp-032 | 0.14095 | 0.12721 | 0.13563 | +0.00285 / +0.00579 |
+
+**New best:** `exp-036` at **0.12753 Public / 0.13570 Private** (+0.00317 Public
+and +0.00586 Private over `exp-027`).
+
