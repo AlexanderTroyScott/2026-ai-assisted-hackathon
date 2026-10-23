@@ -1,5 +1,6 @@
 # source data as received from Kaggle (see developed/MANIFEST.md)
 /developed
+/emerging
 *.zip
 
 # generated submission payloads (recorded by sha256 in docs/experiment_log.md)
