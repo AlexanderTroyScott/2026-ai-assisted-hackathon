@@ -20,7 +20,7 @@ changed (e.g. a new dataset in Week 2).
 
 1. Never write or edit files. Never run anything that mutates state. Read and compute only.
 2. Never print secrets or credential values.
-3. Every number you report must come from a computation on `data_raw/`, and you must
+3. Every number you report must come from a computation on `developed/`, and you must
    say which file/column it came from.
 4. If a check contradicts `docs/data_findings.md`, say so loudly — that is the most
    valuable output you can produce.

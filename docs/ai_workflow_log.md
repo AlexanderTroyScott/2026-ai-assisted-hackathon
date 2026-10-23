@@ -14,7 +14,7 @@ noted with its verification status.
 ## Session 1 — 2026-10-20 · Challenge review + full data profile
 
 **Asked.** Review the competition brief and the existing README battle plan; look
-at the data in `data_raw/`; give suggestions.
+at the data in `developed/`; give suggestions.
 
 **AI did.**
 - Read the brief and README; mapped the four judging weights to deliverables.
@@ -27,7 +27,7 @@ at the data in `data_raw/`; give suggestions.
 - Built the origin-year × report-year incurred triangle and derived LDFs.
 - Measured the experience-feature and premium-decile signals.
 
-**Verified.** All figures recomputed directly from `data_raw/` with pandas; no
+**Verified.** All figures recomputed directly from `developed/` with pandas; no
 number in `docs/data_findings.md` is estimated or carried over unverified.
 Contradictions between the brief and the data were checked twice (e.g. repudiated
 claims carry zero amounts — confirmed before calling the filter a no-op).

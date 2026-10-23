@@ -6,7 +6,7 @@ source changed a decision) from `docs/decisions.md` entries. Append-only.
 
 **Rules (AGENTS.md rule 1).** These sources justify *methods*. They never supply
 numbers that enter our findings or decisions — every figure in `docs/` is still
-recomputed from `data_raw/`. Anything quoted from a source is attributed here
+recomputed from `developed/`. Anything quoted from a source is attributed here
 and stays clearly separated from our measured results.
 
 Provided by the human, 2026-10-20, with two stated purposes: actuarial

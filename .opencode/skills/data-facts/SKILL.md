@@ -1,12 +1,12 @@
 ---
 name: data-facts
-description: Use when doing EDA, feature engineering, modelling or anything that reads data_raw/ parquet files in this actuarial hackathon repo. Loads the verified empirical findings (exposure corruption, target construction, IBNR triangle, inflation rates, feature signal, train/test shift, metric notes) so they do not need to be re-derived or re-read from scratch.
+description: Use when doing EDA, feature engineering, modelling or anything that reads developed/ parquet files in this actuarial hackathon repo. Loads the verified empirical findings (exposure corruption, target construction, IBNR triangle, inflation rates, feature signal, train/test shift, metric notes) so they do not need to be re-derived or re-read from scratch.
 ---
 
 # Data Facts — verified findings (2026-10-20)
 
 Canonical source: `docs/data_findings.md`. Everything below was measured from
-`data_raw/` with pandas. **Do not re-derive these numbers.** If a figure is not
+`developed/` with pandas. **Do not re-derive these numbers.** If a figure is not
 here and not in `docs/data_findings.md`, it is unverified.
 
 ## Inventory & linkage

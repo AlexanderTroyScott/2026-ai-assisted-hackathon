@@ -1,7 +1,7 @@
 # Data Findings — Verified Empirically
 
 **Status:** authoritative reference for Week 1. Every number here was measured from
-`data_raw/` (not inferred from the brief). Last verified 2026-10-20.
+`developed/` (not inferred from the brief). Last verified 2026-10-20.
 
 Load this file (or the `data-facts` skill) before any modelling, feature engineering or
 target construction. Do **not** re-derive these facts from scratch.
@@ -214,6 +214,6 @@ mean falls 6.60 → 5.87. `construction_type` loses `T/t` levels in test.
 
 ## 9. Reproducibility
 
-- `data_raw/` is gitignored. Do not commit parquets. Keep `docs/data_manifest.md` (file, rows, sha256)
+- `developed/` is gitignored. Do not commit parquets. Keep `docs/data_manifest.md` (file, rows, sha256)
   so the repo remains reproducible against the Kaggle download.
-- All analysis in this file is reproducible with pandas over `data_raw/`.
+- All analysis in this file is reproducible with pandas over `developed/`.

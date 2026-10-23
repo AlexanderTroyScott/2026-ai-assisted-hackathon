@@ -38,7 +38,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-DATA = ROOT / "data_raw"
+DATA = ROOT / "developed"
 
 EXTRACT_YEAR = 2024
 ACCIDENT_YEARS = (2021, 2022, 2023, 2024)

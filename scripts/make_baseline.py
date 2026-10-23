@@ -20,7 +20,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-DATA = ROOT / "data_raw"
+DATA = ROOT / "developed"
 OUT = ROOT / "outputs" / "submissions"
 
 from src.dataset import LDF, forward_factors  # noqa: E402  single source of truth

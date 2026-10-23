@@ -24,7 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data_raw"
+DATA = ROOT / "developed"
 LOG_MD = ROOT / "docs" / "experiment_log.md"
 LOG_CSV = ROOT / "outputs" / "experiment_log.csv"
 COMP = "iaa-ai-assisted-hackathon-2026-part-1"

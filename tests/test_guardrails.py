@@ -6,6 +6,7 @@ category — keep them meaningful, not decorative.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +14,8 @@ import pandas as pd
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data_raw"
+sys.path.insert(0, str(ROOT))
+DATA = ROOT / "developed"
 EXPECTED_ROWS = 626_639
 FLOOR = 1e-3
 LOB_PREFIX = {"motor": "M", "buildings": "B", "contents": "C"}

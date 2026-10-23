@@ -1,6 +1,6 @@
 # Synthetic DGP — Reverse-Engineering Findings
 
-**Status:** measured 2026-10-20 from `data_raw/`. Complements `docs/data_findings.md`
+**Status:** measured 2026-10-20 from `developed/`. Complements `docs/data_findings.md`
 (that file is about data quality and the target; this one is about the generator).
 These findings change *how* we model, not just what we clean.
 

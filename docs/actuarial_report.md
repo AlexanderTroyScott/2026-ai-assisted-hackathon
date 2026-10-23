@@ -32,7 +32,7 @@ executable code in `src/` and `scripts/` with its test suite.
 
 ### 2.1 Sources
 
-All data is competition-supplied, in `data_raw/` (gitignored; manifest with sha256
+All data is competition-supplied, in `developed/` (gitignored; manifest with sha256
 hashes in `docs/data_manifest.md`).
 
 | table | rows | role |
@@ -377,7 +377,7 @@ before acting, and comparing family means rather than best draws. Where that
 discipline was not applied, an over-claim followed.
 
 **Verification discipline.** Every conclusion that reaches this report was recomputed
-from `data_raw/` (AGENTS.md rule 1) or attributed to a named source. Independent
+from `developed/` (AGENTS.md rule 1) or attributed to a named source. Independent
 subagent audits were run on the code (`reviewer`) and on the modelling inferences
 (`model-audit`, `data-audit`) and their findings are what produced D-040 and D-051.
 48 automated tests guard the invariants, including mutation-checked leakage tests.
@@ -454,9 +454,9 @@ form of work requires it. This report is unsigned pending the entrant's sign-off
 
 ## 10. Reproducibility
 
-- `data_raw/` is gitignored; `docs/data_manifest.md` holds sha256 hashes so the dataset
+- `developed/` is gitignored; `docs/data_manifest.md` holds sha256 hashes so the dataset
   can be re-verified against the source.
-- Every figure in this report is recomputable from `data_raw/` or is attributed to a
+- Every figure in this report is recomputable from `developed/` or is attributed to a
   numbered decision (`D-xxx`) or reference (`R-xx`).
 - Submission CSVs are not committed; their sha256 is recorded in `docs/experiment_log.md`.
 - 48 tests in `tests/` guard the invariants. `pytest -q` is the entry point.

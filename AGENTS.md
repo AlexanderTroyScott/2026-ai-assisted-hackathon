@@ -12,7 +12,7 @@ relevant skill instead:
 
 | Situation | Load |
 |---|---|
-| Modelling, EDA, features, anything touching `data_raw/` | `data-facts` skill |
+| Modelling, EDA, features, anything touching `developed/` | `data-facts` skill |
 | Submitting to Kaggle, checking leaderboard | `kaggle-submit` skill |
 | Building labels, development factors, trend/inflation | `actuarial-target` skill |
 | Choosing a split, judging overfit, is this number a valid gate | `model-validation` skill |
@@ -23,12 +23,12 @@ subagents and bring back only the conclusions.
 ## Hard rules
 
 1. **Never invent numbers.** Anything that reaches `docs/` or a decision must be
-   recomputed from `data_raw/` or explicitly marked `unverified`.
+   recomputed from `developed/` or explicitly marked `unverified`.
 2. **Never submit to Kaggle** without going through `scripts/kaggle_submit.py`
    and getting explicit human confirmation. Submissions are irreversible and
    capped at 10/day.
 3. **Never print secrets.** Check credential *names/lengths*, never values.
-4. **Never commit `data_raw/`** or submission CSVs. `data_raw/` is gitignored.
+4. **Never commit `developed/`** or submission CSVs. `developed/` is gitignored.
 5. **One primary change per submission** so leaderboard movement is attributable.
 6. **Lag features strictly** — anything derived from `claims` for a row must only
    use loss dates before that row's `period_start`. Leakage is a hard fail.
@@ -56,7 +56,7 @@ scripts/    make_baseline.py, kaggle_submit.py
 tests/      pytest guardrails
 docs/       findings, decisions, ai_workflow_log, submission_protocol, experiment_log
 outputs/    submissions/, charts/, manifests
-data_raw/   parquet as received (gitignored)
+developed/   parquet as received (gitignored)
 .opencode/  skills, agents, commands
 ```
 
@@ -74,14 +74,14 @@ judging panel ("well-structured code repository with version control").
   aggregation pitfall [D-001]`, `submit: exp-002 premium_lr baseline`.
 - Reference decision IDs where one exists, and the experiment tag for submissions,
   so commits map to `docs/experiment_log.md` rows.
-- Never commit `data_raw/` or files under `outputs/submissions/` (gitignored).
+- Never commit `developed/` or files under `outputs/submissions/` (gitignored).
 - Do not rewrite history, amend published commits, or force-push.
 - If a commit is made and then a correction is needed, add a follow-up commit —
   the trail is evidence, not clutter.
 
 ## Definition of done
 
-- Code: runs end-to-end from `data_raw/` to a valid submission CSV.
+- Code: runs end-to-end from `developed/` to a valid submission CSV.
 - Tests: `pytest -q` passes; new behaviour has a test.
 - Docs: `docs/experiment_log.md` updated if anything was submitted or measured;
   `docs/decisions.md` updated if a choice was made.

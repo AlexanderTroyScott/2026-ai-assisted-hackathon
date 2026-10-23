@@ -1,7 +1,7 @@
 # Data Manifest
 
 Parquet files as received from Kaggle (`public/` prefix in the competition).
-The parquets themselves are **not committed** — `.gitignore` excludes `data_raw/`.
+The parquets themselves are **not committed** — `.gitignore` excludes `developed/`.
 This manifest lets the dataset be re-verified against the Kaggle download
 (`kaggle competitions files -c iaa-ai-assisted-hackathon-2026-part-1`).
 

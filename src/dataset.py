@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data_raw"
+DATA = ROOT / "developed"
 
 LINES = ["motor", "buildings", "contents"]
 

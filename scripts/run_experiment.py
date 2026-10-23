@@ -91,7 +91,7 @@ FLAGS = ["driver_assist", "named_young_driver", "accidental_damage_cover", "mort
 
 
 def add_weather(df: pd.DataFrame, lag: bool = False) -> pd.DataFrame:
-    w = pd.read_parquet(ROOT / "data_raw" / "weather.parquet")
+    w = pd.read_parquet(ROOT / "developed" / "weather.parquet")
     w["year"] = w["year"].astype(int)
     df = df.copy()
     if lag:
