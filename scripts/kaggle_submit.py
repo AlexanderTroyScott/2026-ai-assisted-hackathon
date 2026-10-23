@@ -168,7 +168,10 @@ def check_quota() -> int:
              "print(l.num_today, l.num_allowed_now)" % COMP],
             capture_output=True, text=True, timeout=60, check=False,
         ).stdout.split()
-        num_today, allowed = int(out[0]), int(out[1])
+        # The `kaggle` package prints a version warning to stdout on import, so
+        # filter to the numeric tokens (the two limit values come last).
+        nums = [t for t in out if t.lstrip("-").isdigit()]
+        num_today, allowed = int(nums[0]), int(nums[1])
         print(f"  quota           used today {num_today}/10, remaining {allowed}")
         return allowed
     except Exception as exc:  # noqa: BLE001

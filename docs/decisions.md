@@ -1939,3 +1939,27 @@ transfer. Small but consistent, and mechanistically grounded.
 This is the first positive result from the reserve-adequacy / development-papers
 investigation (R-07 through R-17). BF (D-060) was a no-op; the uniform-vs-open
 split is not.
+
+### Update to D-061 — exp-031 did NOT transfer
+
+exp-031 (split development) scored **0.12301** against exp-027's **0.12436**
+(−0.00135). The local gate — skill-vs-baseline gap +0.0015/+0.0004 and
+calibration ratio toward 1.0 on both folds — did **not** predict the leaderboard,
+the same failure mode as exp-025.
+
+This is now the **sixth** local-metric over-read this session (exp-024, exp-025,
+the occupation-instability alarm, the calibration-slope framing, the D-059
+arithmetic, and now the split-development gate). The Boor individual-claim bias
+is real and mechanistically correct — the split development *is* the more
+actuarially-defensible target — but being right about the claim distribution
+does not translate to Tweedie D² on the 2025 population.
+
+The deep, consistent finding: **nothing we measure locally predicts the
+leaderboard.** The 2024 holdout and the 2025 scoring population are different
+enough (D-025) that even a correct, mechanistically-grounded label refinement
+scores worse. The split development is retained in code (`development="split"`)
+and in the write-up as a disclosed alternative, but it is not our presented
+model.
+
+Best remains **exp-027 at 0.12436** (uniform LDF, occupation removed, corrected
+labels, D-045 refit). 1 slot used 2026-10-23, 9 remaining, deadline 16:00.
