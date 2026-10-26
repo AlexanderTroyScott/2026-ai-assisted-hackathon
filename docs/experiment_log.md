@@ -57,14 +57,16 @@ negative results are as valuable as positive ones.
 | 33 | 2026-10-23 21:20 UTC | exp-038 | D-065 4-model ensemble: 35% exp-037 (norm-rel per-LOB LGBM) + 35% exp-035 (per-LOB XGB) + 15% exp-033 + 15% exp-032 | D-064/D-065 ensemble combining year-normalized per-LOB LGBM, per-LOB XGBoost (depth=3), and pooled LGBM rate models | 0.1410 | **0.12721** (Priv 0.13563) | −0.00032 vs exp-036 | clean | `f2418464525e` |
 | 34 | 2026-10-23 21:21 UTC | exp-035 | D-064 per-LOB XGBoost rate model (max_depth=3, no_rel) | Standalone per-LOB XGBoost rate model (tweedie p=1.5, max_depth=3, no relativity cols) | 0.1401 | **0.12700** (Priv 0.13509) | standalone XGB | clean | `a354d7148c88` |
 | 35 | 2026-10-23 22:42 UTC | emerging-exp-001 | D-066 Part 2 transfer learning + credibility-shrinkage offset adaptation (5-Fold CV D2 0.14045) | Part 2 emerging market: Developed 2.41M-row prior + Offset Per-LOB LGBM (lv=3, min_leaf=600, l2=100). First 4 attempts errored (host evaluator still expected Part 1's 626,639 rows); organizers fixed it and the 2026-10-24 06:34 UTC retry scored. | 0.1405 | **0.16170** (Part 2 Public, rank 9/20 at 2026-10-26) | first Part 2 submission | clean | `477fa66d8c22` |
+| 36 | 2026-10-26 23:41 UTC | emerging-exp-002 | D-066 trial: offset-only adaptation w_off=1.0 (drop prior blend; OOF 0.14045 vs 0.14015) | primary change vs exp-001: blend weight 0.75/0.25 -> 1.0 offset | 0.1405 | **0.16297** (new best) | **+0.00127** vs exp-001 | clean | `24a2d2a66f46` |
+| 37 | 2026-10-26 23:41 UTC | emerging-exp-004 | D-066 trial: per-LOB prior shrinkage (contents w_off=0.5, motor/buildings 1.0) | primary change vs exp-002: contents blended 50/50 with calibrated dev prior | 0.1405 | 0.16293 | +0.00123 vs exp-001 (−0.00004 vs exp-002: local +0.00005 did not rank) | clean | `529c805122f8` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
 **Status at 2026-10-26 (supersedes the note above):** Part 1 best is `exp-036`
-at **0.12753 Public / 0.13570 Private** (row 31). Part 2 (`emerging-exp-001`,
-row 35) scored **0.16170** Public — rank 9 of 20 teams; top is `applause_bin`
-at 0.17303. Part 2 quota for 2026-10-26 unused (10 slots).
+at **0.12753 Public / 0.13570 Private** (row 31). Part 2 best is
+`emerging-exp-002` (row 36) at **0.16297** Public — offset-only adaptation
+(D-067); rank 8 of 20 teams, top is `applause_bin` at 0.17303.
 
 ### Metric validation — local D² is a reliable proxy
 

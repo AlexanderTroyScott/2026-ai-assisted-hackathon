@@ -2161,4 +2161,34 @@ rows are `new_business == True`** due to a broker portfolio takeover in
      `outputs/metrics/emerging_reference_office_premiums.csv` and
      `docs/emerging_market_report.md` §5.
 
+## D-067 — Part 2 trial sprint: the offset layer should stand alone (w_off = 1.0)
+**2026-10-26 · accepted · 2 leaderboard submissions + 4 local trial rounds (`scripts/run_emerging_trials*.py`)**
+
+Time-boxed sprint (before the hourly quota reset) testing whether the exp-001
+credibility blend (0.75 offset + 0.25 calibrated prior) can be improved.
+
+1. **Blend grid on OOF (offline, one fit round):** w_off ∈ [0.50…1.00] rises
+   monotonically (0.13974 → 0.14045); the prior blend never helps — the offset
+   layer with `init_score = log(prior)` has already absorbed the prior. Per-LOB
+   optimum: motor 1.0, buildings 1.0, contents 0.5 (global OOF 0.14050).
+2. **Leaderboard confirms the local ordering:** `emerging-exp-002` (offset-only)
+   **0.16297** (new best, +0.00127 over exp-001) > `emerging-exp-004` (per-LOB
+   contents shrink) 0.16293. The local +0.00005 for exp-004's variant did not
+   rank — another D-025 instance (4th-decimal local movement is noise).
+3. **Negative results (all rejected, no slots spent):**
+   - capacity sweep n_est ×0.5 / ×2.0: 0.13968 / 0.14036 (peak at ×1.0);
+   - extended adaptation feature set (36 factors): 0.13784 — the heavy
+     shrinkage already extracts what is usable, extra features only add noise;
+   - higher capacity on extended features: 0.13772;
+   - prior recalibrated on 2024 only: 0.14045 (no change — fold-level
+     calibration already adapts the level);
+   - per-LOB tree counts (motor 50/70, property-heavy): ≤ 0.14045;
+   - pure written-premium prior (w_wp=1.0) as init: 0.14007 (worse —
+     confirms the 0.6/0.4 prior blend of D-066).
+4. **Conclusion:** `emerging-exp-002` (offset-only) is the Part 2 submission of
+   record at **0.16297 Public** (rank 8 of 20 at 2026-10-26; top 0.17303). The
+   remaining ~0.010 gap to the lead is not reachable by tuning this
+   architecture; it needs a structural change (e.g. per-peril frequency/severity
+   modelling or a better 2024 IBNR basis).
+
 
