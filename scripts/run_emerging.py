@@ -32,6 +32,7 @@ from src.emerging import (  # noqa: E402
     LINES,
     build_market_frame,
     build_office_premiums,
+    estimate_forward_index,
 )
 
 OUT_SUB = ROOT / "outputs" / "submissions"
@@ -231,13 +232,16 @@ def main() -> int:
     def d2_all(p):
         return float(d2_tweedie_score(y_all, np.maximum(p, FLOOR), power=1.5))
 
-    p_final_oof = 0.75 * p_offset + 0.25 * p_dev_zero
+    # D-067: the offset layer stands alone (blend grid rises monotonically to w_off=1.0)
+    p_final_oof = p_offset
+    p_blend_legacy = 0.75 * p_offset + 0.25 * p_dev_zero
     print(f"5-Fold CV  constant_rate           D2 = {d2_all(p_const):+.5f}")
     print(f"5-Fold CV  premium_lr              D2 = {d2_all(p_prem):+.5f}")
     print(f"5-Fold CV  emerging_only_lgbm      D2 = {d2_all(p_em_only):+.5f}")
     print(f"5-Fold CV  developed_prior_zero    D2 = {d2_all(p_dev_zero):+.5f}")
     print(f"5-Fold CV  offset_adapted_lgbm     D2 = {d2_all(p_offset):+.5f}")
-    print(f"5-Fold CV  credibility_blend_final D2 = {d2_all(p_final_oof):+.5f}")
+    print(f"5-Fold CV  legacy_blend_075_025    D2 = {d2_all(p_blend_legacy):+.5f}")
+    print(f"5-Fold CV  final_offset_only       D2 = {d2_all(p_final_oof):+.5f}")
     per_lob_d2 = {}
     for ln in LINES:
         m = lines_all == ln
@@ -254,7 +258,6 @@ def main() -> int:
         scale_pr = y_all[m_tr].sum() / (pr_tr * exp_all[m_tr]).sum()
         pr_tr_cal = pr_tr * scale_pr
         pr_te_cal = pr_te * scale_pr
-        p_te_dev_zero = pr_te_cal * exp_te[m_te]
 
         sub_a = X_ad_tr.loc[m_tr]
         c_a = [c for c in cols_ad if sub_a[c].nunique(dropna=False) > 1]
@@ -280,7 +283,17 @@ def main() -> int:
             cost_te_hat = rate_te_hat * exp_te[m_te]
             preds_off += cost_te_hat * (y_all[m_tr].sum() / cost_tr_hat.sum()) / 3.0
 
-        p_te_pred[m_te] = 0.75 * preds_off + 0.25 * p_te_dev_zero
+        p_te_pred[m_te] = preds_off  # D-067 offset-only
+
+    # ---- D-069: 2025 forward index applied at scoring (D-008) ----
+    fwd, fwd_stats = estimate_forward_index(em_tr, em_te)
+    em_te = em_te.copy()
+    em_te["cohort"] = np.where(em_te["new_business"].fillna(0).astype(float) > 0.5, "nb", "ren")
+    f_map = fwd.set_index(["line", "cohort"])["f_final"]
+    f_rows = f_map.loc[list(zip(em_te["line"], em_te["cohort"]))].to_numpy(float)
+    p_te_pred = p_te_pred * f_rows
+    print("\n2025 forward index (D-069):")
+    print(fwd[["line", "cohort", "f_data", "f_reconciled", "f_final"]].round(4).to_string(index=False))
 
     sample = pd.read_parquet(EM_DIR / "sample_submission.parquet")
     sub = pd.DataFrame({"row_id": em_te["row_id"], "prediction": np.maximum(p_te_pred, FLOOR)})
@@ -314,8 +327,11 @@ def main() -> int:
         "d2_developed_prior_zero": d2_all(p_dev_zero),
         "d2_offset_adapted": d2_all(p_offset),
         "d2_credibility_blend_final": d2_all(p_final_oof),
+        "d2_legacy_blend_075_025": d2_all(p_blend_legacy),
         "per_lob_d2": per_lob_d2,
-    }, indent=2))
+        "forward_index": fwd.to_dict(orient="records"),
+        "forward_index_stats": fwd_stats,
+    }, indent=2, default=float))
     return 0
 
 

@@ -84,7 +84,9 @@ split NB/renewals (≈ ×1.33/×1.07) + property ×1.05 (D-068). The post-reset
 batch (rows 46–50, human-approved, 5 submissions) confirmed the property peak
 (≈ ×1.06) and found the NB/renewal shape signal. Batch limit reached — **hold**:
 of the 5 remaining quota slots in the 2026-10-27 window, none to be used
-without explicit human confirmation.
+without explicit human confirmation. `emerging-exp-019` (D-069: trend built
+into the pipeline — per-cell forward index at scoring) is generated and
+validated locally, awaiting explicit submission confirmation.
 
 ### Metric validation — local D² is a reliable proxy
 

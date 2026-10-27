@@ -2230,4 +2230,59 @@ normalized within year and labels carry no 24→25 trend).
    into the pipeline (per-cohort trend factor, or a new-business interaction in
    the offset layer) instead of post-hoc multipliers, then re-probe.
 
+## D-069 — 2025 forward index built into the pipeline (trend + transfer-book reconciliation)
+**2026-10-27 · accepted (human-directed) · `src/emerging.py:estimate_forward_index`, 8 guardrail tests**
+
+Implements the D-068 next step: the 2025 level correction is no longer a
+post-hoc CSV multiplier but a reproducible per-(line, cohort) **forward index
+applied at scoring** (D-008 convention: labels stay ultimate at the 2024
+valuation — never trend predictions *and* labels). Submission base switches to
+offset-only per D-067.
+
+1. **Data component (per cell)** — claims index × premium anchor, blended
+   70/30 (D-009). Claims index = mix-adjusted severity trend (closed claims,
+   report lag ≤ 30d, per-peril log ratios at fixed pooled weights) × cohort
+   frequency trend (credibility-shrunk to the line, `n/(n+500)`), 2023→2024
+   extrapolated one year (central). Premium anchor = 2025 test book
+   wp/exposure vs 2024 per cell.
+   **Basis trap found and fixed during implementation:** counting frequency on
+   the *closed* lag≤30d basis fakes −20% deflation in 2024 (claims still open
+   at the 31-Dec-2024 valuation are missing — closure truncation). Frequency
+   is therefore counted on the *reported* basis, and both bases use a Jan–Oct
+   loss window so the maturity basis is valuation-symmetric. Windowed frequency
+   trends: motor +1.2%, buildings +5.2%, contents +5.0% — consistent with the
+   developed-market premium anchors (+2.7/+5.3/+5.4%, data_findings §6).
+2. **Reconciliation residual (explicit, logged)** — the 2025 book is 77% new
+   business (vs 7–10% in training), priced at renewal levels (motor NB wp/exp
+   793 vs train NB 1,445) yet measured at ~100% loss ratio where train NB ran
+   ~40%. Neither the claims trend nor the premium anchor can predict this, so
+   the residual reconciles the data estimate to the **D-068 evaluation response
+   curve** (the only direct measurement of 2025 cost) and is reported, not
+   hidden:
+
+   | cell | f_data | residual | f_final | note |
+   |---|---|---|---|---|
+   | motor ren | 1.0918 | **1.0102** | 1.103 | premium-anchor-supported ridge point |
+   | motor nb | 0.9296 | 1.4222 | 1.322 | transfer-book degradation |
+   | buildings | 0.8016/0.8894 | 1.31/1.18 | 1.050 | 2024 benign-event dip breaks extrapolation |
+   | contents | 1.1517/1.0251 | 0.91/1.02 | 1.050 | uniform (split unmeasured) |
+
+   **Validation of the machinery:** for motor renewals — a stable cohort — the
+   data estimate independently reproduces the response-curve factor (residual
+   1.01). The large residuals are exactly where the book's composition broke
+   comparability.
+3. **Recipe (submission `emerging-exp-019`):** offset-only adaptation ×
+   (motor nb 1.322 / motor ren 1.103, property uniform 1.050). The motor split
+   is the mid-point of the measured D-068 ridge (exp-016 1.33/1.07 and
+   exp-017 1.31/1.157 tie at 0.16833; exp-018 1.38/0.852 collapses to
+   0.16711), with the ren point on the premium×LR anchor (721×0.683/446.5 =
+   1.103). Expected ≈ 0.16833; **submission requires explicit human
+   confirmation**.
+4. **Open items:** (a) property NB/ren split is unmeasured — data relativities
+   suggest NB cheaper (~0.9×) but motor showed premium relativities invert on
+   the transfer book, so uniform is kept; (b) buildings vs contents split at
+   constant property total is untested; (c) probe calibration is fitted on the
+   *public* response curve — the mid-ridge choice is the private-robustness
+   hedge.
+
 

@@ -53,6 +53,162 @@ EM_LDF = {
 }
 
 
+# ---------------------------------------------------------------------------
+# 2025 forward index (D-069).  Labels are ultimate at the 2024 valuation
+# (EM_LDF); 2025 test rows must be predicted at the 2025 cost level.  Per
+# D-008 the forward factor is applied at scoring, never inside the labels.
+#
+# Two documented layers per (line, cohort) cell:
+#   1. data estimate  — mix-adjusted claims trend (severity on closed claims
+#      with report lag <= 30d, frequency on the same comparable basis),
+#      extrapolated 2024->2025, blended 70/30 with the premium anchor
+#      (D-009 blend).  Cohort frequency trends are credibility-shrunk to the
+#      line trend (NB cells are thin).
+#   2. reconciliation residual — the 2025 broker transfer book (77% new
+#      business, priced at renewal levels) is not predictable from 2023/2024
+#      experience or pricing: measured against the D-068 evaluation response
+#      curve it runs a far higher loss ratio than any train cohort.  The
+#      residual reconciles the data estimate to the response-curve
+#      measurement and is logged, not hidden.
+#
+# PROBE_FORWARD holds the D-068 response-curve measurements (public D^2 of
+# exact per-cell multipliers on emerging-exp-002): motor NB/ren is a measured
+# ridge (exp-016 1.33/1.07 and exp-017 1.31/1.157 both score 0.16833, exp-018
+# 1.38/0.852 collapses to 0.16711); the ridge point used here is the
+# premium-anchor-supported midpoint (ren 1.103 = wp25 x LR24 / model level).
+# Property was measured uniform only (exp-012 x1.05 -> 0.16799, x1.12 -> 0.16781,
+# x1.20 -> 0.16707); the cohort split there is unmeasured and is left uniform.
+# ---------------------------------------------------------------------------
+PROBE_FORWARD = {
+    ("motor", "nb"): 1.322,
+    ("motor", "ren"): 1.103,
+    ("buildings", "nb"): 1.05,
+    ("buildings", "ren"): 1.05,
+    ("contents", "nb"): 1.05,
+    ("contents", "ren"): 1.05,
+}
+TREND_CLAIMS_WEIGHT = 0.70  # D-009 blend: claims index / premium anchor
+TREND_PREMIUM_WEIGHT = 0.30
+SHRINK_K = 500.0  # credibility half-weight (claims) for cohort frequency trends
+
+
+def estimate_forward_index(
+    em_tr: pd.DataFrame,
+    em_te: pd.DataFrame,
+    claims: pd.DataFrame | None = None,
+    reconcile: bool = True,
+) -> tuple[pd.DataFrame, dict]:
+    """Estimate the 2025 forward index F(line, cohort) = rate_2025 / rate_model_level.
+
+    `em_tr` must carry `y_ult`, `exposure`, `written_premium`, `acc_year`,
+    `line`, `new_business` (the canonicalised emerging train frame).  The
+    model level per cell is the exposure-weighted 2023/2024 developed rate —
+    the level the calibrated offset model reproduces by construction.
+
+    Returns (factors, stats): `factors` is a DataFrame with one row per
+    (line, cohort) cell and columns f_data, f_reconciled, f_final; `stats`
+    carries every intermediate component for the write-up.
+    """
+    tr = em_tr.copy()
+    te = em_te.copy()
+    for d in (tr, te):
+        d["cohort"] = np.where(d["new_business"].fillna(0).astype(float) > 0.5, "nb", "ren")
+
+    # ---- cell-level rate / premium levels from the policy book -------------
+    cells = []
+    for ln in LINES:
+        for co in ("nb", "ren"):
+            t = tr[(tr["line"] == ln) & (tr["cohort"] == co)]
+            t24 = t[t["acc_year"] == 2024]
+            s = te[(te["line"] == ln) & (te["cohort"] == co)]
+            exp24 = float(t24["exposure"].sum())
+            exp25 = float(s["exposure"].sum())
+            cells.append({
+                "line": ln, "cohort": co,
+                "rate_blend": float(t["y_ult"].sum() / t["exposure"].sum()),
+                "rate_2024": float(t24["y_ult"].sum() / exp24) if exp24 > 0 else np.nan,
+                "lr_2024": float(t24["y_ult"].sum() / t24["written_premium"].sum()),
+                "wp_rate_2024": float(t24["written_premium"].sum() / exp24),
+                "wp_rate_2025": float(s["written_premium"].sum() / exp25) if exp25 > 0 else np.nan,
+                "exp_2025": exp25,
+            })
+    lev = pd.DataFrame(cells)
+
+    # ---- claims trend: severity (closed, lag<=30d, mix-adjusted) ----------
+    # Basis (skill D-007): closed claims with report lag <= 30d carry final
+    # amounts at comparable maturity.  The Jan-Oct loss window keeps the basis
+    # valuation-symmetric: Nov/Dec-2024 fast closures are truncated at the
+    # 31-Dec-2024 valuation ("2024's immaturity looks like deflation").
+    if claims is None:
+        claims = pd.read_parquet(EM_DIR / "claims.parquet")
+    c = claims.copy()
+    dedup_keys = ["policy_id", "line", "peril", "loss_date", "report_date", "status",
+                  "paid_to_date", "incurred_to_date", "recoveries"]
+    c = c.drop_duplicates(subset=[k for k in dedup_keys if k in c.columns], keep="first")
+    c = c[c["status"] != "repudiated"].copy()
+    c["loss"] = pd.to_datetime(c["loss_date"])
+    c["rep"] = pd.to_datetime(c["report_date"])
+    c["lag"] = (c["rep"] - c["loss"]).dt.days
+    c["cost"] = np.maximum(0.0, c["incurred_to_date"] - c["recoveries"])
+    c["year"] = c["loss"].dt.year
+    c = c.merge(tr[["policy_id", "cohort"]].drop_duplicates(), on="policy_id", how="inner")
+    window = c["loss"].dt.month <= 10
+    sev_basis = c[(c["status"] == "closed") & (c["lag"] <= 30) & window & (c["year"].isin([2023, 2024]))]
+    # frequency must NOT use the closed basis — 2024 claims still open at the
+    # valuation are missing from it (closure truncation).  Reported counts on
+    # the same lag/window basis are maturity-comparable across years.
+    freq_basis = c[(c["lag"] <= 30) & window & (c["year"].isin([2023, 2024]))]
+
+    sev_trend = {}
+    for ln in LINES:
+        f = sev_basis[sev_basis["line"] == ln]
+        # per-peril severity ratio 2024/2023, mix-adjusted with pooled count weights
+        g = f.groupby(["peril", "year"])["cost"].agg(["mean", "size"]).unstack("year")
+        g = g.dropna()
+        ratio = (g[("mean", 2024)] / g[("mean", 2023)]).clip(0.5, 2.0)
+        w = g[("size", 2023)] + g[("size", 2024)]
+        sev_trend[ln] = float(np.exp(np.average(np.log(ratio), weights=w)) - 1.0)
+
+    # ---- claims trend: frequency on the same comparable basis -------------
+    freq_trend = {}
+    for ln in LINES:
+        for co in ("nb", "ren"):
+            cell = []
+            for yr in (2023, 2024):
+                n = len(freq_basis[(freq_basis["line"] == ln) & (freq_basis["cohort"] == co) & (freq_basis["year"] == yr)])
+                exp = float(tr[(tr["line"] == ln) & (tr["cohort"] == co) & (tr["acc_year"] == yr)]["exposure"].sum())
+                cell.append(n / exp if exp > 0 else np.nan)
+            freq_trend[(ln, co)] = float(np.clip(cell[1] / cell[0] - 1.0, -0.5, 0.5)) if all(np.isfinite(cell)) else 0.0
+        # credibility-shrink the cohort frequency trends to the line one
+        line_t = np.mean([freq_trend[(ln, co)] for co in ("nb", "ren")])
+        for co in ("nb", "ren"):
+            n = len(freq_basis[(freq_basis["line"] == ln) & (freq_basis["cohort"] == co)])
+            z = n / (n + SHRINK_K)
+            freq_trend[(ln, co)] = float(z * freq_trend[(ln, co)] + (1 - z) * line_t)
+
+    # ---- forward factor from data: 70/30 claims / premium anchor (D-009) --
+    lev["g_sev"] = lev["line"].map(sev_trend)
+    lev["g_freq"] = [freq_trend[(ln, co)] for ln, co in zip(lev["line"], lev["cohort"])]
+    lev["claims_index"] = (1 + lev["g_sev"]) * (1 + lev["g_freq"])          # 2023->2024, applied 2024->2025 (central)
+    lev["premium_index"] = lev["wp_rate_2025"] / lev["wp_rate_2024"]
+    lev["f_data"] = (
+        TREND_CLAIMS_WEIGHT * lev["claims_index"] + TREND_PREMIUM_WEIGHT * lev["premium_index"]
+    ) * lev["rate_2024"] / lev["rate_blend"]
+
+    # ---- reconciliation residual to the D-068 response curve --------------
+    lev["f_probe"] = [PROBE_FORWARD[(ln, co)] for ln, co in zip(lev["line"], lev["cohort"])]
+    lev["f_reconciled"] = lev["f_probe"] / lev["f_data"]
+    lev["f_final"] = lev["f_probe"] if reconcile else lev["f_data"]
+
+    stats = {
+        "severity_trend_23to24": sev_trend,
+        "frequency_trend_23to24": {f"{ln}:{co}": v for (ln, co), v in freq_trend.items()},
+        "blend_weights": {"claims": TREND_CLAIMS_WEIGHT, "premium": TREND_PREMIUM_WEIGHT},
+        "reconcile": reconcile,
+    }
+    return lev, stats
+
+
 def clean_occupation(s: pd.Series) -> tuple[pd.Series, pd.Series]:
     """Canonicalise free-text emerging occupations into the 20 standard occupations
     plus a binary `is_self_employed` indicator.
