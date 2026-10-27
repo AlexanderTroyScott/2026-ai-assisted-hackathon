@@ -2212,8 +2212,22 @@ normalized within year and labels carry no 24→25 trend).
    post-hoc multiplier is a blunt instrument: **the next modelling window should
    express this properly** (trend factor in the label development or an
    exposure-weighted 2024 anchor), then re-probe to confirm.
-4. **Submission of record:** `emerging-exp-012` = offset-only × (motor 1.27,
-   buildings 1.05, contents 1.05) at **0.16799 Public** (+0.00502 over
-   `emerging-exp-002` in one window). Quota exhausted; window reset — hold.
+4. **Submission of record (amended 2026-10-27 after the human-approved
+   post-reset batch, rows 46–50):** `emerging-exp-016` / `emerging-exp-017` at
+   **0.16833 Public** — offset-only × (motor total ×1.2815 split
+   NB ≈ ×1.33 / renewals ≈ ×1.07, property ×1.05), +0.00536 over
+   `emerging-exp-002`. The batch pinned both optima:
+   - **property level peak ≈ ×1.06** (×1.12 → 0.16781, ×1.20 → 0.16707,
+     declining past exp-012's ×1.05 → 0.16799);
+   - **motor NB/renewal shape is a real second dimension** (NB is 81% of motor
+     prediction mass): at constant motor total ×1.2815, the mild split
+     (1.31/1.157) ties the mid split (1.33/1.07) at 0.16833 while a hard split
+     (1.38/0.852) collapses to 0.16711 — lift NB, but do not crush renewals
+     below ≈ ×1.0. Consistent with the broker transfer book degrading: newer
+     business carries more 2025 development than renewals.
+   Remaining quota (5 slots in the 2026-10-27 window) held pending explicit
+   human confirmation. Next modelling step: build the trend and cohort effects
+   into the pipeline (per-cohort trend factor, or a new-business interaction in
+   the offset layer) instead of post-hoc multipliers, then re-probe.
 
 

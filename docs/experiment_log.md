@@ -67,17 +67,24 @@ negative results are as valuable as positive ones.
 | 43 | 2026-10-26 23:56 UTC | emerging-exp-011 | D-067 tuning probe: motor scale bracket (x1.15 / x1.25) vs exp-002 | primary change: motor prediction level scale | n/a | 0.16776 | +0.00479 vs exp-002 | clean | `13061f6a2615` |
 | 44 | 2026-10-26 23:58 UTC | emerging-exp-012 | D-067 tuning: motor x1.27/x1.40 + property x1.05 (peak search vs exp-002) | primary change: motor+property prediction level scale; quadratic peak from 5 motor probes ≈ x1.27 | n/a | **0.16799** (new best) | **+0.00502** vs exp-002 | clean | `83f1268bed5f` |
 | 45 | 2026-10-26 23:58 UTC | emerging-exp-013 | D-067 tuning: motor x1.27/x1.40 + property x1.05 (peak search vs exp-002) | primary change: motor+property prediction level scale | n/a | 0.16732 | +0.00435 vs exp-002 (×1.40 declining → peak ≈1.25–1.30) | clean | `76f3309e01f1` |
+| 46 | 2026-10-27 00:16 UTC | emerging-exp-014 | D-068 property peak search: motor x1.28 + property x1.12 / x1.20 | primary change: property prediction level scale | n/a | 0.16781 | −0.00018 vs exp-012 (property peak ≈ ×1.06 confirmed) | clean | `5b50c9c15fe7` |
+| 47 | 2026-10-27 00:16 UTC | emerging-exp-015 | D-068 property peak search: motor x1.28 + property x1.12 / x1.20 | primary change: property prediction level scale | n/a | 0.16707 | −0.00092 vs exp-012 (declining, peak bracketed) | clean | `d125be9ae672` |
+| 48 | 2026-10-27 00:18 UTC | emerging-exp-016 | D-068 cohort shape probe: motor NB x1.33 / renewals x1.07 (total level preserved) + property x1.05 | primary change: motor new-business vs renewal split at constant motor total | n/a | **0.16833** (new best) | **+0.00034** vs exp-012 (cohort shape signal, above D-025 noise) | clean | `f2109eb6da22` |
+| 49 | 2026-10-27 00:22 UTC | emerging-exp-017 | D-068 cohort split bracket: motor NB/ren split strength at constant motor total x1.2815 + property x1.05 | primary change: motor NB vs renewal split strength (mild 1.31/1.157, total preserved) | n/a | **0.16833** (ties exp-016) | plateau mild–mid at constant total | clean | `d1904b70bef6` |
+| 50 | 2026-10-27 00:22 UTC | emerging-exp-018 | D-068 cohort split bracket: motor NB/ren split strength at constant motor total x1.2815 + property x1.05 | primary change: motor NB vs renewal split strength (strong 1.38/0.852, total preserved) | n/a | 0.16711 | −0.00122 vs exp-016 at same total → splitting too hard (ren < ~×1.0) hurts | clean | `66dbdf77106d` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
 **Status at 2026-10-27 (supersedes the note above):** Part 1 best is `exp-036`
 at **0.12753 Public / 0.13570 Private** (row 31). Part 2 best is
-`emerging-exp-012` (row 44) at **0.16799** Public — motor ×1.27 + property
-×1.05 level correction on the offset-only model (D-068); gained **+0.00502**
-in the 2026-10-26 late-window tuning sprint. Part 2 quota exhausted (10/10
-used); the daily window has since reset to 10 — **hold**: no submissions in a
-fresh window without explicit human confirmation.
+`emerging-exp-016` / `emerging-exp-017` (rows 48–49, tied at displayed
+precision) at **0.16833** Public — offset-only model with motor level ×1.2815
+split NB/renewals (≈ ×1.33/×1.07) + property ×1.05 (D-068). The post-reset
+batch (rows 46–50, human-approved, 5 submissions) confirmed the property peak
+(≈ ×1.06) and found the NB/renewal shape signal. Batch limit reached — **hold**:
+of the 5 remaining quota slots in the 2026-10-27 window, none to be used
+without explicit human confirmation.
 
 ### Metric validation — local D² is a reliable proxy
 

@@ -2,11 +2,13 @@
 
 **Status:** Verified empirically from `developed/` and `emerging/` Parquet tables (2026-10-23).
 **Executable pipeline:** `src/emerging.py`, `scripts/run_emerging.py`, `tests/test_emerging.py`.
-**Leaderboard:** `emerging-exp-002` (offset-only adaptation, D-067) scored
-**0.16297** Public on `iaa-ai-assisted-hackathon-2026-part-2` (rank 8 of 20
-teams at 2026-10-26; top 0.17303). Consistent with Part 1 experience, the
-leaderboard score sits above the 5-Fold CV estimate (+0.14045) — CV folds train
-on 4/5 of two thin years, so the honest CV is the conservative number.
+**Leaderboard:** best is `emerging-exp-016` / `emerging-exp-017` at **0.16833**
+Public on `iaa-ai-assisted-hackathon-2026-part-2` (D-068 level/trend + cohort
+correction on the D-067 offset-only model; `emerging-exp-002` base scored
+0.16297, rank 8 of 20 teams at 2026-10-26; top 0.17303). Consistent with Part 1
+experience, the leaderboard score sits above the 5-Fold CV estimate (+0.14045)
+— CV folds train on 4/5 of two thin years, so the honest CV is the conservative
+number.
 
 ---
 
