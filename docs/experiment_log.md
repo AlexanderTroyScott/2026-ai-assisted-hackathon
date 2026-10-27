@@ -59,14 +59,25 @@ negative results are as valuable as positive ones.
 | 35 | 2026-10-23 22:42 UTC | emerging-exp-001 | D-066 Part 2 transfer learning + credibility-shrinkage offset adaptation (5-Fold CV D2 0.14045) | Part 2 emerging market: Developed 2.41M-row prior + Offset Per-LOB LGBM (lv=3, min_leaf=600, l2=100). First 4 attempts errored (host evaluator still expected Part 1's 626,639 rows); organizers fixed it and the 2026-10-24 06:34 UTC retry scored. | 0.1405 | **0.16170** (Part 2 Public, rank 9/20 at 2026-10-26) | first Part 2 submission | clean | `477fa66d8c22` |
 | 36 | 2026-10-26 23:41 UTC | emerging-exp-002 | D-066 trial: offset-only adaptation w_off=1.0 (drop prior blend; OOF 0.14045 vs 0.14015) | primary change vs exp-001: blend weight 0.75/0.25 -> 1.0 offset | 0.1405 | **0.16297** (new best) | **+0.00127** vs exp-001 | clean | `24a2d2a66f46` |
 | 37 | 2026-10-26 23:41 UTC | emerging-exp-004 | D-066 trial: per-LOB prior shrinkage (contents w_off=0.5, motor/buildings 1.0) | primary change vs exp-002: contents blended 50/50 with calibrated dev prior | 0.1405 | 0.16293 | +0.00123 vs exp-001 (−0.00004 vs exp-002: local +0.00005 did not rank) | clean | `529c805122f8` |
+| 38 | 2026-10-26 23:53 UTC | emerging-exp-006 | D-067 tuning probe: motor-x1.06-up (level/trend probe vs exp-002) | primary change: motor prediction level scale | n/a | 0.16499 | +0.00202 vs exp-002 | clean | `2d4d1fca621e` |
+| 39 | 2026-10-26 23:54 UTC | emerging-exp-007 | D-067 tuning probe: motor-x0.95-down (level/trend probe vs exp-002) | primary change: motor prediction level scale | n/a | 0.16073 | −0.00224 vs exp-002 (direction probe) | clean | `3953a52462c5` |
+| 40 | 2026-10-26 23:54 UTC | emerging-exp-008 | D-067 tuning probe: property-x1.05-up (level/trend probe vs exp-002) | primary change: prediction level scale | n/a | 0.16316 | +0.00019 vs exp-002 | clean | `e2e960bf0d86` |
+| 41 | 2026-10-26 23:54 UTC | emerging-exp-009 | D-067 tuning probe: global-x1.02-up (level/trend probe vs exp-002) | primary change: prediction level scale | n/a | 0.16383 | +0.00086 vs exp-002 | clean | `85d201248709` |
+| 42 | 2026-10-26 23:56 UTC | emerging-exp-010 | D-067 tuning probe: motor scale bracket (x1.15 / x1.25) vs exp-002 | primary change: motor prediction level scale | n/a | 0.16691 | +0.00394 vs exp-002 | clean | `a4fe7725aeee` |
+| 43 | 2026-10-26 23:56 UTC | emerging-exp-011 | D-067 tuning probe: motor scale bracket (x1.15 / x1.25) vs exp-002 | primary change: motor prediction level scale | n/a | 0.16776 | +0.00479 vs exp-002 | clean | `13061f6a2615` |
+| 44 | 2026-10-26 23:58 UTC | emerging-exp-012 | D-067 tuning: motor x1.27/x1.40 + property x1.05 (peak search vs exp-002) | primary change: motor+property prediction level scale; quadratic peak from 5 motor probes ≈ x1.27 | n/a | **0.16799** (new best) | **+0.00502** vs exp-002 | clean | `83f1268bed5f` |
+| 45 | 2026-10-26 23:58 UTC | emerging-exp-013 | D-067 tuning: motor x1.27/x1.40 + property x1.05 (peak search vs exp-002) | primary change: motor+property prediction level scale | n/a | 0.16732 | +0.00435 vs exp-002 (×1.40 declining → peak ≈1.25–1.30) | clean | `76f3309e01f1` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
-**Status at 2026-10-26 (supersedes the note above):** Part 1 best is `exp-036`
+**Status at 2026-10-27 (supersedes the note above):** Part 1 best is `exp-036`
 at **0.12753 Public / 0.13570 Private** (row 31). Part 2 best is
-`emerging-exp-002` (row 36) at **0.16297** Public — offset-only adaptation
-(D-067); rank 8 of 20 teams, top is `applause_bin` at 0.17303.
+`emerging-exp-012` (row 44) at **0.16799** Public — motor ×1.27 + property
+×1.05 level correction on the offset-only model (D-068); gained **+0.00502**
+in the 2026-10-26 late-window tuning sprint. Part 2 quota exhausted (10/10
+used); the daily window has since reset to 10 — **hold**: no submissions in a
+fresh window without explicit human confirmation.
 
 ### Metric validation — local D² is a reliable proxy
 

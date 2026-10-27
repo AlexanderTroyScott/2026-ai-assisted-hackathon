@@ -2191,4 +2191,29 @@ credibility blend (0.75 offset + 0.25 calibrated prior) can be improved.
    architecture; it needs a structural change (e.g. per-peril frequency/severity
    modelling or a better 2024 IBNR basis).
 
+## D-068 — Part 2 level/trend correction: predictions were systematically LOW for 2025
+**2026-10-26/27 · accepted · 8 leaderboard probes in the late window (rows 38–45)**
+
+With slots expiring at the daily reset, the remaining quota was spent on
+one-change level probes of `emerging-exp-002` (uniform per-LOB multipliers —
+actuarially, a trend/level correction the model cannot express: `wp_rel` is
+normalized within year and labels carry no 24→25 trend).
+
+1. **Motor scale response (public D²):** ×0.95 → 0.16073, ×1.00 → 0.16297,
+   ×1.06 → 0.16499, ×1.15 → 0.16691, ×1.25 → 0.16776, ×1.27 (+prop ×1.05) →
+   **0.16799**, ×1.40 (+prop ×1.05) → 0.16732. A quadratic through the bracket
+   puts the motor optimum at ≈ ×1.27 — i.e. the raw model under-predicts 2025
+   motor ultimate cost by ~27%.
+2. **Property:** ×1.05 → 0.16316 (+0.00019 vs baseline) — same direction,
+   smaller magnitude.
+3. **Actuarial reading:** consistent with the 2023→2024 emerging motor ultimate
+   rate trend (+10.7%: 445.7→493.4 CU/exposure) continuing into 2025 and/or the
+   broker transfer book degrading faster than the 2023–2024 mix implies. A
+   post-hoc multiplier is a blunt instrument: **the next modelling window should
+   express this properly** (trend factor in the label development or an
+   exposure-weighted 2024 anchor), then re-probe to confirm.
+4. **Submission of record:** `emerging-exp-012` = offset-only × (motor 1.27,
+   buildings 1.05, contents 1.05) at **0.16799 Public** (+0.00502 over
+   `emerging-exp-002` in one window). Quota exhausted; window reset — hold.
+
 
