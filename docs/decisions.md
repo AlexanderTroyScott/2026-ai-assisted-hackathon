@@ -2335,4 +2335,11 @@ Top sandbox candidate: **D-065 Horvitz-Thompson date×peril development**
 result would inform Part 2's coarse LOB-level `EM_LDF` labels, where motor
 `bodily_injury` alone has a 127-day median reporting lag.
 
+**Authorization (human, 2026-10-27):** Part 1 submissions carry *standing*
+confirmation — "feel free to make those because we won't hit the 100
+submission/day limit" — and may be made without per-submission approval (still
+via `scripts/kaggle_submit.py`, one primary change each, logged). Part 2 keeps
+the explicit per-submission confirmation rule. Recorded in
+`docs/submission_protocol.md` §3.7.
+
 

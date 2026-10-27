@@ -48,6 +48,15 @@ Tweedie **D², power = 1.5**, vs a "constant-rate baseline". Higher is better.
    within the same session as the submission.
 6. Reserve at least **2 slots per day** for the current best model after any
    refactor, in case a bug regresses the score silently.
+7. **Confirmation policy (human-directed, 2026-10-27):** every **Part 2**
+   submission needs explicit human confirmation at the time of submission.
+   **Part 1** submissions carry standing human authorization ("feel free to make
+   those because we won't hit the 100 submission/day limit") and may be
+   submitted without asking, subject to rules 1–6 above and the
+   `scripts/kaggle_submit.py` gate. Part 1 serves as the validation sandbox
+   (D-071): its gate scored byte-identical reproductions four days past the
+   deadline and it reveals Private scores. All other rules (one primary change
+   per submission, logging, tag/message) apply unchanged to both markets.
 
 ## 4. Procedure
 
