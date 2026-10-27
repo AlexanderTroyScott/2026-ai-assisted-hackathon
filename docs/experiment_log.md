@@ -72,6 +72,7 @@ negative results are as valuable as positive ones.
 | 48 | 2026-10-27 00:18 UTC | emerging-exp-016 | D-068 cohort shape probe: motor NB x1.33 / renewals x1.07 (total level preserved) + property x1.05 | primary change: motor new-business vs renewal split at constant motor total | n/a | **0.16833** (new best) | **+0.00034** vs exp-012 (cohort shape signal, above D-025 noise) | clean | `f2109eb6da22` |
 | 49 | 2026-10-27 00:22 UTC | emerging-exp-017 | D-068 cohort split bracket: motor NB/ren split strength at constant motor total x1.2815 + property x1.05 | primary change: motor NB vs renewal split strength (mild 1.31/1.157, total preserved) | n/a | **0.16833** (ties exp-016) | plateau mild–mid at constant total | clean | `d1904b70bef6` |
 | 50 | 2026-10-27 00:22 UTC | emerging-exp-018 | D-068 cohort split bracket: motor NB/ren split strength at constant motor total x1.2815 + property x1.05 | primary change: motor NB vs renewal split strength (strong 1.38/0.852, total preserved) | n/a | 0.16711 | −0.00122 vs exp-016 at same total → splitting too hard (ren < ~×1.0) hurts | clean | `66dbdf77106d` |
+| 51 | 2026-10-27 20:20 UTC | emerging-exp-019 | D-069 trend in pipeline: forward index at scoring (motor nb 1.322 / ren 1.103, property 1.05) reconciled to D-068 curve | primary change: 2025 level correction now pipeline-native (estimate_forward_index, D-068 recipe reproduced from data + logged residuals) | 0.1405 | **0.16836** (new best) | **+0.00003** vs exp-016/017 (mid-ridge point; pipeline-native recipe validated end-to-end) | clean | `8b85e2e5e359` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -84,9 +85,10 @@ split NB/renewals (≈ ×1.33/×1.07) + property ×1.05 (D-068). The post-reset
 batch (rows 46–50, human-approved, 5 submissions) confirmed the property peak
 (≈ ×1.06) and found the NB/renewal shape signal. Batch limit reached — **hold**:
 of the 5 remaining quota slots in the 2026-10-27 window, none to be used
-without explicit human confirmation. `emerging-exp-019` (D-069: trend built
-into the pipeline — per-cell forward index at scoring) is generated and
-validated locally, awaiting explicit submission confirmation.
+without explicit human confirmation. **Current best: `emerging-exp-019`
+(D-069, row 51) at 0.16836 Public** — the 2025 level correction is now
+pipeline-native (forward index at scoring); 4 slots remain in the 2026-10-27
+window, held for explicit confirmation.
 
 ### Metric validation — local D² is a reliable proxy
 

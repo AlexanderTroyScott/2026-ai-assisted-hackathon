@@ -2276,8 +2276,9 @@ offset-only per D-067.
    is the mid-point of the measured D-068 ridge (exp-016 1.33/1.07 and
    exp-017 1.31/1.157 tie at 0.16833; exp-018 1.38/0.852 collapses to
    0.16711), with the ren point on the premium×LR anchor (721×0.683/446.5 =
-   1.103). Expected ≈ 0.16833; **submission requires explicit human
-   confirmation**.
+   1.103). **Scored 0.16836 Public (new best, +0.00003 over exp-016/017)** —
+   the mid-ridge point validated; recipe now reproducible end-to-end from
+   `src/emerging.py` + `scripts/run_emerging.py`.
 4. **Open items:** (a) property NB/ren split is unmeasured — data relativities
    suggest NB cheaper (~0.9×) but motor showed premium relativities invert on
    the transfer book, so uniform is kept; (b) buildings vs contents split at
