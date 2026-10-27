@@ -2286,4 +2286,53 @@ offset-only per D-067.
    *public* response curve — the mid-ridge choice is the private-robustness
    hedge.
 
+## D-070 — Multi-family ensemble does not port to Part 2 (negative result)
+**2026-10-27 · measured in OOF · `scripts/run_emerging_ensemble.py` · not submitted**
+
+The D-064 lesson (our only Part 1 board-winner: 40% per-LOB XGB + 42% per-LOB
+LGBM + 18% pooled LGBM) was ported to Part 2 as a 4-component OOF ensemble on
+identical folds/seeds to the pipeline:
+
+| component | OOF D² |
+|---|---|
+| offset LGBM (D-067 winner) | 0.14045 |
+| offset XGBoost (tweedie p=1.5, depth=3, base_margin=log prior) | 0.13945 |
+| pooled emerging-only LGBM (lv=16) | 0.09152 |
+| developed prior alone | 0.13855 |
+
+Best blend on the OOF grid: 70% offset LGBM / 30% offset XGB = **0.14068**,
+gain **+0.00023** over the offset-only baseline — below the pre-registered
++0.0003 D-025 noise threshold, so no CSV was emitted and no slot was spent.
+**Conclusion:** family diversity is real but its Part 2 value is smaller than
+the board noise floor; the lv=16 pooled family collapses to 0.09152 on the
+thin 2-year emerging book (capacity overfits here, consistent with D-067).
+Part 2 submissions stay offset-LGBM-only unless a *structural* change (labels,
+features, target) arrives.
+**Mechanics note (validated empirically before the run):** XGBoost's
+`base_margin` must be passed at BOTH `fit` and `predict` — `predict()` without
+it is not trees-only (its mean sat between the correction-only and full-rate
+levels). LightGBM's `raw_score` conversely excludes `init_score`, so the
+pipeline convention `rate = pr_cal × exp(raw)` is correct as written.
+
+## D-071 — Part 1 gate confirmed open past the deadline: Part 1 is a live sandbox
+**2026-10-27 · measured on the board · `exp-036-gate-test` (row 52)**
+
+Part 1's nominal deadline was 2026-10-23 16:00 UTC, yet exp-033…038 submitted
+19:50–21:21 UTC that day all scored. To test whether the gate is still open
+days later, `exp-036-xgb-lgb-blend.csv` was resubmitted **byte-identical**
+(sha256 `0039b77f4d8a`) on 2026-10-27, four days past the deadline. It was
+accepted and **scored 0.12753 Public / 0.13570 Private — an exact
+reproduction**. Part 1 therefore remains a usable evaluation instrument:
+100 submissions/day, and unlike Part 2 it reveals **Private** scores too.
+
+**Use policy (accepted):** Part 1 is a *sandbox for Part 2 hypotheses*, not a
+target in its own right (rank 41/51 is frozen and irrelevant). Candidate
+techniques are tested on Part 1 for board-level direction, then ported to
+Part 2 only through its own OOF validation (the D-065 caution: norm-rel was
++0.00052 local but −0.00094 on the Part 1 board — board-adjacent ≠ reliable).
+Top sandbox candidate: **D-065 Horvitz-Thompson date×peril development**
+(validated only in a censored backtest, never board-tested anywhere) — its
+result would inform Part 2's coarse LOB-level `EM_LDF` labels, where motor
+`bodily_injury` alone has a 127-day median reporting lag.
+
 

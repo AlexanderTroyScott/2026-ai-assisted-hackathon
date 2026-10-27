@@ -73,22 +73,23 @@ negative results are as valuable as positive ones.
 | 49 | 2026-10-27 00:22 UTC | emerging-exp-017 | D-068 cohort split bracket: motor NB/ren split strength at constant motor total x1.2815 + property x1.05 | primary change: motor NB vs renewal split strength (mild 1.31/1.157, total preserved) | n/a | **0.16833** (ties exp-016) | plateau mild–mid at constant total | clean | `d1904b70bef6` |
 | 50 | 2026-10-27 00:22 UTC | emerging-exp-018 | D-068 cohort split bracket: motor NB/ren split strength at constant motor total x1.2815 + property x1.05 | primary change: motor NB vs renewal split strength (strong 1.38/0.852, total preserved) | n/a | 0.16711 | −0.00122 vs exp-016 at same total → splitting too hard (ren < ~×1.0) hurts | clean | `66dbdf77106d` |
 | 51 | 2026-10-27 20:20 UTC | emerging-exp-019 | D-069 trend in pipeline: forward index at scoring (motor nb 1.322 / ren 1.103, property 1.05) reconciled to D-068 curve | primary change: 2025 level correction now pipeline-native (estimate_forward_index, D-068 recipe reproduced from data + logged residuals) | 0.1405 | **0.16836** (new best) | **+0.00003** vs exp-016/017 (mid-ridge point; pipeline-native recipe validated end-to-end) | clean | `8b85e2e5e359` |
+| 52 | 2026-10-27 20:51 UTC | exp-036-gate-test | GATE TEST: resubmit exp-036 byte-identical (D-064 multi-family blend) to verify post-deadline acceptance | gate test only - identical sha256 0039b77f4d8a to scored version; expect 0.12753 if gate accepts | 0.14076 | **0.12753** (Priv **0.13570**) | ±0.00000 — byte-identical reproduction **4 days past the Part 1 deadline: gate confirmed open and scoring** | clean | `0039b77f4d8a` |
+| 53 | 2026-10-27 20:55 UTC | emerging-exp-020-ensemble | D-064 port: multi-family OOF ensemble (offset LGBM + offset XGB + pooled lv=16 LGBM + dev prior), blend grid on OOF | components 0.14045/0.13945/0.09152/0.13855; best blend 70/30 LGBM/XGB = 0.14068, gain +0.00023 **below the +0.0003 D-025 noise threshold → not submitted, no slot spent** (pre-registered rule) | 0.14068 | - | — (not submitted) | clean | - |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
-**Status at 2026-10-27 (supersedes the note above):** Part 1 best is `exp-036`
-at **0.12753 Public / 0.13570 Private** (row 31). Part 2 best is
-`emerging-exp-016` / `emerging-exp-017` (rows 48–49, tied at displayed
-precision) at **0.16833** Public — offset-only model with motor level ×1.2815
-split NB/renewals (≈ ×1.33/×1.07) + property ×1.05 (D-068). The post-reset
-batch (rows 46–50, human-approved, 5 submissions) confirmed the property peak
-(≈ ×1.06) and found the NB/renewal shape signal. Batch limit reached — **hold**:
-of the 5 remaining quota slots in the 2026-10-27 window, none to be used
-without explicit human confirmation. **Current best: `emerging-exp-019`
-(D-069, row 51) at 0.16836 Public** — the 2025 level correction is now
-pipeline-native (forward index at scoring); 4 slots remain in the 2026-10-27
-window, held for explicit confirmation.
+**Status at 2026-10-27 (supersedes the note above):** **Part 2 best is
+`emerging-exp-019` (D-069, row 51) at 0.16836 Public** (rank 4 of 26) — the
+2025 level correction is pipeline-native (forward index at scoring, motor nb
+1.322 / ren 1.103, property 1.05). The multi-family ensemble port (D-070,
+row 53) measured +0.00023 in OOF — below the noise threshold, **not
+submitted**; Part 2 stays offset-LGBM-only. Part 1 best remains `exp-036` at
+0.12753 Public / 0.13570 Private (row 31), and row 52 confirmed the **Part 1
+gate is still open and scoring 4 days past its deadline** (byte-identical
+reproduction) — per D-071 Part 1 is now a validation sandbox for Part 2
+hypotheses (100 slots/day, Private feedback). Quota: 3 Part 2 slots remain in
+the 2026-10-27 window, held for explicit human confirmation.
 
 ### Metric validation — local D² is a reliable proxy
 
