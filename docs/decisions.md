@@ -2524,4 +2524,33 @@ exposure-weighted total (×1.05, 2025 shares nb 0.769 / ren 0.231), post-hoc on
    book running hot), which is why it is adopted at the measured point rather
    than shrunk further.
 
+## D-077 — Joint (total × split) optimum settled: ×1.05 confirmed at the ridge
+**2026-10-28 · measured on the Part 2 board · emerging-exp-028/029 (rows 64–65) · accepted (no change)**
+
+D-068's ×1.05 property anchor was measured at cohort-uniform, so with D-076's
+ridge in place the optimal total could have moved. Two pure total-scale arms
+at the fixed split (nb/ren ratio 1.371 held, every property cell ×t/1.05,
+motor untouched):
+
+| property total | Public | Δ vs ×1.05 |
+|---|---|---|
+| ×1.02 (exp-028) | 0.16986 | −0.00008 |
+| **×1.05 (exp-025)** | **0.16994** | — |
+| ×1.08 (exp-029) | 0.16992 | −0.00002 |
+
+1. **Settled: the ridge does not shift the optimal total.** The quadratic
+   vertex sits at total ≈ 1.059 with an implied gain of **+0.000004** — zero
+   above probe noise. `emerging-exp-025` remains the submission of record
+   (0.16994); no refinement shot (D-073/D-076 discipline).
+2. With this, the level/trend axis is fully mapped end to end: motor level
+   (D-068), property level (D-068), LOB split (D-073), cohort ridge (D-076),
+   total-at-ridge (D-077). Every measured vertex is at or within noise of the
+   adopted configuration.
+3. **Process note (slot lost to a race):** the two bracket arms were issued as
+   concurrent `kaggle_submit.py` invocations and exp-029's upload ran twice
+   (refs 57741577/57741578 — same file and description 27 ms apart). The
+   duplicate scored identically and the standing is unaffected, but it
+   consumed an extra daily slot (window closed at 9/10 used). Rule added to
+   `docs/submission_protocol.md` §4: **submit serially**.
+
 

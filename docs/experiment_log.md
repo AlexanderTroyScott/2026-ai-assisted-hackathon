@@ -85,6 +85,8 @@ negative results are as valuable as positive ones.
 | 61 | 2026-10-28 15:17 UTC | emerging-exp-025 | D-069 open item a: property NB/ren split bracket arm A (nb-heavy: f_nb 1.12 / f_ren 0.817, property total x1.05 held) | primary change: property forward index split by cohort at constant exposure-weighted total (nb 76.9% / ren 23.1%); post-hoc on emerging-exp-024, multipliers verified cell-wise (motor untouched); arm A = nb-heavy. Human authorization: 'Lets go ahead and submit since we have the remaining submissions and see what happens' (2026-10-28) | 0.14074 | **0.16994** | **+0.00115 vs exp-024 — NEW RECORD (rank 4 of 27, ahead of ManuelRodríguez 0.16914)**; property NB runs hotter than ren — the cohort ridge is real and matches motor's direction (D-076) | clean | `d794565c16b4` |
 | 62 | 2026-10-28 15:17 UTC | emerging-exp-026 | D-069 open item a: property NB/ren split bracket arm B (ren-heavy: f_nb 1.029 / f_ren 1.12, property total x1.05 held) | primary change: property forward index split by cohort at constant exposure-weighted total (nb 76.9% / ren 23.1%); post-hoc on emerging-exp-024, multipliers verified cell-wise (motor untouched); arm B = ren-heavy. Human authorization: 'Lets go ahead and submit since we have the remaining submissions and see what happens' (2026-10-28) | 0.14074 | 0.16815 | −0.00064 vs exp-024 — the wrong direction; bracket is strongly asymmetric, confirming the ridge direction | clean | `7edc7a0c10fe` |
 | 63 | 2026-10-28 15:22 UTC | emerging-exp-027 | D-076 refinement: property NB/ren quadratic vertex (m_nb 1.084 / m_ren 0.720, property total x1.05 held) | primary change: cohort-split refinement at the quadratic vertex fitted to the exp-025/024/026 bracket (vertex lies beyond arm A, so extrapolation is tested directly); post-hoc on emerging-exp-024, multipliers verified cell-wise. Human authorization: 'Lets go ahead and submit since we have the remaining submissions and see what happens' (2026-10-28) | 0.14074 | 0.16991 | −0.00003 vs exp-025 — flat top: the peak lies at m_nb ∈ [1.067, 1.084], **exp-025 stands as the record; axis closed (no further refinement, D-073 discipline)** | clean | `bf3ef1b4edd6` |
+| 64 | 2026-10-28 15:40 UTC | emerging-exp-028 | D-076 continuation: property total x1.02 at fixed cohort split (post-hoc on exp-025, ratio nb/ren 1.371 held) | primary change: property total level x1.05 -> x1.02 only (every property cell x0.971429, cohort split and motor untouched); settles the joint (total x split) optimum - the x1.05 anchor was measured at cohort-uniform in D-068. Human authorization: 'Go ahead and settle it' (2026-10-28) | 0.14074 | 0.16986 | −0.00008 vs exp-025 — lower side declines | clean | `e6f7a54faa11` |
+| 65 | 2026-10-28 15:40 UTC | emerging-exp-029 | D-076 continuation: property total x1.08 at fixed cohort split (post-hoc on exp-025, ratio nb/ren 1.371 held) | primary change: property total level x1.05 -> x1.08 only (every property cell x1.028571, cohort split and motor untouched); settles the joint (total x split) optimum - the x1.05 anchor was measured at cohort-uniform in D-068. Human authorization: 'Go ahead and settle it' (2026-10-28) | 0.14074 | 0.16992 | −0.00002 vs exp-025 — **settled: quadratic vertex at total ≈ 1.059 gains +0.000004 (zero above noise) → ×1.05 confirmed at the ridge, exp-025 stands, no refinement shot (D-077)**. Process note: this invocation double-uploaded (refs 57741577/57741578, parallel-call race); the duplicate scored identically and consumed one extra slot — serial rule added to submission_protocol §4 | clean | `2c7ab2fe32d6` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -100,9 +102,13 @@ negative: multi-family ensemble (D-070), HT-development port (D-072),
 buildings/contents split (D-073), motor per-peril (D-074), single-knob tuning
 (D-075 singles). Measured board seed noise at the exp-033 recipe ≈ 0.0012
 Public (local OOF seed σ only 0.00011). Part 1 best remains `exp-036` at
-0.12753 Public / 0.13570 Private (row 31). Quota 2026-10-28: Part 2 4 of 10
-slots remain (3 spent on the D-076 bracket + refinement with human
-authorization); Part 1 100 slots (standing authorization).
+0.12753 Public / 0.13570 Private (row 31). **The joint (total × split)
+optimum is settled (D-077, rows 64–65): ×1.05 confirmed at the ridge,
+exp-025 stands — the level axis (D-068 → D-073 → D-076 → D-077) is fully
+mapped.** Quota 2026-10-28: Part 2 1 of 10 slots remains (3 on the D-076
+bracket + refinement, 2 on the D-077 settlement, plus 1 lost to a duplicate
+upload in a parallel-call race — serial rule added to submission_protocol §4);
+Part 1 100 slots (standing authorization).
 
 ### Metric validation — local D² is a reliable proxy
 

@@ -75,6 +75,11 @@ leaderboard → appends a row to `docs/experiment_log.md` (and
 Before uploading, the script also records sha256 of the CSV so a submission can be
 reproduced later.
 
+**Submit serially.** Never run two `kaggle_submit.py` invocations concurrently:
+on 2026-10-28 a parallel bracket pair produced a duplicate upload (same file
+and description twice, refs 57741577/57741578, 27 ms apart), which consumed an
+extra daily slot. One submission at a time; wait for the score before the next.
+
 ## 5. Leaderboard snapshot format
 
 Log after every submission:
