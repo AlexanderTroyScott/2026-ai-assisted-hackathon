@@ -380,3 +380,276 @@ updating documentation, and pushing commits to GitHub.
 `docs/experiment_log.md`, `docs/actuarial_report.md`, and submissions
 `exp-033`..`exp-038`.
 
+## Session 12 — 2026-10-23 → 2026-10-26 · Part 2 launch: cross-market transfer pipeline (D-066/D-067)
+
+**Asked.** Part 2 opened with a new `emerging/` market: build the Part 2
+solution and submission pipeline, transferring what can be transferred from
+Part 1 **without joining IDs** (they collide across datasets), document it, and
+submit only with explicit per-submission confirmation.
+
+**AI did.**
+- Profiled `emerging/` against `developed/` (structural comparison in
+  `docs/emerging_market_report.md`): 2 thin years (109,296 rows, ~9,100
+  claims), 2025 test book 209,063 rows and **76% new business** from a broker
+  portfolio takeover — a regime the training data barely covers.
+- Built schema canonicalisation recovering 100% of shared rating factors (80
+  free-text occupations → 20 standard + `is_self_employed`; `BRK/STN/WOD/MIX`
+  → construction types; age bands → midpoints). Transfer happens in feature
+  space only; the no-ID-join rule is test-enforced.
+- Quantified emerging pricing misalignments (flood_zone unpriced in contents:
+  flat premium against a 6.6× cost gradient; motor 25–34 band priced as 35–64;
+  gender +34% claim rate for +3% premium) — the adaptation target list.
+- Built `src/emerging.py` + `scripts/run_emerging.py`: developed-market prior
+  (0.6 written-premium-weighted / 0.4 unweighted, recalibrated to emerging
+  totals) as `init_score` to an ultra-shallow emerging offset layer, plus the
+  20-policy office-premium build-up deliverable.
+- Ran the D-067 trial sprint before a quota reset: blend grid (weight on the
+  offset rises monotonically to 1.0 — the offset stands alone), capacity
+  sweep, extended feature set, prior variants — six negative results, none
+  submitted.
+
+**Verified.** 5-fold policy-grouped CV ladder established the architecture:
+transfer prior alone +0.1386 vs emerging-only tree +0.1073 vs constant rate
++0.0804 (the prior is the backbone; the thin book cannot train a standalone
+50-feature tree). Every submission CSV passes mechanical gates (209,063 rows,
+exact row_id set, positivity, finiteness) and records sha256.
+`tests/test_emerging.py` guards the arithmetic.
+
+**Human decided.** Accepted D-066 architecture and D-067's offset-only
+conclusion; Part 2 keeps the explicit per-submission confirmation rule.
+
+**Output.** `emerging-exp-001` 0.16170 (rank 9/20) → `emerging-exp-002`
+**0.16297** (record). D-066/D-067; `emerging_market_report.md`.
+
+## Session 13 — 2026-10-26/27 · Level/trend probes and the 2025 forward index (D-068/D-069)
+
+**Asked.** Spend the expiring Part 2 window on structured one-change probes of
+the 2025 prediction level (the model was systematically low), then build
+whatever survives properly into the pipeline instead of leaving post-hoc
+multipliers in a CSV.
+
+**AI did.**
+- Mapped the motor level response curve with uniform multipliers (×0.95 …
+  ×1.40): optimum ≈ ×1.27 — the model under-predicts 2025 motor ultimate cost
+  by ~27%. Property peak ≈ ×1.06.
+- Probed the motor new-business/renewal shape at constant total: mild and mid
+  splits tie at 0.16833 while a hard split collapses to 0.16711 — lift new
+  business, do not crush renewals below ≈ ×1.0.
+- Replaced the post-hoc multipliers with `estimate_forward_index`
+  (`src/emerging.py`): a per-(line, cohort) data estimate (mix-adjusted
+  severity trend × credibility-shrunk cohort frequency trend, blended 70/30
+  with a premium anchor) **plus explicit, logged reconciliation residuals** to
+  the measured response curve — the residual is reported, not hidden.
+- Found and fixed a basis trap mid-implementation: closed-lag frequency counts
+  fake −20% deflation in 2024 (claims open at the 31-Dec-2024 valuation are
+  missing — closure truncation); frequency re-counted on the reported basis
+  with a valuation-symmetric Jan–Oct window.
+
+**Verified.** Machinery check: motor renewals — a stable cohort — reproduce
+the response-curve factor from data alone (residual 1.01); large residuals sit
+exactly where the transfer book broke comparability. The mid-ridge motor point
+is a deliberate Public-overfit hedge (two bracket arms tie; the hard split is
+the caution). 8 guardrail tests assert ridge direction and held totals.
+`emerging-exp-019` (0.16836) reproduced the probe recipe end-to-end from the
+pipeline.
+
+**Human decided.** Adopt the forward index at scoring (D-008 convention:
+labels stay ultimate at the 2024 valuation — never trend both); keep the
+mid-ridge hedge; property cohort split left as open item (a).
+
+**Output.** Probes exp-005…exp-018 (rows 38–50), `emerging-exp-019`
+**0.16836** record. D-068/D-069.
+
+## Session 14 — 2026-10-27 · Ensemble port rejected in OOF; Part 1 gate test; sandbox policy (D-070/D-071)
+
+**Asked.** Port the Part 1 multi-family blend lesson (D-064, our only Part 1
+board-winner) to Part 2; and test whether Part 1 still scores days past its
+deadline — if so, use it as a labelled sandbox.
+
+**AI did.**
+- Built `scripts/run_emerging_ensemble.py` — 4 components on identical folds
+  and seeds to the pipeline. Best blend (+0.00023) fell below the
+  pre-registered +0.0003 gate: **no CSV emitted, no slot spent** (D-070).
+  Side-finding validated empirically: XGBoost `base_margin` must be passed at
+  both `fit` and `predict`; LightGBM `raw_score` excludes `init_score`.
+- Resubmitted `exp-036` **byte-identical** (same sha256) four days past the
+  Part 1 deadline: accepted, scored 0.12753/0.13570 — an exact reproduction.
+  The gate is open (D-071).
+- Recorded the sandbox use policy: Part 1 is an *evaluation instrument* for
+  Part 2 hypotheses (100 slots/day, reveals Private scores), with the D-065
+  caution that board-adjacent results do not port automatically.
+
+**Verified.** The gate test is self-verifying (a known CSV reproduces its
+known scores); the ensemble comparison is paired on identical folds/seeds; the
+threshold was fixed before the run.
+
+**Human decided.** Standing authorization for Part 1 submissions — "feel free
+to make those because we won't hit the 100 submission/day limit" (2026-10-27)
+— scoped and recorded in `docs/submission_protocol.md` §3.7. Part 2 keeps
+explicit per-submission confirmation.
+
+**Output.** D-070/D-071; rows 52–53. No Part 2 slot spent.
+
+## Session 15 — 2026-10-27 → 2026-10-28 · HT development labels: a designed 2×2 sandbox campaign (D-072)
+
+**Asked.** Test D-065's Horvitz–Thompson date×peril development labels on the
+board for the first time, and decide whether Part 2's coarse LOB-level
+development labels should be replaced.
+
+**AI did.**
+- Designed a 2×2 replication before spending anything: {LOB labels, HT
+  labels} × {seed 0, seed 1} on the byte-identical `exp-033` recipe — one
+  factor changed per arm, one arm explicitly measuring the seed-noise floor.
+- Measured: HT gains +0.00049/+0.00078 Public in both seeds but loses Private
+  in both (mean −0.00021); seed noise alone moves Public by −0.00119. The
+  Public effect is inside noise and the Private direction is consistently
+  wrong.
+- Verdict: HT trades Private for Public → **Part 2 label port rejected**.
+
+**Verified.** The conclusion rests on a designed experiment, not a single
+score: effect measured against the noise band (σ ≈ 0.0012 Public), two seeds
+per arm, everything else byte-identical, all four CSVs cell-verified. Local
+OOF could not answer this (the label *is* the change), so the board was used
+as the instrument and the design was stated before the shots.
+
+**Human decided.** Accept the rejection (D-072); Part 2 keeps its `EM_LDF`
+labels; the four sandbox uploads are covered by the standing authorization.
+
+**Output.** Rows 54–56; D-072; the board-noise measurement that calibrates
+every subsequent gate.
+
+## Session 16 — 2026-10-28 · Bracket discipline: LOB split, per-peril, tuning (D-073/D-074/D-075)
+
+**Asked.** With a fresh Part 2 window (human-approved), spend it on the best
+candidates; and — "if you think further tuning could benefit then test and
+submit that before going forward" (2026-10-28) — pursue tuning if the
+evidence supports it.
+
+**AI did.**
+- Buildings/contents split bracket (two arms at constant property total +
+  quadratic vertex): both arms lose to uniform ×1.05, vertex gain +0.00003 →
+  **no split; axis closed with no refinement shot** (D-073).
+- Motor per-peril trial (`scripts/run_emerging_peril.py`): per-peril labels
+  developed pro-rata with Σ = `y_ult` asserted and tested; OOF −0.00036 →
+  **gate failed, no CSV, no slot** (D-074). The pro-rata label fix was kept as
+  a correctness improvement with its own regression test.
+- Hyperparameter residual sweep (`scripts/run_emerging_tune.py`, 15 configs
+  one-at-a-time around the incumbent): single knobs flat (all ≤ +0.00011); one
+  real shrinkage-pair interaction (`num_leaves` 3→4 with `min_leaf`
+  600→1200), confirmed on paired seeds (+0.00029/+0.00046/+0.00053) before
+  adoption.
+- Submitted `emerging-exp-024` — **0.16879**, new record. The board gain
+  equalled the mean OOF gain *exactly* (local OOF is a faithful oracle), and
+  measured board seed noise (0.0012) vs local seed σ (0.00011) quantified how
+  much of any board move is luck.
+
+**Verified.** Paired-seed deltas at identical seeds; thresholds pre-registered
+(D-025); the board/OOF equality on exp-024 is a direct validation of the
+offline gate. `run_emerging.py` was parameterised so the adopted config is the
+default and reproducible.
+
+**Human decided.** Authorised the tuning submission (quote above); accepted
+the two negative verdicts without spending slots.
+
+**Output.** Rows 57–60; D-073/D-074/D-075.
+
+## Session 17 — 2026-10-28 · Property cohort ridge → record 0.16994; joint settlement; an AI process error on the record (D-076/D-077)
+
+**Asked.** "Lets go ahead and submit since we have the remaining submissions
+and see what happens" (2026-10-28) — spend the remaining window on the D-069
+open item (property NB/ren split). Then "Go ahead and settle it" — settle the
+joint (total × split) optimum.
+
+**AI did.**
+- Two-arm cohort bracket at constant ×1.05 total (nb-heavy vs ren-heavy,
+  post-hoc on exp-024 with cell-wise-verified multipliers): nb-heavy **0.16994
+  (+0.00115, new record)**, ren-heavy 0.16815 (−0.00064) — property new
+  business runs hotter than renewals, the same ridge direction as motor.
+  Refinement at the quadratic vertex (0.16991) showed a flat top → axis
+  closed at the measured point (D-076).
+- Adopted the split pipeline-natively (property nb 1.12 / ren 0.816907, solved
+  to hold the ×1.05 total at measured 2025 exposure shares) and proved
+  reproduction: a full pipeline run regenerates the record predictions to
+  float precision (max rel diff 8e-16); 87 tests green.
+- Settled the joint optimum with pure total-scale arms at the fixed split
+  (D-077): ×1.02 → 0.16986, ×1.08 → 0.16992 vs ×1.05 → 0.16994; vertex
+  +0.000004 — nothing there. The level axis is fully mapped.
+- **Process error, recorded in full:** the two settlement submissions were
+  issued as concurrent `kaggle_submit.py` invocations and one upload ran twice
+  (refs 57741577/57741578, 27 ms apart). The duplicate scored identically but
+  consumed an extra daily slot. The AI diagnosed the race from the submission
+  list, recorded it in D-077 and the experiment log, and added the
+  **serial-submission rule** to `docs/submission_protocol.md` §4.
+
+**Verified.** Cell-wise multiplier checks on every post-hoc CSV (motor exactly
+×1.0, held totals recomputed); exact end-to-end reproduction of the record
+(8e-16); quota read from the API before and after; the incident is documented
+rather than quietly absorbed.
+
+**Human decided.** Both quotes authorised the rounds; the bracket/refinement
+protocol (arms at constant total + vertex, stop when vertex gain < probe
+noise) applied as pre-registered; `emerging-exp-025` accepted as the
+submission of record.
+
+**Output.** Rows 61–65; D-076/D-077; record **0.16994 Public (rank 4 of 33)**;
+serial-submission rule.
+
+## Session 18 — 2026-10-28 · Write-up: README rewrite and a correction to our own Part 1 record
+
+**Asked.** "Can you first work on the readme part of the writeup?" — make the
+README the judging-panel front door.
+
+**AI did.**
+- Fact-checked every number the README would state against the logs *and live
+  ground truth* (both leaderboards pulled from the Kaggle API at write time)
+  instead of copying the logs forward.
+- **The fact-check corrected the logs:** the final Part 1 board ranks on the
+  Private split and shows our entry at 0.12984 — the Private score of
+  `exp-027`, our best Public submission as of the 2026-10-23 16:00 deadline.
+  The `exp-033`→`exp-036` line — including our best model `exp-036`
+  (0.12753/0.13570) — was submitted after the deadline and is measured but not
+  ranked. Evidence chain: the board score matches `exp-027`'s Private to five
+  decimals; entry timestamps and the other teams' deadline-era dates agree.
+  Recorded as a correction in `docs/experiment_log.md` and framed honestly in
+  the README, with the lesson (deadline discipline) adopted into the protocol.
+- Rewrote `README.md` (results, both architectures, measured findings
+  including negatives, guardrails, AI workflow, reproducibility, judging-axes
+  map) and refreshed the stale `emerging_market_report.md` header.
+
+**Verified.** Standings re-pulled from the API at write time (Part 2: 4th of
+33; Part 1: 41st of 54); every README number traced to an experiment-log row,
+a decision, or the snapshot; the Part 1 finding stated with its evidence and
+without over-claiming the mechanism.
+
+**Human decided.** README first, then the remaining write-up ("Yes please" →
+this AI-workflow log next).
+
+**Output.** `README.md`, `emerging_market_report.md` header, Part 1 correction
+note.
+
+## Verification mechanisms (summary for the judging panel)
+
+1. **Pre-registered gates stop submissions.** The +0.0003 OOF gate (D-025)
+   killed two complete feature families — the multi-family ensemble (D-070,
+   +0.00023) and motor per-peril (D-074, −0.00036) — without a single quota
+   slot spent.
+2. **Effects near the gate get designed replications**, not single shots:
+   paired seeds (D-075), a 2×2 treatment/control design (D-072), brackets at
+   constant total with quadratic vertices and a stop rule (D-073/076/077).
+3. **Noise is measured, not assumed:** board seed σ ≈ 0.0012 vs local OOF
+   σ 0.00011 (D-072/D-075); the exp-024 board gain equalled its mean OOF gain
+   exactly — the offline oracle is validated against the board.
+4. **Reproduction is exact:** a byte-identical gate test (D-071) and an
+   end-to-end pipeline reproduction of the record to 8e-16 (D-076).
+5. **AI errors are recorded and hardened against:** the leaked-feature
+   deny-list (D-016), the `--final-fit` bugfixes (D-063), the closure-truncation
+   basis trap (D-069), and the duplicate-upload race — each logged with the
+   mechanical rule added afterwards (e.g. the serial-submission rule, §4).
+6. **Human authorisation gates every submission:** Part 2 requires explicit
+   per-submission confirmation and the log quotes it verbatim; the sandbox
+   standing authorisation is scoped and recorded (§3.7); `kaggle_submit.py`
+   refuses to upload blind.
+7. **Every claim is traceable:** 65 experiment-log rows with hypotheses,
+   verdicts and sha256; 77 decisions with judgement calls flagged; 87
+   guardrail tests green at each commit.
+
