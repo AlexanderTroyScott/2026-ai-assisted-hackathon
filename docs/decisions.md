@@ -2682,4 +2682,38 @@ scored `'lob'` controls at matched seeds:
    feature-space or vehicle-space changes, of which the validated queue is
    empty (D-079). The write-up becomes the priority.
 
+### D-080 supplement — third pair (same day, rows 69–70): verdict stands, evidence grade downgraded, noise estimate corrected
+**2026-10-28 · 3-seed paired design complete (peril exp-042/043/044 vs lob exp-033/040/045)**
+
+The pre-registered decision was already taken on the paired 2×2; a third pair
+was run for write-up robustness and it materially changes the *evidence grade*
+and the noise model, though not the decision:
+
+| Δ peril − lob | seed 0 | seed 1 | seed 2 | mean | sd |
+|---|---:|---:|---:|---:|---:|
+| Public | −0.00301 | −0.00222 | +0.00029 | **−0.00165** | 0.00173 |
+| Private | −0.00316 | −0.00348 | −0.00003 | **−0.00222** | 0.00192 |
+
+1. **The seed-2 pair is a tie — because the `lob` control collapsed.** exp-045
+   (lob seed 2) scored 0.12417/0.13199 vs exp-033/exp-040's 0.1255–0.1268 /
+   0.1353–0.1357. The lob arm's seed spread is 0.0026 Public / **0.0037
+   Private** (sd 0.00135 / **0.00208**): **Private seed noise is ≈ 0.002, ~5×
+   the exp-033→exp-040 single-pair estimate (~0.0004) used in D-072/D-079.**
+   The peril arm, by contrast, is near-deterministic across seeds (Private sd
+   0.00013) — observation only, not acted on.
+2. **Verdict unchanged: no port.** The pre-registered rule requires *Private
+   improvement*; the point estimate is non-positive on Private in 3/3 pairs
+   (mean −0.00222) and negative on Public in 2/3 (mean −0.00165). But the
+   correct evidence grade is **"negative point estimate at n=3"** (one-sided
+   paired t p ≈ 0.07 on Private), not "decisive" — the 2×2's apparent
+   tightness was luck of the draw.
+3. **Noise-model correction, applied forward.** Single-pair sandbox verdicts
+   are noisier than logged; D-072's HT rejection stands (2/2 direction
+   consistency on both boards plus a mechanism argument) but its −0.00021
+   Private estimate is inside the revised noise band. Any future sandbox
+   conclusion requires ≥3 seeds per arm. The D-079 endgame conclusion
+   *strengthens*: with Private seed σ ≈ 0.002 and anti-correlated Pub/Priv
+   draws, seed redraws are pure noise on the final metric and only vehicle
+   mean quality counts.
+
 

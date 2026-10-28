@@ -95,7 +95,7 @@ fully measured, but it is not ranked. Deadline discipline is now part of the pro
 ## 3. What actually moved the needle
 
 Measured on the board unless noted. Full record: `docs/experiment_log.md` (65 logged
-submissions), judgement calls and evidence: `docs/decisions.md` (D-001…D-077).
+submissions), judgement calls and evidence: `docs/decisions.md` (D-001…D-080).
 
 **Part 2 record progression** (Public):
 
@@ -131,7 +131,7 @@ submissions), judgement calls and evidence: `docs/decisions.md` (D-001…D-077).
   gain equalled its mean OOF gain to four decimals. Board seed noise ≈ 0.0012 Public
   (2×2 seed replication, D-072) vs local OOF seed σ 0.00011 — so the score moved off
   model changes, not luck.
-- **87 guardrail tests** (`tests/`, run before every commit): the no-ID-join rule,
+- **89 guardrail tests** (`tests/`, run before every commit): the no-ID-join rule,
   per-peril labels summing to each row's `y_ult`, held cohort totals, forward-index
   ridge assertions, label development arithmetic, feature and submission-format checks.
 - **Reproducibility:** the record submission is regenerated end-to-end by the pipeline
@@ -163,7 +163,7 @@ results, the duplicate-upload incident and its process fix — is in
 | `docs/actuarial_report.md` | Part 1 actuarial report (ASOP 9 documentation standard) |
 | `docs/emerging_market_report.md` | Part 2 market analysis and adaptation methodology |
 | `docs/data_findings.md` | Authoritative empirical findings (structural comparison, feature harmonisation) |
-| `docs/decisions.md` | Decision log D-001…D-077 — judgement calls flagged, nothing unverified |
+| `docs/decisions.md` | Decision log D-001…D-080 — judgement calls flagged, nothing unverified |
 | `docs/experiment_log.md` | Measurement record — every submission, score, verdict, authorisation, sha256 |
 | `docs/submission_protocol.md` | Format/metric rules, cadence policy, serial-submission rule |
 | `docs/ai_workflow_log.md` | AI interaction evidence trail for the judging panel |
@@ -172,12 +172,12 @@ results, the duplicate-upload incident and its process fix — is in
 | `scripts/run_emerging.py` | Part 2 end-to-end pipeline → submission CSV |
 | `scripts/run_emerging_tune.py`, `run_emerging_peril.py` | D-075 tuning sweep, D-074 per-peril trial |
 | `scripts/kaggle_submit.py` | Only submission path (validate → upload → log) |
-| `tests/` | 87 guardrail tests (`python3 -m pytest tests/ -q`) |
+| `tests/` | 89 guardrail tests (`python3 -m pytest tests/ -q`) |
 
 ## 7. Reproducing the submission of record
 
 ```bash
-python3 -m pytest tests/ -q            # 87 guardrails
+python3 -m pytest tests/ -q            # 89 guardrails
 python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 # -> outputs/submissions/emerging-exp-025-repro.csv
 #    byte-equivalent predictions to the 0.16994 submission (max rel diff 8e-16)
@@ -189,5 +189,5 @@ python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 |---|---|
 | Pricing performance & adaptation (40%) | §2–§3 — transfer-prior + offset adaptation, measured forward index, 0.16994 (4th of 33) |
 | Effective use of AI (25%) | §5, `docs/ai_workflow_log.md`, `docs/decisions.md` |
-| Trust, validation & guardrails (20%) | §4 — pre-registered gates, noise measurement, 87 tests, exact reproducibility |
+| Trust, validation & guardrails (20%) | §4 — pre-registered gates, noise measurement, 89 tests, exact reproducibility |
 | Communication & documentation (15%) | this README, `docs/actuarial_report.md`, `docs/emerging_market_report.md`, `docs/experiment_log.md` |

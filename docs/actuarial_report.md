@@ -8,7 +8,8 @@ is reproduced in R-01 Appendix C (`docs/references.md`).
 **Competition:** `iaa-ai-assisted-hackathon-2026-part-1`
 **Metric:** Tweedie D², power = 1.5
 **Deadline:** 2026-10-23 16:00
-**Documentation date:** 2026-10-22
+**Documentation date:** 2026-10-22; reconciled 2026-10-28 (D-071…D-080:
+counted-entry correction in §6, sandbox verdicts in §5)
 
 ---
 
@@ -248,6 +249,8 @@ substantive changes in this work, in order:
 | **D-063 — `--final-fit` defects fixed; Per-LOB + Pooled `rate` models** | `--final-fit` had hardcoded `train["y_ult"]` (causing exposure double-counting in `exp-024`) and hardcoded `num_leaves=64, lr=0.04` (causing 6× tree-budget overfitting in `exp-025`). Fixed both and implemented shallow Per-LOB `rate` LGBM (`num_leaves=6`). | **+0.0078 honest OOF D²** (`0.1322 → 0.1400`), **Public LB 0.12681 / Private LB 0.13531** (`exp-033`, +0.00547 Private over `exp-027`); 70/30 Per-LOB + Pooled blend (`exp-034`) reaches **0.12707 Public / 0.13536 Private**. |
 | **D-064 — Multi-family rate ensemble (Per-LOB XGBoost + LGBM)** | Retracts D-060's residual-correlation rejection of model-form blending. Adds Per-LOB XGBoost Tweedie rate model (`max_depth=3, no_rel`, solo `0.12700` Public / `0.13509` Private, `exp-035`). | **New Best (`exp-036`): 0.12753 Public / 0.13570 Private** (+0.00317 Public / +0.00586 Private over `exp-027`; honest OOF D² **0.14076**). |
 | **D-065 — Horvitz-Thompson Date×Peril development & year-normalized relativities** | Addresses 31 Dec 2024 reporting truncation and open-claim recovery/IBNER asymmetry on Motor (`development="ht_motor"`), plus year-normalized historical relativities (`--norm-rel`, `exp-037`/`exp-038`). | Censored age-0 backtest Motor D² `0.0860 → 0.0871`; `exp-038` 4-model ensemble scores **0.12721 Public / 0.13563 Private**. |
+| **D-071/D-072 — post-deadline sandbox campaign; HT labels board-tested** | Part 1's scoring gate stayed open after the 2026-10-23 deadline; all runs from `exp-033` onward are post-deadline and unranked. The gate reveals Private, so it served as a labelled sandbox: D-065's HT date×peril labels were board-tested at two paired seeds against the scored `exp-033`/`exp-040` controls. | **+0.00063 Public / −0.00021 Private** — a Private-for-Public trade. `ht_motor` labels **rejected**; the presented model never used them. Also measured: board seed noise σ ≈ 0.0013 Public / ≈ 0.002 Private per redraw (revised up by D-080's third seed pair), which reclassifies several earlier single-seed verdicts as undecidable. |
+| **D-080 — level-preserving per-peril development board-tested** | D-028's per-peril LDF factors (motor `bodily_injury` age-0→ult 1.708 vs `own_damage` 1.039) had stood as "a tie locally, LB tie-break open" since 2026-10-20. Tested on the sandbox in a 3-seed paired design (`exp-042`/`043`/`044` vs `exp-033`/`040`/`045`). | **−0.00165 Public / −0.00222 Private** mean (3/3 pairs non-positive on Private; third pair a tie on a noisy control). No evidence of improvement; uniform LOB development stands and the tie-break closes against per-peril factors. Grade: negative point estimate at n=3, not decisive. |
 
 **Professional judgement conflict (ASOP 9 §5.4).** The corrected label table (D-033/D-035)
 is the actuarially correct one and reproduces `data_findings.md` §5 exactly. It is
@@ -262,14 +265,23 @@ such.**
 
 ## 6. Results and diagnostics
 
-**Presented result (updated 2026-10-23, D-063/D-064).** Our best submission is
-`exp-036` (multi-family rate ensemble: 40% Per-LOB XGBoost `max_depth=3` + 42%
-Per-LOB LightGBM `num_leaves=6` + 18% Pooled LightGBM `num_leaves=16`, all
-modelling annualised rate `y_ult / exposure` with exposure weights and
-reconstructed as `exposure × rate`), scoring **0.12753 Public / 0.13570
-Private** (honest Fold 2024 OOF D² **0.14076**). Its individual components also
-substantially outperform the prior cost-target baseline (`exp-027`, `0.12436`
-Public / `0.12984` Private):
+**Counted entry vs best model — stated plainly (reconciled 2026-10-28).**
+Part 1's final ranking runs on **Private**, with the counted entry being the
+best **Public** submission as of the 2026-10-23 16:00 deadline. Our counted
+entry is therefore **`exp-027`** (cost-target pooled LightGBM, occupation
+dropped, D-056): **0.12436 Public → 0.12984 Private**, rank 41 of 54. The
+stronger `exp-033`→`exp-038` line was submitted **after** the deadline (the
+scoring gate stayed open — D-071) and is **unranked**: presented below as
+method evidence and as the sandbox instrument for Part 2 (D-072, D-080), not
+as a competition result.
+
+**Best model (`exp-036`, unranked).** Multi-family rate ensemble: 40% Per-LOB
+XGBoost `max_depth=3` + 42% Per-LOB LightGBM `num_leaves=6` + 18% Pooled
+LightGBM `num_leaves=16`, all modelling annualised rate `y_ult / exposure`
+with exposure weights and reconstructed as `exposure × rate`, scoring
+**0.12753 Public / 0.13570 Private** (honest Fold 2024 OOF D² **0.14076**).
+Its individual components also substantially outperform the counted
+cost-target baseline (`exp-027`, `0.12436` Public / `0.12984` Private):
 - `exp-033` (Per-LOB LightGBM rate `num_leaves=6`): **0.12681 Public / 0.13531 Private** (OOF D² 0.14002)
 - `exp-035` (Per-LOB XGBoost rate `max_depth=3`): **0.12700 Public / 0.13509 Private** (OOF D² 0.14014)
 - `exp-034` (70% `exp-033` + 30% Pooled LightGBM rate `exp-032`): **0.12707 Public / 0.13536 Private** (OOF D² 0.14033)
