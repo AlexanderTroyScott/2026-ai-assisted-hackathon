@@ -76,21 +76,23 @@ negative results are as valuable as positive ones.
 | 52 | 2026-10-27 20:51 UTC | exp-036-gate-test | GATE TEST: resubmit exp-036 byte-identical (D-064 multi-family blend) to verify post-deadline acceptance | gate test only - identical sha256 0039b77f4d8a to scored version; expect 0.12753 if gate accepts | 0.14076 | **0.12753** (Priv **0.13570**) | ±0.00000 — byte-identical reproduction **4 days past the Part 1 deadline: gate confirmed open and scoring** | clean | `0039b77f4d8a` |
 | 53 | 2026-10-27 20:55 UTC | emerging-exp-020-ensemble | D-064 port: multi-family OOF ensemble (offset LGBM + offset XGB + pooled lv=16 LGBM + dev prior), blend grid on OOF | components 0.14045/0.13945/0.09152/0.13855; best blend 70/30 LGBM/XGB = 0.14068, gain +0.00023 **below the +0.0003 D-025 noise threshold → not submitted, no slot spent** (pre-registered rule) | 0.14068 | - | — (not submitted) | clean | - |
 | 54 | 2026-10-27 21:09 UTC | exp-039 | D-065 HT date x peril development labels (per-LOB rate LGBM, exp-033 recipe) | sandbox test: one change vs exp-033 (0.12681/0.13531) = development=ht_motor labels (Horvitz-Thompson date x peril reporting completeness + open-claim IBNER); local OOF vs changed truth not comparable - board is the gate | 0.1381 | **0.12730** (Priv **0.13528**) | **+0.00049 Pub / −0.00003 Priv** vs exp-033 — small Public gain, Private-neutral (no norm-rel-style regression); 2×2 seed replication in rows 55–56 to separate signal from flip | clean | `94c9cf76f555` |
+| 55 | 2026-10-28 00:46 UTC | exp-040 | 2x2 replication: exp-033 recipe seed=1 (lob labels) - board noise floor | seed-noise control arm: compares to exp-033 (seed 0, 0.12681/0.13531) to measure board seed sigma at this recipe | 0.1404 | **0.12562** (Priv **0.13569**) | **seed noise alone: −0.00119 Pub / +0.00038 Priv** vs exp-033 — Public seed-to-seed σ ≈ 0.0012 at this recipe, larger than the HT effect | clean | `fd96a3b4478c` |
+| 56 | 2026-10-28 00:46 UTC | exp-041 | 2x2 replication: exp-039 recipe seed=1 (ht_motor labels) - HT gain replication | HT treatment arm at seed 1: compares to exp-040 (lob seed 1) for the clean HT-vs-lob delta and to exp-039 (ht seed 0) for replication | 0.1385 | **0.12640** (Priv **0.13529**) | **+0.00078 Pub / −0.00040 Priv** vs exp-040 — HT Public gain replicates (2/2 seeds) but is inside seed noise; **Private negative at both seeds (mean −0.00021)** → HT trades Private for Public; port rejected (D-072) | clean | `d0a11d1641bd` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
-**Status at 2026-10-27 (supersedes the note above):** **Part 2 best is
-`emerging-exp-019` (D-069, row 51) at 0.16836 Public** (rank 4 of 26) — the
-2025 level correction is pipeline-native (forward index at scoring, motor nb
-1.322 / ren 1.103, property 1.05). The multi-family ensemble port (D-070,
-row 53) measured +0.00023 in OOF — below the noise threshold, **not
-submitted**; Part 2 stays offset-LGBM-only. Part 1 best remains `exp-036` at
-0.12753 Public / 0.13570 Private (row 31), and row 52 confirmed the **Part 1
-gate is still open and scoring 4 days past its deadline** (byte-identical
-reproduction) — per D-071 Part 1 is now a validation sandbox for Part 2
-hypotheses (100 slots/day, Private feedback). Quota: 3 Part 2 slots remain in
-the 2026-10-27 window, held for explicit human confirmation.
+**Status at 2026-10-28 (supersedes the note above):** **Part 2 best is
+`emerging-exp-019` (D-069, row 51) at 0.16836 Public** (rank 4 of 26). The
+multi-family ensemble port (D-070, row 53) measured +0.00023 in OOF — below
+the noise threshold, not submitted. **Sandbox campaign (D-072, rows 54–56)
+closed the HT-development question: it trades Private for Public
+(+0.00063/−0.00021 mean) and the Part 2 label port is rejected.** Measured
+board seed noise at the exp-033 recipe ≈ 0.0012 Public — single-seed close
+comparisons are uninformative. Part 1 best remains `exp-036` at 0.12753
+Public / 0.13570 Private (row 31). Quota 2026-10-28: Part 2 10 slots fresh
+(held for explicit human confirmation); Part 1 100 slots (standing
+authorization).
 
 ### Metric validation — local D² is a reliable proxy
 

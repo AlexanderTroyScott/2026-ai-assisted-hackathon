@@ -2342,4 +2342,35 @@ via `scripts/kaggle_submit.py`, one primary change each, logged). Part 2 keeps
 the explicit per-submission confirmation rule. Recorded in
 `docs/submission_protocol.md` §3.7.
 
+## D-072 — HT date×peril development: board-validated as a Private-for-Public trade → Part 2 label port rejected
+**2026-10-28 · measured in the Part 1 sandbox 2×2 (rows 54–56) · port not made**
+
+First sandbox campaign (D-071) tested D-065's Horvitz-Thompson date×peril
+development on the board for the first time — `development="ht_motor"` labels
+vs uniform LOB LDF labels, exp-033 recipe otherwise byte-identical, at two
+seeds (exp-039/041 vs exp-033/040):
+
+| Δ ht − lob | seed 0 | seed 1 | mean |
+|---|---|---|---|
+| Public | +0.00049 | +0.00078 | **+0.00063** |
+| Private | −0.00003 | −0.00040 | **−0.00021** |
+
+1. **Board seed noise at this recipe is ≈ 0.0012 Public** (exp-033 0.12681 →
+   exp-040 0.12562 from `random_state` alone; Private seed drift 0.00038).
+   Single-seed comparisons of close models on Public are below the noise floor;
+   any future Part 1 conclusion requires seed-averaged arms.
+2. **The HT Public gain replicates in direction (2/2 seeds) but sits inside the
+   noise band.** The Private effect is small yet *consistently negative* (2/2
+   seeds) with unusually low seed variance on the HT side (0.13528/0.13529).
+3. **Decision: do not port HT development to Part 2's `EM_LDF` labels.** Final
+   rankings run on Private; HT moves Public and Private in opposite
+   directions, so a Public-visible gain would cost final standing — the exact
+   failure mode the sandbox was opened to detect (cf. the norm-rel caution,
+   exp-037). Part 2 keeps LOB-level `EM_LDF`; the motor BI reporting-lag
+   problem remains open for methods that move both metrics together.
+4. **Part 2 probe discipline implication:** our D-068 response curve is fitted
+   on *Public* scores. The mid-ridge hedging choice (D-069c) is validated by
+   this finding — public-fit corrections should be shrunk toward the
+   data-supported anchor, never taken at their public-optimal extreme.
+
 
