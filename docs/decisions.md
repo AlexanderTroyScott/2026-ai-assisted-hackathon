@@ -2748,4 +2748,46 @@ Three human calls recorded so nothing downstream is ambiguous.
    **The post-deadline fact is disclosed in `final_writeup.md` §7**, not
    buried. Week 2 file = `emerging-exp-025` (the counted entry).
 
+## D-082 (proposed) — Transfer-prior upgrade: "exp-036 becomes the prior"
+**2026-10-28 · pre-registered before results · validation-only run in flight
+(`scripts/run_emerging_prior.py`) · human-endorsed direction**
+
+Human direction: *"we should continue improving our part 1 model since this
+could influence and improve our part 2 model."* Mechanism verified in code:
+the developed-market transfer prior carries **0.1386 of the record pipeline's
+0.1407 OOF** (98% of Part 2 skill), yet it predates our own Part 1 findings —
+it is the D-066-era model (LGBM-only, lv=8/400 trees/lr 0.04/l2 5.0, `occ_clean`
+in the feature set, no family blend). The two measured Part 1 improvements it
+never received: the multi-family blend (D-064: exp-033 → exp-036, +0.00046
+Public / +0.00034 Private) and occupation removal (D-056). This experiment
+brings the prior up to the Part 1 state of the art:
+
+1. **Variant prior = exp-036 family structure:** 42% Per-LOB LGBM (exp-033
+   spec: lv=6, lr=0.05, l2=5.0, min_leaf=200) + 40% Per-LOB XGBoost (exp-035
+   spec, D-064: depth=3, lr=0.05, min_child_weight=200, reg_lambda=5.0) +
+   18% Pooled LGBM (exp-032 spec: lv=16, lr=0.04, l2=3.0) on the shared
+   feature set with `occ_clean` dropped (D-056). Weights FIXED a priori from
+   exp-036 (no re-selection — the D-070 lesson). Two-leg structure kept
+   (0.6 wp_rel / 0.4 no-wp). Fixed 400-tree budget matched to the record
+   prior (no eval set exists at the prior location — all developed rows are
+   training data). Pooled leg gets `line` as a categorical; XGBoost consumes
+   categorical codes as in the D-070 port. Everything downstream of the prior
+   is byte-identical to the record pipeline (same cached frames, offset layer,
+   fold calibration, 3-seed refit, PROBE_FORWARD).
+2. **Pre-registered gate (validation before any slot):** paired-seed (0/1/2)
+   5-fold OOF — variant arm minus record arm at identical folds/seeds — mean
+   paired delta **≥ +0.0002**, with the record arm reproducing the record OOF
+   **0.14074 at seed 0** (contract check, tol 1e-5; abort on drift).
+   **PASS → bring the evidence to the human and request ONE Part 2 slot**
+   (explicit per-submission confirmation still required). **FAIL → no CSV,
+   this axis closes**, another negative result for the write-up.
+3. **Honest caveats, recorded before the result:** (a) Part 1 ensemble gains
+   have vanished once before when ported (D-070's +0.00023 → D-079 −0.00020),
+   and the prior location is untested; (b) the variant bundles family blend +
+   `occ_clean` removal + LGBM-spec switch as one package — a fail would not
+   attribute the loss to any one component (an ablation is possible but the
+   axis closes per the plan); (c) if it passes, the gain is a real mean shift
+   on both boards (not a Public-fitted multiplier) — the right kind of
+   improvement under Private-final rules (D-079).
+
 
