@@ -11,6 +11,20 @@ is reproduced in R-01 Appendix C (`docs/references.md`).
 **Documentation date:** 2026-10-22; reconciled 2026-10-28 (D-071…D-080:
 counted-entry correction in §6, sandbox verdicts in §5)
 
+> **In plain terms.** This is the technical record for Part 1 — predicting 2025
+> claim costs on 2.4 million policies across motor, buildings and contents. The
+> short version: we cleaned the data (a corrupt exposure column, annualised
+> premiums, 604 duplicate claims), fixed a bug in our claim-development table
+> and **presented the corrected version even when the buggy one scored
+> slightly better** (a table known to be wrong cannot be defended), removed a
+> misleading "occupation" field, and found that deliberately small, shallow
+> models beat big ones. The leaderboard counted our `exp-027` entry
+> (0.12984 private, 41st of 54); our best model, `exp-036`, scores 0.13570
+> private but was submitted after the deadline and is therefore unranked — it
+> is attached as our Week 1 deliverable with that fact disclosed. The
+> accessible summary is `docs/final_writeup.md`; the sections below are the
+> detailed evidence.
+
 ---
 
 ## 1. Purpose, intended use, and users (ASOP 9 §5.1)

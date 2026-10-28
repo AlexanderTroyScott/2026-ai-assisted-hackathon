@@ -2716,4 +2716,36 @@ and the noise model, though not the decision:
    draws, seed redraws are pure noise on the final metric and only vehicle
    mean quality counts.
 
+## D-081 — Final deliverables: reader-friendly graded artifacts, Week 1 file = exp-036 (disclosed), video deferred
+**2026-10-28 · human-directed · presentation and deliverable decisions**
+
+Three human calls recorded so nothing downstream is ambiguous.
+
+1. **Presentation direction: "our documentation is way too technical, make it a
+   lot more reader-friendly."** Scope chosen by the human: the *graded
+   artifacts* get the plain-language treatment — a new `docs/final_writeup.md`
+   (≤5 pages, mirroring the form checklist: approach, major decisions, AI use,
+   assumptions, limitations, adaptation, guardrails), a story-first README
+   rewrite, and an "In plain terms" summary atop each technical report. The
+   deep reports (`actuarial_report.md`, `emerging_market_report.md`),
+   `decisions.md` and `experiment_log.md` keep their precision as the evidence
+   layer — the human explicitly declined a full rewrite (evidence-trail risk).
+   Justification from the rules: only the first 5 pages of the write-up and
+   the first 5 minutes of the video are graded, screened first by AI review
+   tools, by a panel that may include non-actuaries.
+2. **Deliverable mechanics (Part 2 "Submissions" page):** final submission via
+   Google Form `https://forms.gle/8TYHcYXYqdd6ue1X6`, due **2026-10-30 23:59:59
+   EDT (= 2026-10-31 03:59 UTC, same instant as the Part 2 board close)**.
+   Contents: team/member names, Week 1 and Week 2 prediction files, the video
+   demo, the concise write-up, and the version-controlled repository. **Video
+   deferred by the human** ("ignore the video for now, that is due later").
+3. **Week 1 prediction file = `exp-036` (human decision), with disclosure.**
+   The board-counted Part 1 entry is `exp-027` (best Public at the deadline →
+   0.12984 Private), but `exp-036` scores 0.13570 Private and was submitted
+   post-deadline to the still-open gate (unranked). Rationale: if the form
+   file is re-scored by the organisers, exp-036 gains ≈ +0.00586 on the Part 1
+   half of the 40% pricing axis; the eligibility risk is accepted knowingly.
+   **The post-deadline fact is disclosed in `final_writeup.md` §7**, not
+   buried. Week 2 file = `emerging-exp-025` (the counted entry).
+
 

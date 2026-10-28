@@ -25,6 +25,18 @@ Public/Private movements are uncorrelated to anti-correlated in our pairs — so
 seed redraws are EV-neutral and only the Private *mean* quality of the vehicle
 counts (§6–§7).
 
+> **In plain terms.** This report documents how we priced a brand-new insurance
+> market that had only two thin years of history. The short version: we learned
+> from the established market first, let the thin new book correct it gently,
+> and adjusted for 2025 price drift. That got us **4th of 33 teams**. Three
+> findings did the heavy lifting — the 2025 book is 76% new business and new
+> business was priced too cheaply relative to renewals; flood risk is entirely
+> unpriced in contents cover; and the claim data has a genuine heavy tail that
+> we refused to trim. We also measured the leaderboard's own randomness and
+> rejected several ideas (ensembles, fancy claim-development schemes) that
+> could not beat it. The deep sections below are the evidence; the accessible
+> summary is `docs/final_writeup.md`.
+
 ---
 
 ## 1. Inventory & Structural Comparison (`developed/` vs `emerging/`)

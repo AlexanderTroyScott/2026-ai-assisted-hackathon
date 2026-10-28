@@ -1,180 +1,139 @@
 # 2026 AI-Assisted Actuarial Hackathon — Pricing Across Markets
 
-Solution write-up for the IAA 2026 AI-Assisted Hackathon (Parts 1 and 2): predicting
-expected ultimate claim cost per policy-period row across a developed market and a
-newly entered emerging market. This README is the front door for the judging panel —
-the detailed evidence lives in `docs/`, the executable solution in `src/`, `scripts/`
-and `tests/`.
+We built insurance pricing models for two markets — a mature one with four years of
+history, and a brand-new one with only two thin years — to predict the claim cost of
+every 2025 policy. Our emerging-market model finished **4th of 33 teams**.
 
-**Metric:** Tweedie D², power = 1.5 (higher is better) ·
-**Target:** expected ultimate claim cost per 2025 row — total, not annualised — net of
-policy excess and recoveries, including IBNR, excluding repudiated claims, allocated by
-loss date within the policy period.
+This README is the front door. If you read one document, read
+**`docs/final_writeup.md`** (the concise five-page write-up). The detailed evidence
+lives in `docs/`; the runnable solution in `src/`, `scripts/` and `tests/`.
 
-## Results snapshot (2026-10-28)
+*In plain terms: for each policy we predict how much the insurer will pay in claims —
+big fires and all — and we score with Tweedie D², where 0 means "just predict one flat
+average for everyone" and 1 means "perfect".*
 
-| Competition | Submission of record | Score | Standing |
+## Results at a glance (2026-10-28)
+
+| Competition | Our entry | Score | Standing |
 |---|---|---|---|
-| **Part 2** — emerging market (live; closes 2026-10-31 03:59 UTC) | `emerging-exp-025` | **0.16994** Public | **4th of 33 teams** — 0.00178 off 3rd (HS 0.17303, SnorlaxCode 0.17192, Actuarial NOOB 0.17172, us 0.16994, ManuelRodríguez 0.16914) |
-| **Part 1** — developed market (closed 2026-10-23 16:00; final ranking on Private) | `exp-027` (best Public at the deadline) | 0.12984 Private | 41st of 54 — our best model `exp-036` (0.12753 Pub / 0.13570 Priv) was built *after* the deadline and is not ranked |
+| **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-025` | **0.16994** | **4th of 33** — within 0.0018 of the podium |
+| **Part 1** — developed market (closed 2026-10-23) | `exp-027` | 0.12984 (hidden board) | 41st of 54 — our best model `exp-036` (0.13570) came just after the deadline and is unranked (disclosed in §2) |
 
-Part 2 is the live competition and the primary workstream. Part 1's scoring gate
-remained open after its deadline, which made it a fully labelled sandbox for
-validating Part 2 ideas — the source of several measured accept/reject verdicts below.
+One nice coincidence of the rules: Part 1's scoring gate stayed open after its
+deadline and reveals both scores — so it became a free, fully labelled **laboratory**
+for testing Part 2 ideas before spending Part 2 submissions. Several ideas died there
+cheaply (§3).
 
 ---
 
-## 1. The problem
+## 1. The challenge
 
-Two markets, one modelling question:
+- **Part 1 (developed market):** 2.4 million policy rows over 2021–2024 — motor,
+  buildings and contents. Predict 2025 claim costs for 626,639 policies.
+- **Part 2 (emerging market):** a new country with two thin years (109,296 rows,
+  ~9,100 claims) — and a 2025 test book nearly four times a normal year, because the
+  insurer took over a broker portfolio. **76% of it is business the insurer has never
+  seen before.**
 
-- **Part 1 (`developed/`)**: four accident years (2021–2024, 2.4M rows) of private
-  motor, home buildings and home contents business; price the 2025 book (626,639 rows).
-- **Part 2 (`emerging/`)**: a new market with two thin years (2023–2024, 109,296 rows,
-  ~9,100 matched claims) and a 2025 test book of 209,063 rows that is **76% new
-  business** — a broker portfolio takeover where most test policies have zero insurer
-  claim history and start on 2025-01-02..2025-01-15.
+Two traps were built into the data. First, the two markets' policy and claim IDs
+**collide** — joining them by ID is forbidden and would be silently wrong; knowledge
+can only travel through *shared customer characteristics*. Second, claims counted at
+31 December 2024 are unfinished: a claim reported in December is still growing, so
+every training label has to be **developed to its final value** before we can learn
+from it.
 
-The Part 1 data cannot be joined to the Part 2 data by policy or claim ID — **IDs
-collide across the two datasets**. All transfer happens in *feature space*: developed
-market models are fitted on harmonised features and evaluated on emerging rows to form
-a prior. This rule is enforced in code and in the test suite.
+## 2. What we built
 
-The actuarial content: claim counts are sparse and heavy-tailed (Tweedie variance power
-1.5), the 2025 book is dominated by transferred new business with no experience, and
-claims valued at 31 Dec 2024 require development to ultimate (IBNR/IBNER) before the
-target is constructed.
+**Part 2 — learn from the old market, let the new one correct it.** With only ~9,100
+claims, a model trained from scratch memorises noise. So the model starts from a
+*prior*: strong models trained on the 2.4M-row developed market, recalibrated to the
+new market's cost level. A deliberately tiny correction layer (20–35 shallow trees per
+product) then learns only the *differences* the prior cannot know. Finally, a 2025
+adjustment — measured on the live board, not assumed — accounts for cost drift and for
+the fact that new business and renewals behave differently.
 
-## 2. Solution architecture
-
-### Part 2 — transfer-learned offset boosting with a measured 2025 forward index
-(`src/emerging.py`, `scripts/run_emerging.py` — submission `emerging-exp-025`)
-
-1. **Developed-market transfer prior.** Models fitted on `developed/` predict emerging
-   rates in feature space; the prior blends a written-premium-weighted and an unweighted
-   version (0.6 / 0.4) and is recalibrated to emerging training totals.
-2. **Ultra-shallow offset layer, per LOB.** A LightGBM Tweedie model (p = 1.5) is fitted
-   on emerging data with `log(prior)` as `init_score` offset, correcting the transfer
-   prior for emerging-specific structure. Deliberately tiny — 35/30/20 trees (motor /
-   buildings / contents), learning rate 0.02, `num_leaves` 4, `min_data_in_leaf` 1200,
-   `lambda_l2` 100 — so it adapts the prior without overwriting it. The offset layer
-   stands alone (blend weights sweep up to 1.0 on the offset; D-067).
-3. **2025 forward index applied at scoring.** A per line × cohort (new business vs
-   renewal) level/trend multiplier captures the 2025 book's shift: motor nb 1.322 /
-   ren 1.103, buildings & contents nb 1.120 / ren 0.817 (exposure-weighted total ×1.05
-   held at 2025 shares). Every factor is measured on the board via response-curve
-   brackets (D-068/069/076/077), never assumed.
-4. **Refit on all training rows, predictions averaged over 3 seeds.**
-
-5-fold GroupKFold (by customer) D² ladder — the transfer prior is the backbone, the
-shallow offset adds the emerging-specific signal:
+The measured quality ladder (cross-validated, higher is better):
 
 | Model | OOF D² |
 |---|---:|
-| Per-LOB constant rate | +0.0804 |
-| Per-LOB premium × loss ratio | +0.1097 |
-| Emerging-only LightGBM (no transfer) | +0.1073 |
-| Transfer prior alone (no adaptation) | +0.1386 |
-| **Transfer prior + offset adaptation (final)** | **+0.1407** |
+| One flat rate per product | +0.0804 |
+| Premium × loss ratio | +0.1097 |
+| Emerging data alone (no transfer) | +0.1073 |
+| Transfer prior alone | +0.1386 |
+| **Transfer prior + correction layer (final)** | **+0.1407** |
 
-### Part 1 — multi-family rate blend
-(`src/features.py`, `src/glm.py`, `scripts/run_experiment.py`; best model `exp-036`)
+**Part 1 — one careful model per product.** Rate models (claim cost per unit of
+cover) blending three model families (LightGBM and XGBoost), on cleaned data with
+properly developed labels.
 
-Rate models (claim cost per unit of exposure, with premium, experience, weather,
-relativity, address and customer feature families) across three model families —
-per-LOB LightGBM, pooled LightGBM, per-LOB XGBoost — blended 42 / 18 / 40
-(`exp-036`, honest OOF D² 0.1408, 0.12753 Pub / 0.13570 Priv). Labels are developed to
-ultimate with line-level LDFs, with open/closed split development tested (D-061).
+**One disclosure.** Part 1's leaderboard counted our `exp-027` entry — the best we had
+by the deadline (0.12984 on the hidden board, 41st of 54). In the hours after the
+deadline we built `exp-036`, a family blend that scores **0.13570** on the hidden
+board. The gate still scored it, so it is fully measured, but it is unranked. We
+attach `exp-036` as our Week 1 prediction file with that fact stated openly rather
+than buried.
 
-*The entry that actually counts for Part 1 ranking* is `exp-027` (pooled cost-target
-LightGBM, occupation dropped, D-056) — our best Public submission as of the deadline
-(0.12436 Pub → **0.12984 Private** on the final board). The `exp-033`→`exp-036` line
-of work landed in the hours after the deadline; the gate still scored it, so it is
-fully measured, but it is not ranked. Deadline discipline is now part of the protocol.
+## 3. What moved the needle — and what didn't
 
-## 3. What actually moved the needle
+The Part 2 climb (public score): **0.1630** transfer baseline → **0.1684** the 2025
+forward adjustment → **0.1688** model restraint → **0.1699** charging new business and
+renewals differently (the 2025 book is underpriced on new business — measured twice,
+in motor and in property, independently).
 
-Measured on the board unless noted. Full record: `docs/experiment_log.md` (65 logged
-submissions), judgement calls and evidence: `docs/decisions.md` (D-001…D-080).
+Equally important, the ideas we **killed with evidence** — each one logged:
 
-**Part 2 record progression** (Public):
+- **Ensembles** — a winning idea in Part 1, tested twice in Part 2, lost both times
+  (the second test was pre-registered and its rule stopped the submission before it
+  cost us anything).
+- **Fancy claim-development schemes** — two alternatives to our simple development
+  factors were tested on the Part 1 laboratory. One traded hidden-board score for
+  public-board score; the other lost on both. Simple won.
+- **Occupation** — looked predictive, but it was mostly driver age in disguise. Gone.
+- **Aggressive tuning** — won locally, lost on the board. Restraint transferred;
+  cleverness didn't.
 
-| Step | Submission | Score | Lever |
-|---|---|---:|---|
-| Base | `emerging-exp-002` | 0.16297 | transfer-prior offset pipeline |
-| + level/trend response curve | `emerging-exp-019` | 0.16836 | 2025 forward index, pipeline-native (D-068/069) |
-| + shrinkage-pair tuning | `emerging-exp-024` | 0.16879 | `num_leaves` 4 / `min_leaf` 1200, paired-seed confirmed (D-075) |
-| **+ property cohort ridge** | **`emerging-exp-025`** | **0.16994** | new business runs hotter than renewals in property (D-076) |
+## 4. Keeping it honest
 
-- **The 2025 forward index is the largest single lever** (base → record, +0.0070
-  combined with tuning): the transferred book's new-business share and the 2025 level
-  shift dominate the error, and correcting for them is worth more than any model
-  capacity change.
-- **New business runs hotter than renewals in both motor and property** — two
-  independently measured ridges (motor 1.322/1.103; property 1.120/0.817 at constant
-  total). The property ridge alone is +0.00115, and its quadratic top is flat
-  between the two bracket arms, so the axis is closed at the measured point.
-- **Negative results are first-class findings.** Each was tested, logged and rejected
-  on evidence: multi-family ensemble port (+0.00023 OOF, below the noise gate, D-070);
-  Horvitz–Thompson development labels (trades Private for Public, mean Private
-  −0.00021 in a 2×2 seed design, D-072); buildings/contents split (flat, D-073);
-  motor per-peril decomposition (−0.00036 OOF; sparse perils can't carry standalone
-  models, D-074); single-knob hyperparameter moves (flat, D-075).
+- **We measured the noise before claiming signal.** Re-running the same model with a
+  different random seed moves the score by ~0.0013 (hidden board: ~0.002). Any claim
+  smaller than that needs more evidence — and we say so even when it weakens our story.
+- **Rules before results.** Each experiment declared its pass/fail bar in advance
+  ("the blend must beat the baseline by 0.0002 across three matched seeds"), which is
+  why a good-looking ensemble stayed unsubmitted.
+- **89 automated guardrail tests** run before every commit: leakage rules, label
+  arithmetic, calibration invariants, submission format checks.
+- **Reproducibility.** One command regenerates the Part 2 submission of record
+  byte-for-byte (differences below 1e-15) — the leaderboard number is not an artefact.
+- **One submission, one explained change**, uploaded only through a validating script,
+  with an explicit human go-ahead for Part 2 every time. A one-off double upload
+  (two parallel calls raced) is logged honestly and became a permanent serial-submission
+  rule.
 
-## 4. Validation, guardrails and trust
+## 5. How AI was used
 
-- **Pre-registered adoption gate:** a change is submitted only if honest out-of-fold D²
-  improves by more than +0.0003 (D-025), and effects near the gate get paired-seed
-  confirmation before adoption. Bracket probes use two arms at constant total plus a
-  quadratic vertex, stopping when the vertex gain falls below probe noise.
-- **OOF is a faithful oracle, and that is measured, not assumed:** the exp-024 board
-  gain equalled its mean OOF gain to four decimals. Board seed noise ≈ 0.0012 Public
-  (2×2 seed replication, D-072) vs local OOF seed σ 0.00011 — so the score moved off
-  model changes, not luck.
-- **89 guardrail tests** (`tests/`, run before every commit): the no-ID-join rule,
-  per-peril labels summing to each row's `y_ult`, held cohort totals, forward-index
-  ridge assertions, label development arithmetic, feature and submission-format checks.
-- **Reproducibility:** the record submission is regenerated end-to-end by the pipeline
-  to float precision (max relative difference 8e-16) — the leaderboard number is not a
-  post-hoc artefact:
-  `python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200`.
-- **Submission guardrails** (`scripts/kaggle_submit.py`, the only upload path):
-  validates schema, row count (209,063), positivity and finiteness before anything is
-  uploaded; refuses to submit blind when quota is unavailable; records sha256 for every
-  CSV; requires explicit human confirmation for Part 2 submissions and quotes the
-  authorisation in the log; one primary change per submission; submissions are issued
-  **serially** (a parallel pair once produced a duplicate upload — logged honestly, and
-  the rule was added to `docs/submission_protocol.md` §4).
+The AI agent did the hands-on analytical work — exploring data, writing the pipelines,
+running experiments, computing diagnostics, drafting documentation — inside a
+governance frame built by the human: authorisation gates on every submission, every
+number recomputed from source data before it could appear in a report, judgement calls
+flagged and escalated, negative results kept on the record. The full interaction trail
+(including where AI was wrong and how it was caught) is in `docs/ai_workflow_log.md`
+and `docs/decisions.md`.
 
-## 5. Effective use of AI
+## 6. Where to find things
 
-The workflow is an AI-driven measurement loop with human authorisation gates: the agent
-designs and runs experiments, computes honest OOF evidence, proposes adopt/reject
-verdicts, and may only upload on explicit human confirmation (standing authorisation
-for the sandbox market only). Every claim in the logs is tied to a measurement; every
-judgement call is flagged as such. The full interaction trail — including negative
-results, the duplicate-upload incident and its process fix — is in
-`docs/ai_workflow_log.md` and the decision log.
-
-## 6. Where things live
-
-| Path | Purpose |
+| Path | What it is |
 |---|---|
-| `docs/actuarial_report.md` | Part 1 actuarial report (ASOP 9 documentation standard) |
-| `docs/emerging_market_report.md` | Part 2 market analysis and adaptation methodology |
-| `docs/data_findings.md` | Authoritative empirical findings (structural comparison, feature harmonisation) |
-| `docs/decisions.md` | Decision log D-001…D-080 — judgement calls flagged, nothing unverified |
-| `docs/experiment_log.md` | Measurement record — every submission, score, verdict, authorisation, sha256 |
-| `docs/submission_protocol.md` | Format/metric rules, cadence policy, serial-submission rule |
-| `docs/ai_workflow_log.md` | AI interaction evidence trail for the judging panel |
-| `docs/references.md` | Actuarial bibliography (R-01…) and method candidates (C-1…) |
-| `src/emerging.py` | Part 2: market frames, transfer priors, forward index |
-| `scripts/run_emerging.py` | Part 2 end-to-end pipeline → submission CSV |
-| `scripts/run_emerging_tune.py`, `run_emerging_peril.py` | D-075 tuning sweep, D-074 per-peril trial |
-| `scripts/kaggle_submit.py` | Only submission path (validate → upload → log) |
+| `docs/final_writeup.md` | **The concise five-page write-up — start here** |
+| `docs/emerging_market_report.md` | Part 2 deep report (market analysis, adaptation method) |
+| `docs/actuarial_report.md` | Part 1 deep report (ASOP 9 documentation standard) |
+| `docs/decisions.md` | Every judgement call, dated (D-001…D-080) |
+| `docs/experiment_log.md` | Every experiment and submission, with scores and file hashes |
+| `docs/ai_workflow_log.md` | AI interaction evidence trail |
+| `docs/submission_protocol.md` | Submission rules and safety rails |
+| `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
 | `tests/` | 89 guardrail tests (`python3 -m pytest tests/ -q`) |
 
-## 7. Reproducing the submission of record
+Reproducing the Part 2 submission of record:
 
 ```bash
 python3 -m pytest tests/ -q            # 89 guardrails
@@ -183,11 +142,7 @@ python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 #    byte-equivalent predictions to the 0.16994 submission (max rel diff 8e-16)
 ```
 
-## 8. Mapping to the judging axes
-
-| Axis | Where the evidence is |
-|---|---|
-| Pricing performance & adaptation (40%) | §2–§3 — transfer-prior + offset adaptation, measured forward index, 0.16994 (4th of 33) |
-| Effective use of AI (25%) | §5, `docs/ai_workflow_log.md`, `docs/decisions.md` |
-| Trust, validation & guardrails (20%) | §4 — pre-registered gates, noise measurement, 89 tests, exact reproducibility |
-| Communication & documentation (15%) | this README, `docs/actuarial_report.md`, `docs/emerging_market_report.md`, `docs/experiment_log.md` |
+**For the judging panel** — where each axis is evidenced: pricing performance &
+adaptation → §2–§3 and `docs/emerging_market_report.md`; effective use of AI → §5 and
+`docs/ai_workflow_log.md`; trust, validation & guardrails → §4 and `tests/`;
+communication & documentation → this README and `docs/final_writeup.md`.
