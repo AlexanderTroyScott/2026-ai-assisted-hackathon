@@ -101,8 +101,13 @@ closed) and adopted pipeline-natively with exact reproduction. exp-024
 negative: multi-family ensemble (D-070), HT-development port (D-072),
 buildings/contents split (D-073), motor per-peril (D-074), single-knob tuning
 (D-075 singles). Measured board seed noise at the exp-033 recipe ≈ 0.0012
-Public (local OOF seed σ only 0.00011). Part 1 best remains `exp-036` at
-0.12753 Public / 0.13570 Private (row 31). **The joint (total × split)
+Public (local OOF seed σ only 0.00011). Part 1 best model remains `exp-036` at
+0.12753 Public / 0.13570 Private (row 31). **Correction (2026-10-28, leaderboard
+inspection): the final Part 1 board ranks on the Private split and shows our
+entry at 0.12984 = `exp-027`'s Private score — `exp-027` was our best Public
+submission as of the 2026-10-23 16:00 deadline. The `exp-033`→`exp-036` work
+was submitted after the deadline (the scoring gate stayed open) and is measured
+but not ranked. Ranked entry: `exp-027`, 41st of 54.** **The joint (total × split)
 optimum is settled (D-077, rows 64–65): ×1.05 confirmed at the ridge,
 exp-025 stands — the level axis (D-068 → D-073 → D-076 → D-077) is fully
 mapped.** Quota 2026-10-28: Part 2 1 of 10 slots remains (3 on the D-076

@@ -2,12 +2,14 @@
 
 **Status:** Verified empirically from `developed/` and `emerging/` Parquet tables (2026-10-23).
 **Executable pipeline:** `src/emerging.py`, `scripts/run_emerging.py`, `tests/test_emerging.py`.
-**Leaderboard:** best is `emerging-exp-019` at **0.16836**
-Public on `iaa-ai-assisted-hackathon-2026-part-2` (D-069: 2025 forward index
-built into the pipeline — per-line/cohort trend + transfer-book reconciliation
-at scoring; `emerging-exp-016`/`017` post-hoc recipe scored 0.16833,
-`emerging-exp-002` base 0.16297, rank 8 of 20 teams at 2026-10-26; top
-0.17303). Consistent with Part 1
+**Leaderboard:** best is `emerging-exp-025` at **0.16994**
+Public on `iaa-ai-assisted-hackathon-2026-part-2` (rank 4 of 33 at 2026-10-28;
+D-076: property NB/ren cohort ridge on top of the D-075 tuned offset layer.
+Record chain: `emerging-exp-002` base 0.16297 → `emerging-exp-019` 0.16836
+(D-069: 2025 forward index built into the pipeline — per-line/cohort trend +
+transfer-book reconciliation at scoring; `emerging-exp-016`/`017` post-hoc
+recipe scored 0.16833) → `emerging-exp-024` 0.16879 (D-075 tuning) →
+`emerging-exp-025` 0.16994). Consistent with Part 1
 experience, the leaderboard score sits above the 5-Fold CV estimate (+0.14045)
 — CV folds train on 4/5 of two thin years, so the honest CV is the conservative
 number.
