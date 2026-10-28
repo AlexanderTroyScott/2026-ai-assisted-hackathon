@@ -2553,4 +2553,49 @@ motor untouched):
    consumed an extra daily slot (window closed at 9/10 used). Rule added to
    `docs/submission_protocol.md` §4: **submit serially**.
 
+## D-078 — Emerging-market outlier review: one real heavy tail, zero corruptions
+**2026-10-28 · measured on `emerging/` · no submissions · accepted (documented, no model change)**
+
+D-043 reviewed outliers in `developed/`; D-066 recorded the emerging *field*
+defects (`exposure > 1.5`, `sum_insured > 1e7` artefact, annualised premium).
+The emerging **claim-severity** tail — the part that actually drives a
+9,258-claim book — had no review. Recomputed from `emerging/claims.parquet`
+and the cached training frames:
+
+1. **Integrity is clean — zero violations.** No negative amounts; `paid ≤
+   incurred` everywhere; closed claims exactly `paid == incurred`; all 120
+   repudiated claims carry zero amounts (same as Part 1); no `report_date <
+   loss_date`; nothing beyond the 2024-12-31 valuation; max report lag 653
+   days. Nothing in the claims table is corrupt.
+2. **Real severity concentration, genuinely heavy-tailed:** buildings top-10
+   claims = **25.6%** of line cost (all fire total losses, max 361k vs p99
+   138.5k, 2.6× p99); motor top-10 = 5.7% (one open bodily_injury at 155.7k
+   incurred / 19.2k paid — **8.4× motor p99**); contents top-10 = 12.7% (max
+   2.5× p99). Row-level: the top 10 training rows carry 8.3% of total `y_ult`.
+3. **The giants are economics, not errors.** Only 4 claims exceed their
+   policy `sum_insured`, all marginally (fire losses at the SI limit ±0.05%,
+   one flood +7.4% — costs above cover); the top 6 buildings rows are single
+   fire claims at ≈ their `sum_insured`. **None of the 25 largest claims sits
+   on a `si_artefact` row** — the corrupt-SI population carries no claim
+   signal, replicating D-043's Part 1 result.
+4. **Development leverage (the one real caution):** open-claim incurred is
+   itself concentrated — contents top-3 open claims = **44.5%** of open
+   contents incurred (59 open claims), buildings 24.3% (157 open), motor 8.3%.
+   The line-level `EM_LDF` factors applied to open claims therefore rest on a
+   handful of claims in property, especially contents — residual label
+   uncertainty that no development method can remove from this data (same
+   sparsity that closed D-072/D-074).
+5. **Metric concentration:** with the dev prior as μ, the top 10 rows carry
+   4.9% of total Tweedie deviance (buildings 13.9%) and the 50 rows above
+   y_ult 50k carry **10.1%**. Part of the measured board noise is therefore
+   irreducible claim randomness in the evaluation split — no model predicts an
+   individual fire; only the fire rate level.
+
+**Verdict: no capping, winsorisation or row deletion.** These are real losses;
+trees are robust to leverage in the feature space, and capping labels would
+bias the total-cost calibration (Σpred ≈ Σy is a pipeline invariant). The tail
+is documented as uncertainty instead of being engineered away. Guardrails
+added to `tests/test_emerging.py`: claims-table integrity invariants and the
+`si_artefact`-orthogonality of the top claims (mirroring D-043's guardrails).
+
 

@@ -46,6 +46,12 @@ number.
    - **Motor `driver_age_band = 25-34` is underpriced:** Priced at `462 CU` (same as `35-49` at `456 CU` and `50-64` at `459 CU`), but carries `421.6 CU` observed claim rate (LR **`0.912`** vs `0.60–0.62` for `35-64`).
    - **Motor `third_party_fire_theft` is overpriced:** Priced at `764.7 CU` (above `comprehensive` at `596.6 CU`), but has less than half the claim frequency (`0.098` vs `0.204`, LR `0.438`).
    - **Motor `gender = M` is underpriced:** Priced only +3% above `F` (`617` vs `599 CU`), but carries +34% higher claim cost (`467.4` vs `347.7 CU`, LR `0.757` vs `0.580`).
+3. **Claim-severity outlier review (D-078, 2026-10-28): real heavy tail, zero corruptions.**
+   - **Integrity clean:** no negative amounts, `paid ≤ incurred` everywhere, closed claims exactly `paid == incurred`, all 120 repudiated claims carry zero amounts, no impossible dates (max report lag 653 days, nothing beyond the 2024-12-31 valuation).
+   - **Concentration is genuine severity, not error:** buildings top-10 claims = **25.6%** of line cost (all fire total losses; max 361k vs p99 138.5k), motor top-10 = 5.7% (largest: open bodily_injury 155.7k incurred / 19.2k paid, 8.4× motor p99), contents top-10 = 12.7%. The top 10 training rows carry 8.3% of total `y_ult`.
+   - **The giants are economics:** only 4 claims exceed their policy `sum_insured`, all marginally (fire at the SI limit ±0.05%, one flood +7.4%); **none of the 25 largest claims sits on a `si_artefact` row** — the corrupt-SI population carries no claim signal (same as `developed/`, D-043).
+   - **Caution for development:** open-claim incurred is concentrated — contents top-3 open claims = 44.5% of open contents incurred (59 open claims), buildings 24.3%, motor 8.3% — so the line-level `EM_LDF` factors rest on a handful of property claims. This is residual label uncertainty, not fixable from this data (the sparsity behind D-072/D-074).
+   - **Metric:** the top 10 rows carry 4.9% of total Tweedie deviance (buildings 13.9%); the 50 rows with `y_ult > 50k` carry 10.1% — part of board noise is irreducible claim randomness. **No capping/winsorisation** (trees are robust; capping would bias Σpred ≈ Σy); guardrail tests lock the integrity invariants.
 
 ---
 

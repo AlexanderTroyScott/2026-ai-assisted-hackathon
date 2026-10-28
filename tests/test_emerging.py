@@ -148,3 +148,47 @@ def test_motor_per_peril_labels_sum_to_y_ult(emerging_frames):
     assert np.allclose(y_p.sum(axis=1).to_numpy(), y_ult, rtol=0, atol=1e-6)
     # non-trivial partition: every peril carries some developed cost
     assert (y_p.sum(axis=0) > 0).all()
+
+
+def test_emerging_claims_table_integrity():
+    """D-078 guardrail: the emerging claims table has no corrupt rows.
+
+    Outlier review found zero violations; lock the invariants in so a data
+    refresh cannot silently introduce negatives, paid > incurred, repudiated
+    claims with amounts, impossible dates, or duplicate claim IDs.
+    """
+    cl = pd.read_parquet(EM_DIR / "claims.parquet")
+    assert cl.claim_id.is_unique
+    amounts = cl[["paid_to_date", "incurred_to_date", "recoveries"]]
+    assert (amounts >= 0).all().all()
+    assert (cl.paid_to_date <= cl.incurred_to_date + 1e-9).all()
+    rep = cl[cl.status == "repudiated"]
+    assert (rep[["paid_to_date", "incurred_to_date", "recoveries"]] == 0).all().all()
+    closed = cl[cl.status == "closed"]
+    assert np.allclose(closed.paid_to_date, closed.incurred_to_date)
+    loss = pd.to_datetime(cl.loss_date)
+    report = pd.to_datetime(cl.report_date)
+    assert (report >= loss).all()
+    assert (report <= pd.Timestamp("2024-12-31")).all()
+    assert (loss <= pd.Timestamp("2024-12-31")).all()
+
+
+def test_emerging_top_claims_not_on_si_artefact_rows(emerging_frames):
+    """D-078 guardrail: the corrupt sum_insured population carries no claim signal.
+
+    Replicates the D-043 developed-market result on emerging/: none of the 25
+    largest claims (net of recoveries) attaches to a row flagged si_artefact.
+    If a data refresh breaks this, the artefact handling must be revisited.
+    """
+    tr, _ = emerging_frames
+    cl = pd.read_parquet(EM_DIR / "claims.parquet").copy()
+    cl["net"] = cl.incurred_to_date - cl.recoveries
+    pol = tr[["row_id", "policy_id", "ps", "pe", "si_artefact"]]
+    m = cl.merge(pol, on="policy_id", how="inner")
+    m_loss = pd.to_datetime(m.loss_date)
+    ps = pd.to_datetime(m.ps)
+    pe = pd.to_datetime(m.pe)
+    m = m[(m_loss >= ps) & (m_loss <= pe + np.timedelta64(1, "D"))]
+    assert len(m) > 9_000  # the bulk of claims attach to a train row
+    top = m.nlargest(25, "net")
+    assert not top.si_artefact.fillna(0).astype(bool).any()
