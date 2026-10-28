@@ -81,25 +81,30 @@ negative results are as valuable as positive ones.
 | 57 | 2026-10-28 01:13 UTC | emerging-exp-022 | D-069 open item b: buildings/contents split bracket arm B (buildings 0.98 / contents 1.106, property total x1.05 held) | primary change: property forward index split by LOB at constant exposure-weighted total; post-hoc on exp-019 (multipliers verified cell-wise); arm B = contents-heavy; fresh window approved by human 2026-10-28 | 0.1405 | 0.16796 | −0.00040 vs exp-019 — contents-heavy side declines | clean | `7d0832dcaef0` |
 | 58 | 2026-10-28 01:13 UTC | emerging-exp-021 | D-069 open item b: buildings/contents split bracket arm A (buildings 1.12 / contents 0.994, property total x1.05 held) | primary change: property forward index split by LOB at constant exposure-weighted total; post-hoc on exp-019 (multipliers verified cell-wise); arm A = buildings-heavy; fresh window approved by human 2026-10-28 | 0.1405 | 0.16829 | −0.00007 vs exp-019 — **bracket closed: both arms lose to uniform; quadratic vertex at b≈1.075/c≈1.030 gains +0.00003 (below noise) → uniform ×1.05 confirmed, no refinement shot** | clean | `ef2334b6917f` |
 | 59 | 2026-10-28 01:40 UTC | emerging-peril | D-074 candidate: motor per-peril frequency/severity decomposition — 5 perils, each an ultra-shallow offset LGBM (25/lv3/leaf200/l2-100) on labels partitioning y_ult pro-rata (Σ per-peril = y_ult asserted) | pre-registered gate: OOF gain > +0.0003 over 0.14045 → candidate CSV; like-for-like single-model baseline scored in the same 5 folds | 0.14009 | - | **−0.00036 vs baseline (motor 0.07028 vs 0.07108) — gate failed, no CSV written, no slot spent**; sparse perils (theft 390 / BI 450 claims) cannot carry standalone models; single motor model retained (D-074) | clean | - |
+| 60 | 2026-10-28 02:14 UTC | emerging-exp-024 | D-075 combo_top2: offset layer num_leaves 3->4, min_data_in_leaf 600->1200 (paired-seed confirmed +0.00043 OOF, 3/3 seeds) | primary change: offset-layer hyperparameters only (everything else byte-identical to exp-019). One-at-a-time sweep of the never-tuned knobs; combo_top2 paired deltas vs incumbent at identical seeds +0.00029/+0.00046/+0.00053. Human authorization for this submission: 'if you think further tuning could benefit then test and submit that before going forward' (2026-10-28) | 0.14074 | **0.16879** | **+0.00043 vs exp-019 — new record**; board gain equals the mean OOF gain exactly (local OOF is a faithful oracle); rank 4 of 26, gap to 3rd narrowed to 0.00035 | clean | `d3b1a038e095` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
 **Status at 2026-10-28 (supersedes the note above):** **Part 2 best is
-`emerging-exp-019` (D-069, row 51) at 0.16836 Public** (rank 4 of 26). The
-multi-family ensemble port (D-070, row 53) measured +0.00023 in OOF — below
-the noise threshold, not submitted. **Sandbox campaign (D-072, rows 54–56)
-closed the HT-development question: it trades Private for Public
-(+0.00063/−0.00021 mean) and the Part 2 label port is rejected.** The
-buildings/contents split bracket (D-073, rows 57–58) closed the property-split
-question: both arms lose to uniform ×1.05, vertex +0.00003 — no split.
-Measured board seed noise at the exp-033 recipe ≈ 0.0012 Public — single-seed
-close comparisons are uninformative. Part 1 best remains `exp-036` at 0.12753
-Public / 0.13570 Private (row 31). Quota 2026-10-28: Part 2 8 of 10 slots
-remain (fresh window spent with human approval on the bracket); Part 1 100
-slots (standing authorization). **Motor per-peril decomposition (D-074, row 59)
-measured −0.00036 in OOF (0.14045→0.14009): gate failed, not submitted, single
-motor offset model retained.**
+`emerging-exp-024` (D-075, row 60) at 0.16879 Public** (rank 4 of 26, gap to
+3rd 0.00035) — the shrinkage-pair tuning `num_leaves=4 / min_leaf=1200`,
+paired-seed confirmed (+0.00043 mean OOF) and board-confirmed (+0.00043).
+exp-019 (D-069, row 51, 0.16836) is the prior record. The multi-family
+ensemble port (D-070, row 53) measured +0.00023 in OOF — below the noise
+threshold, not submitted. **Sandbox campaign (D-072, rows 54–56) closed the
+HT-development question: it trades Private for Public (+0.00063/−0.00021
+mean) and the Part 2 label port is rejected.** The buildings/contents split
+bracket (D-073, rows 57–58) closed the property-split question: both arms
+lose to uniform ×1.05, vertex +0.00003 — no split. Motor per-peril
+decomposition (D-074, row 59) measured −0.00036 in OOF: gate failed, not
+submitted, single motor model retained. The hyperparameter residual sweep
+(D-075, row 60) closed the tuning question: single knobs flat, one real
+shrinkage-pair interaction captured. Measured board seed noise at the exp-033
+recipe ≈ 0.0012 Public (local OOF seed σ is only 0.00011 — the board noise is
+mostly split composition). Part 1 best remains `exp-036` at 0.12753 Public /
+0.13570 Private (row 31). Quota 2026-10-28: Part 2 7 of 10 slots remain;
+Part 1 100 slots (standing authorization).
 
 ### Metric validation — local D² is a reliable proxy
 

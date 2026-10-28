@@ -2434,4 +2434,50 @@ registered gate: OOF gain > +0.0003 over 0.14045 → emit candidate CSV.
    `tests/test_emerging.py::test_motor_per_peril_labels_sum_to_y_ult`; all 87
    tests pass.
 
+## D-075 — Hyperparameter residual sweep: one real shrinkage-pair interaction, adopted and board-confirmed
+**2026-10-28 · measured locally + Part 2 board · emerging-exp-024 (row 60) · accepted**
+
+D-067 concluded the remaining gap was "not reachable by tuning this
+architecture" after sweeping blend weights, capacity, feature sets and prior
+blends. But the shrinkage trio (`num_leaves`, `min_data_in_leaf`,
+`lambda_l2`), the learning-rate trajectory, feature/bagging fractions and OOF
+seed sensitivity had never been individually varied. `scripts/run_emerging_tune.py`
+closes the question: one-at-a-time around the incumbent, same folds and offset
+machinery (incumbent must reproduce 0.14045 — it did exactly).
+
+| config | total OOF D² | Δ |
+|---|---|---|
+| incumbent (lv 3, leaf 600, l2 100) | 0.14045 | — |
+| min_leaf 300 / 1200 | 0.13999 / 0.14056 | −0.00046 / +0.00011 |
+| l2 30 / 300 | 0.14043 / 0.14044 | ~0 |
+| lv 2 / 4 | 0.13993 / 0.14055 | −0.00052 / +0.00010 |
+| lr 0.01×2n / 0.04×0.5n | 0.14035 / 0.14003 | −0.00010 / −0.00042 |
+| ff/bag 1.0 | 0.14051 | +0.00006 |
+| **combo_top2 (lv 4, leaf 1200)** | **0.14074** | **+0.00029** |
+| combo_all3 (+ ff 1.0) | 0.14048 | +0.00003 |
+| incumbent seed 1 | 0.14034 | local seed σ = 0.00011 |
+
+1. **Single knobs are flat** (every one ≤ +0.00011, below the D-025 noise
+   threshold) — D-067's conclusion holds one-dimensionally. The only candidate
+   is the *combination* lv=4 + min_leaf=1200 (+0.00029, ≈ additive in its
+   parts: extra split capacity needs extra leaf shrinkage).
+2. **Winner's-curse protocol decided the boundary case.** seed-0 missed the
+   +0.0003 gate by 0.00001; the pre-registered second-seed confirmation gave
+   paired deltas vs incumbent at identical seeds **+0.00029 / +0.00046 /
+   +0.00053 — 3/3 positive, mean +0.00043.** A noise-driven maximum shrinks on
+   replication; this grew. Adopted and submitted with explicit human
+   authorization ("if you think further tuning could benefit then test and
+   submit that before going forward", quoted in row 60).
+3. **The board confirmed the local model exactly: 0.16836 → 0.16879
+   (+0.00043)** — the leaderboard gain equals the mean OOF gain to four
+   decimals. Local OOF is a faithful oracle for this pipeline (cf. the Part 1
+   metric-validation table). `emerging-exp-024` is the submission of record:
+   rank 4 of 26, gap to 3rd (ManuelRodríguez 0.16914) narrowed to 0.00035.
+4. Corollaries: `lambda_l2` is inert at this shrinkage level (100 sits in a
+   flat band 30–300); the lr/tree trajectory confirms 0.02 with 35/30/20
+   trees; **local OOF seed σ (0.00011) is an order of magnitude below the
+   Part 1 board seed noise (0.0012)** — board seed noise is mostly board-split
+   composition, not model seed. The scoring refit already averages 3 seeds
+   (`run_emerging.py`), so no "seed-averaging lever" remains untested.
+
 
