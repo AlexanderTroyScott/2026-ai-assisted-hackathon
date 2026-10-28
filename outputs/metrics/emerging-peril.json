@@ -1,0 +1,22 @@
+{
+  "perils": [
+    "bodily_injury",
+    "glass_hail",
+    "own_damage",
+    "theft",
+    "third_party_prop"
+  ],
+  "peril_cost_share": {
+    "bodily_injury": 0.2985821166446274,
+    "glass_hail": 0.06592827412815214,
+    "own_damage": 0.19298487664726666,
+    "theft": 0.10282657194976295,
+    "third_party_prop": 0.33967816063019074
+  },
+  "motor_d2_baseline": 0.07107950831325371,
+  "motor_d2_peril": 0.07028101572671219,
+  "total_d2_baseline": 0.14045140342770168,
+  "total_d2_peril": 0.14008789822411127,
+  "gate": false,
+  "elapsed_s": 10.8
+}

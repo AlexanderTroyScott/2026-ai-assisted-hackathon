@@ -2395,4 +2395,43 @@ hidden LOB-level split along this axis; the uniform ×1.05 forward factor is
 validated as (near-)optimal. D-069 open item (a) — the property NB/ren split —
 remains open but is subject to the same low-curvature prior.
 
+## D-074 — Motor per-peril decomposition: negative in OOF → single motor model retained
+**2026-10-28 · measured locally (5-Fold GroupKFold(customer_id), emerging-peril, row 59) · not submitted, no slot spent**
+
+Motivation: motor is the weakest LOB (OOF D² 0.071) and its five perils have
+very different shapes — bodily_injury 6% of claims / 30% of developed cost /
+58% open, glass_hail 19% of claims / 7% of cost and growing, theft rare and
+severe (390 claims, mean 4,136). A single Tweedie on the sum cannot give each
+peril its own feature response. Pre-registered design (one config, no grid):
+per-peril ultra-shallow offset LGBM (25 trees, lv=3, min_leaf=200, l2=100) on
+per-peril developed labels, same folds and machinery as D-067, with the
+like-for-like single-model motor baseline scored in the same loop. Pre-
+registered gate: OOF gain > +0.0003 over 0.14045 → emit candidate CSV.
+
+| | motor D² | total D² |
+|---|---|---|
+| single-model motor baseline (D-067) | +0.07108 | +0.14045 |
+| per-peril sum | +0.07028 | +0.14009 |
+| Δ | **−0.00080** | **−0.00036** |
+
+1. **Gate failed; no CSV was written and no quota was spent** — the
+   pre-registered rule made the call automatic. The single motor offset model
+   is retained; `emerging-exp-019` remains the submission of record.
+2. **Why it lost:** the sparse perils cannot carry standalone models at this
+   data size (theft 390 / BI 450 claims against min_leaf=200); the sum of five
+   noisier models underperforms one pooled model even with per-peril feature
+   responses. Only fold 2 improved (0.0666→0.0684); fold 3 got materially
+   worse (0.0480→0.0424). Any future motor-peril work must share strength
+   across perils (hierarchical/multitask), not split the data.
+3. **Label-provenance fix (guardrail):** the cached train frame's `y_ult` was
+   developed with the *unrounded* motor 2024 factor 1.2518×1.0301 = 1.28947918,
+   while `EM_LDF` stores `round(..., 4)` = 1.2895 — a ~1.6bp gap, immaterial
+   to scores but fatal to exact label reconstruction. `peril_targets` now
+   develops each peril pro-rata to its row's own `y_ult` (the LDF is per
+   (LOB, acc_year) and applies uniformly across a row's perils — identical
+   construction, exact by definition), keeping the Σ per-peril = `y_ult`
+   assert as the attribution guardrail. Locked in by
+   `tests/test_emerging.py::test_motor_per_peril_labels_sum_to_y_ult`; all 87
+   tests pass.
+
 

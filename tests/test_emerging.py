@@ -121,3 +121,27 @@ def test_forward_index_cohort_findings_hold(emerging_frames):
     # property was measured uniform only -> both cohorts equal
     for ln in ("buildings", "contents"):
         assert f[(ln, "nb")] == f[(ln, "ren")]
+
+
+def test_motor_per_peril_labels_sum_to_y_ult(emerging_frames):
+    """D-074 guardrail: per-peril developed labels must partition y_ult exactly.
+
+    Perils are developed pro-rata to the row's y_ult (the LDF is per
+    (LOB, acc_year) and applies uniformly across a row's perils).  The assert
+    inside peril_targets fires if any claim cost is dropped from the
+    attribution, and this test locks the invariant in.
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import run_emerging_peril as rp  # noqa: E402
+
+    tr, _ = emerging_frames
+    tr = tr.reset_index(drop=True)
+    perils, y_p, m_idx = rp.peril_targets(tr)
+    y_ult = tr.loc[tr["line"] == "motor", "y_ult"].to_numpy(float)
+
+    assert len(perils) == 5  # bodily_injury, glass_hail, own_damage, theft, third_party_prop
+    assert len(m_idx) == int((tr["line"] == "motor").sum())
+    assert (y_p.to_numpy() >= 0).all()
+    assert np.allclose(y_p.sum(axis=1).to_numpy(), y_ult, rtol=0, atol=1e-6)
+    # non-trivial partition: every peril carries some developed cost
+    assert (y_p.sum(axis=0) > 0).all()

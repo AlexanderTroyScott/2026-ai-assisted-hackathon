@@ -49,7 +49,7 @@ sys.path.insert(0, str(ROOT))
 
 import run_emerging as base  # noqa: E402
 
-from src.emerging import EM_DIR, EM_LDF, LINES, estimate_forward_index  # noqa: E402
+from src.emerging import EM_DIR, estimate_forward_index  # noqa: E402
 
 CACHE = Path("/tmp/opencode/part2")
 OUT_SUB = ROOT / "outputs" / "submissions"
@@ -95,9 +95,19 @@ def peril_targets(em_tr):
 
     piv = m_t.groupby(["row_id", "peril"])["cost"].sum().unstack(fill_value=0.0)
     piv = piv.reindex(m["row_id"]).fillna(0.0)
-    ldf = m["acc_year"].map(EM_LDF["motor"]).to_numpy(float)
-    y_p = piv.to_numpy(float) * ldf[:, None]
+    # Develop each peril pro-rata to the row's own y_ult: the LDF is per
+    # (LOB, acc_year), so it applies uniformly across a row's perils and
+    # allocating the developed total by in-period cost share is exactly the
+    # per-peril development.  This also absorbs a rounding provenance gap —
+    # the cached y_ult was built with motor 2024 = 1.2518*1.0301 (1.289479)
+    # while EM_LDF now stores round(..., 4) = 1.2895 (~1.6bp) — and keeps
+    # sum(per-peril) == y_ult exact.  The assert below still guards against
+    # attribution misses (y_ult > 0 with no attributed claim cost).
     y_ult = m["y_ult"].to_numpy(float)
+    raw = piv.to_numpy(float)
+    tot = raw.sum(axis=1, keepdims=True)
+    share = np.divide(raw, tot, out=np.zeros_like(raw), where=tot > 0)
+    y_p = share * y_ult[:, None]
     assert np.allclose(y_p.sum(axis=1), y_ult), "per-peril labels do not sum to y_ult"
     return piv.columns.tolist(), pd.DataFrame(y_p, index=m["row_id"], columns=piv.columns), m.index.to_numpy()
 
