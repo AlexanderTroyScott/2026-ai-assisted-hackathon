@@ -118,9 +118,12 @@ def test_forward_index_cohort_findings_hold(emerging_frames):
     f = {(r.line, r.cohort): r.f_final for r in fwd.itertuples()}
     # D-068 response ridge: motor NB > motor ren, both above the model level
     assert f[("motor", "nb")] > f[("motor", "ren")] > 1.0
-    # property was measured uniform only -> both cohorts equal
+    # D-076: property cohort ridge, same direction as motor; the split holds
+    # the x1.05 property total at the 2025 exposure shares (nb 0.769 / ren 0.231)
     for ln in ("buildings", "contents"):
-        assert f[(ln, "nb")] == f[(ln, "ren")]
+        assert f[(ln, "nb")] > f[(ln, "ren")]
+        w = 0.7690480279985857 * f[(ln, "nb")] + 0.23095197200141426 * f[(ln, "ren")]
+        assert w == pytest.approx(1.05, rel=1e-4)
 
 
 def test_motor_per_peril_labels_sum_to_y_ult(emerging_frames):

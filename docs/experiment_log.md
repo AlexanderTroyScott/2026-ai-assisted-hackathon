@@ -82,29 +82,27 @@ negative results are as valuable as positive ones.
 | 58 | 2026-10-28 01:13 UTC | emerging-exp-021 | D-069 open item b: buildings/contents split bracket arm A (buildings 1.12 / contents 0.994, property total x1.05 held) | primary change: property forward index split by LOB at constant exposure-weighted total; post-hoc on exp-019 (multipliers verified cell-wise); arm A = buildings-heavy; fresh window approved by human 2026-10-28 | 0.1405 | 0.16829 | −0.00007 vs exp-019 — **bracket closed: both arms lose to uniform; quadratic vertex at b≈1.075/c≈1.030 gains +0.00003 (below noise) → uniform ×1.05 confirmed, no refinement shot** | clean | `ef2334b6917f` |
 | 59 | 2026-10-28 01:40 UTC | emerging-peril | D-074 candidate: motor per-peril frequency/severity decomposition — 5 perils, each an ultra-shallow offset LGBM (25/lv3/leaf200/l2-100) on labels partitioning y_ult pro-rata (Σ per-peril = y_ult asserted) | pre-registered gate: OOF gain > +0.0003 over 0.14045 → candidate CSV; like-for-like single-model baseline scored in the same 5 folds | 0.14009 | - | **−0.00036 vs baseline (motor 0.07028 vs 0.07108) — gate failed, no CSV written, no slot spent**; sparse perils (theft 390 / BI 450 claims) cannot carry standalone models; single motor model retained (D-074) | clean | - |
 | 60 | 2026-10-28 02:14 UTC | emerging-exp-024 | D-075 combo_top2: offset layer num_leaves 3->4, min_data_in_leaf 600->1200 (paired-seed confirmed +0.00043 OOF, 3/3 seeds) | primary change: offset-layer hyperparameters only (everything else byte-identical to exp-019). One-at-a-time sweep of the never-tuned knobs; combo_top2 paired deltas vs incumbent at identical seeds +0.00029/+0.00046/+0.00053. Human authorization for this submission: 'if you think further tuning could benefit then test and submit that before going forward' (2026-10-28) | 0.14074 | **0.16879** | **+0.00043 vs exp-019 — new record**; board gain equals the mean OOF gain exactly (local OOF is a faithful oracle); rank 4 of 26, gap to 3rd narrowed to 0.00035 | clean | `d3b1a038e095` |
+| 61 | 2026-10-28 15:17 UTC | emerging-exp-025 | D-069 open item a: property NB/ren split bracket arm A (nb-heavy: f_nb 1.12 / f_ren 0.817, property total x1.05 held) | primary change: property forward index split by cohort at constant exposure-weighted total (nb 76.9% / ren 23.1%); post-hoc on emerging-exp-024, multipliers verified cell-wise (motor untouched); arm A = nb-heavy. Human authorization: 'Lets go ahead and submit since we have the remaining submissions and see what happens' (2026-10-28) | 0.14074 | **0.16994** | **+0.00115 vs exp-024 — NEW RECORD (rank 4 of 27, ahead of ManuelRodríguez 0.16914)**; property NB runs hotter than ren — the cohort ridge is real and matches motor's direction (D-076) | clean | `d794565c16b4` |
+| 62 | 2026-10-28 15:17 UTC | emerging-exp-026 | D-069 open item a: property NB/ren split bracket arm B (ren-heavy: f_nb 1.029 / f_ren 1.12, property total x1.05 held) | primary change: property forward index split by cohort at constant exposure-weighted total (nb 76.9% / ren 23.1%); post-hoc on emerging-exp-024, multipliers verified cell-wise (motor untouched); arm B = ren-heavy. Human authorization: 'Lets go ahead and submit since we have the remaining submissions and see what happens' (2026-10-28) | 0.14074 | 0.16815 | −0.00064 vs exp-024 — the wrong direction; bracket is strongly asymmetric, confirming the ridge direction | clean | `7edc7a0c10fe` |
+| 63 | 2026-10-28 15:22 UTC | emerging-exp-027 | D-076 refinement: property NB/ren quadratic vertex (m_nb 1.084 / m_ren 0.720, property total x1.05 held) | primary change: cohort-split refinement at the quadratic vertex fitted to the exp-025/024/026 bracket (vertex lies beyond arm A, so extrapolation is tested directly); post-hoc on emerging-exp-024, multipliers verified cell-wise. Human authorization: 'Lets go ahead and submit since we have the remaining submissions and see what happens' (2026-10-28) | 0.14074 | 0.16991 | −0.00003 vs exp-025 — flat top: the peak lies at m_nb ∈ [1.067, 1.084], **exp-025 stands as the record; axis closed (no further refinement, D-073 discipline)** | clean | `bf3ef1b4edd6` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
 
 **Status at 2026-10-28 (supersedes the note above):** **Part 2 best is
-`emerging-exp-024` (D-075, row 60) at 0.16879 Public** (rank 4 of 26, gap to
-3rd 0.00035) — the shrinkage-pair tuning `num_leaves=4 / min_leaf=1200`,
-paired-seed confirmed (+0.00043 mean OOF) and board-confirmed (+0.00043).
-exp-019 (D-069, row 51, 0.16836) is the prior record. The multi-family
-ensemble port (D-070, row 53) measured +0.00023 in OOF — below the noise
-threshold, not submitted. **Sandbox campaign (D-072, rows 54–56) closed the
-HT-development question: it trades Private for Public (+0.00063/−0.00021
-mean) and the Part 2 label port is rejected.** The buildings/contents split
-bracket (D-073, rows 57–58) closed the property-split question: both arms
-lose to uniform ×1.05, vertex +0.00003 — no split. Motor per-peril
-decomposition (D-074, row 59) measured −0.00036 in OOF: gate failed, not
-submitted, single motor model retained. The hyperparameter residual sweep
-(D-075, row 60) closed the tuning question: single knobs flat, one real
-shrinkage-pair interaction captured. Measured board seed noise at the exp-033
-recipe ≈ 0.0012 Public (local OOF seed σ is only 0.00011 — the board noise is
-mostly split composition). Part 1 best remains `exp-036` at 0.12753 Public /
-0.13570 Private (row 31). Quota 2026-10-28: Part 2 7 of 10 slots remain;
-Part 1 100 slots (standing authorization).
+`emerging-exp-025` (D-076, row 61) at 0.16994 Public** (rank 4 of 27, ahead of
+ManuelRodríguez 0.16914, 0.00178 off 3rd) — the property NB/ren cohort ridge
+(nb 1.12 / ren 0.817 at constant ×1.05), measured, shaped (flat top, axis
+closed) and adopted pipeline-natively with exact reproduction. exp-024
+(D-075, row 60, 0.16879) added the shrinkage-pair tuning (lv 4 / min_leaf
+1200); exp-019 (D-069, row 51, 0.16836) is the prior record. Closed as
+negative: multi-family ensemble (D-070), HT-development port (D-072),
+buildings/contents split (D-073), motor per-peril (D-074), single-knob tuning
+(D-075 singles). Measured board seed noise at the exp-033 recipe ≈ 0.0012
+Public (local OOF seed σ only 0.00011). Part 1 best remains `exp-036` at
+0.12753 Public / 0.13570 Private (row 31). Quota 2026-10-28: Part 2 4 of 10
+slots remain (3 spent on the D-076 bracket + refinement with human
+authorization); Part 1 100 slots (standing authorization).
 
 ### Metric validation — local D² is a reliable proxy
 

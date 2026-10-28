@@ -2480,4 +2480,48 @@ machinery (incumbent must reproduce 0.14045 — it did exactly).
    composition, not model seed. The scoring refit already averages 3 seeds
    (`run_emerging.py`), so no "seed-averaging lever" remains untested.
 
+## D-076 — Property NB/ren cohort ridge: measured, shaped, adopted (exp-025, 0.16994)
+**2026-10-28 · measured on the Part 2 board · emerging-exp-025/026/027 (rows 61–63) · accepted · resolves D-069 open item (a)**
+
+The last open item of D-069: should the property forward factor split by
+cohort (new business vs renewal) like motor's measured ridge (1.322/1.103),
+or stay uniform? D-073 had shown the property *LOB* axis flat, and the
+unreconciled data estimates pointed opposite ways in buildings (ren > nb) and
+contents (nb > ren), so the prior was low. A 2-arm bracket at constant
+exposure-weighted total (×1.05, 2025 shares nb 0.769 / ren 0.231), post-hoc on
+`emerging-exp-024` with cell-wise-verified multipliers (motor untouched):
+
+| arm | f_nb | f_ren | Public | Δ vs uniform |
+|---|---|---|---|---|
+| B ren-heavy | 1.029 | 1.120 | 0.16815 | −0.00064 |
+| uniform (exp-024) | 1.05 | 1.05 | 0.16879 | — |
+| **A nb-heavy** | **1.120** | **0.817** | **0.16994** | **+0.00115** |
+| refinement (exp-027) | 1.138 | 0.756 | 0.16991 | +0.00112 |
+
+1. **The cohort ridge is real and large (+0.00115), and it runs in the same
+   direction as motor's: property new business is underpriced relative to
+   renewals in the 2025 book.** The asymmetry of the bracket (ren-heavy loses
+   0.00064) confirms direction, not just magnitude.
+2. **Shaped and closed in one refinement:** the quadratic through the bracket
+   puts the vertex at m_nb ≈ 1.084 (outside the tested range, so the shot was
+   taken there directly); it measured 0.16991 — **the top is flat between
+   m_nb 1.067 and 1.084.** `emerging-exp-025` (m_nb 1.067) stands as the
+   record; no further shots on this axis (D-073 discipline: vertex gain below
+   probe noise).
+3. **`emerging-exp-025` = 0.16994 Public — submission of record, rank 4 of 27**
+   (new entrant SnorlaxCode 0.17192 pushed the top-3 to HS 0.17303 /
+   SnorlaxCode 0.17192 / Actuarial NOOB 0.17172; we sit 0.00178 off 3rd and
+   ahead of ManuelRodríguez 0.16914).
+4. **Adopted pipeline-natively (D-008 convention: applied at scoring):**
+   `PROBE_FORWARD` property cells are now nb 1.12 / ren 0.816907 (ren solved
+   to hold the ×1.05 total at the measured 2025 shares), `test_forward_index_
+   cohort_findings_hold` updated to assert the ridge and the held total, and a
+   full pipeline run (`emerging-exp-025-repro`) reproduces the record
+   predictions to float precision (max rel diff 8e-16). All 87 tests pass.
+5. Interpretation caution (D-072 lesson applied): this is a Public-measured
+   correction on the same response-curve basis as D-068/D-069. The direction
+   is corroborated by independent evidence (motor's ridge, the 77%-NB transfer
+   book running hot), which is why it is adopted at the measured point rather
+   than shrunk further.
+
 

@@ -76,16 +76,23 @@ EM_LDF = {
 # ridge (exp-016 1.33/1.07 and exp-017 1.31/1.157 both score 0.16833, exp-018
 # 1.38/0.852 collapses to 0.16711); the ridge point used here is the
 # premium-anchor-supported midpoint (ren 1.103 = wp25 x LR24 / model level).
-# Property was measured uniform only (exp-012 x1.05 -> 0.16799, x1.12 -> 0.16781,
-# x1.20 -> 0.16707); the cohort split there is unmeasured and is left uniform.
-# ---------------------------------------------------------------------------
+# Property level was measured uniform at x1.05 (exp-012 -> 0.16799, x1.12 ->
+# 0.16781, x1.20 -> 0.16707) and its LOB split uniform (D-073).  D-076 then
+# measured the property *cohort* ridge on the board (exp-025 nb-heavy 0.16994
+# > uniform 0.16879 > exp-026 ren-heavy 0.16815; refinement exp-027 at the
+# quadratic vertex 0.16991 - flat top): property NB runs hotter than ren, the
+# same direction as motor's ridge.  Adopted split holds the x1.05 property
+# total at the measured 2025 test-book exposure shares (nb 0.769048 /
+# ren 0.230952): nb = 1.12 (the measured arm), ren solved to hold the total.
+_PROP_NB = 1.12
+_PROP_REN = (1.05 - 0.7690480279985857 * _PROP_NB) / 0.23095197200141426  # = 0.81690668
 PROBE_FORWARD = {
     ("motor", "nb"): 1.322,
     ("motor", "ren"): 1.103,
-    ("buildings", "nb"): 1.05,
-    ("buildings", "ren"): 1.05,
-    ("contents", "nb"): 1.05,
-    ("contents", "ren"): 1.05,
+    ("buildings", "nb"): _PROP_NB,
+    ("buildings", "ren"): _PROP_REN,
+    ("contents", "nb"): _PROP_NB,
+    ("contents", "ren"): _PROP_REN,
 }
 TREND_CLAIMS_WEIGHT = 0.70  # D-009 blend: claims index / premium anchor
 TREND_PREMIUM_WEIGHT = 0.30
