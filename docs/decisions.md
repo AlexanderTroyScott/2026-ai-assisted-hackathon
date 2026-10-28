@@ -2598,4 +2598,52 @@ is documented as uncertainty instead of being engineered away. Guardrails
 added to `tests/test_emerging.py`: claims-table integrity invariants and the
 `si_artefact`-orthogonality of the top claims (mirroring D-043's guardrails).
 
+## D-079 — Ensemble-on-record fails its pre-registered gate; endgame frame (Private final, best-Public entry)
+**2026-10-28 · measured locally (paired-seed OOF) · no slot spent · rejected**
+
+D-070's 70/30 offset-LGBM/offset-XGB blend (+0.00023 OOF) had been built on the
+**untuned** base and never given the record config. `scripts/run_emerging_ensemble2.py`
+promoted it onto the record config (lv=4, min_leaf=1200) with a pre-registered
+gate — human-authorized 2026-10-28 as "ensemble draw #1 today, validation-gated":
+paired-seed (0/1/2) 5-fold OOF gain ≥ +0.0002, blend weights fixed a priori at
+0.7/0.3 (not re-selected). Result:
+
+| seed | LGBM-only | 0.7/0.3 blend | paired Δ |
+|---|---:|---:|---:|
+| 0 | 0.14074 | 0.14083 | +0.00009 |
+| 1 | 0.14080 | 0.14056 | −0.00023 |
+| 2 | 0.14116 | 0.14070 | −0.00046 |
+| **mean** | | | **−0.00020** |
+
+1. **Gate FAIL → no CSV, today's Part 2 slot held** (pre-registered action; an
+   EV-neutral record-config redraw was explicitly not spent). The seed-0 LGBM
+   arm reproduced the record OOF 0.14074 to 1e-6, so the negative result is a
+   faithful comparison: D-070's +0.00023 was seed noise plus base-specific
+   complementarity, and `combo_top2`'s shrinkage (min_leaf 1200) absorbs what
+   the XGB component added. The validated mean-raiser queue is now empty.
+2. **Side measurement:** LGBM-only OOF across seeds = 0.14074 / 0.14080 /
+   0.14116 — local seed σ ≈ 0.00018 (wider than the D-025-era 0.00011
+   estimate); single-seed local comparisons below ±0.0004 remain undecidable.
+3. **Endgame frame (rules confirmed by the human 2026-10-28: Part 2 final
+   ranking runs on Private; the counted entry is the best Public submission at
+   the deadline, as in Part 1).** Consequences: (a) a new entry only helps if
+   its Private mean exceeds `emerging-exp-025`'s config *and* its Public clears
+   0.16994; (b) seed redraws of the same config are EV-neutral (and slightly
+   negative if the seed-level Pub/Priv correlation is the negative sign our
+   exp-033→040 and exp-039→041 pairs showed) — pure Public lotteries do not
+   transfer to the final metric; (c) mean quality of the vehicle is the only
+   lever left. `emerging-exp-025` remains the submission of record.
+4. **Next candidate (D-080): peril-level development of labels.** D-028's
+   level-preserving per-peril factors (frozen from incurred triangles —
+   motor BI age-0→ultimate 1.708 vs own_damage 1.039, D-035) were only ever
+   compared *locally* ("answered locally as a tie; LB tie-break still open") —
+   the board test never happened. Part 2 develops motor **uniformly**
+   (`EM_LDF`) although BI is 30% of motor cost / 58% open — the motor-BI
+   development problem D-072 left open. Label changes cannot pass a Part 2 OOF
+   gate (they redefine the truth), so the Part 1 sandbox is the instrument
+   (D-071 policy): `development='peril'` vs `'lob'` on the exp-033 recipe at
+   matched seeds against the scored controls exp-033/exp-040. Decision rule
+   (pre-registered): port to Part 2 only if Private improves (the HT failure
+   mode was Private-negative) and Public does not degrade materially.
+
 
