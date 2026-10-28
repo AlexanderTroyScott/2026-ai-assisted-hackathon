@@ -2373,4 +2373,26 @@ seeds (exp-039/041 vs exp-033/040):
    this finding — public-fit corrections should be shrunk toward the
    data-supported anchor, never taken at their public-optimal extreme.
 
+## D-073 — Buildings/contents split bracket: uniform property factor confirmed
+**2026-10-28 · measured on the Part 2 board · emerging-exp-021/022 (rows 57–58) · resolves D-069 open item (b)**
+
+A 2-arm bracket at constant exposure-weighted property total (×1.05, shares
+buildings 44.5% / contents 55.5%), post-hoc on `emerging-exp-019` with
+cell-wise-verified multipliers:
+
+| arm | buildings | contents | Public | Δ vs uniform |
+|---|---|---|---|---|
+| B contents-heavy | 0.98 | 1.106 | 0.16796 | −0.00040 |
+| **uniform (exp-019)** | **1.05** | **1.05** | **0.16836** | — |
+| A buildings-heavy | 1.12 | 0.994 | 0.16829 | −0.00007 |
+
+Both arms lose to uniform. A quadratic through the three points puts the
+vertex at buildings ≈ 1.075 / contents ≈ 1.030 with an implied gain of
+**+0.00003 — below probe noise**, so no refinement shot is warranted and
+`emerging-exp-019` remains the submission of record. **Conclusion:** unlike
+motor (whose cohort ridge moved 0.0012 across its bracket), property has no
+hidden LOB-level split along this axis; the uniform ×1.05 forward factor is
+validated as (near-)optimal. D-069 open item (a) — the property NB/ren split —
+remains open but is subject to the same low-curvature prior.
+
 

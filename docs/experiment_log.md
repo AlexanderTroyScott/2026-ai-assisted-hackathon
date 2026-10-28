@@ -78,6 +78,8 @@ negative results are as valuable as positive ones.
 | 54 | 2026-10-27 21:09 UTC | exp-039 | D-065 HT date x peril development labels (per-LOB rate LGBM, exp-033 recipe) | sandbox test: one change vs exp-033 (0.12681/0.13531) = development=ht_motor labels (Horvitz-Thompson date x peril reporting completeness + open-claim IBNER); local OOF vs changed truth not comparable - board is the gate | 0.1381 | **0.12730** (Priv **0.13528**) | **+0.00049 Pub / −0.00003 Priv** vs exp-033 — small Public gain, Private-neutral (no norm-rel-style regression); 2×2 seed replication in rows 55–56 to separate signal from flip | clean | `94c9cf76f555` |
 | 55 | 2026-10-28 00:46 UTC | exp-040 | 2x2 replication: exp-033 recipe seed=1 (lob labels) - board noise floor | seed-noise control arm: compares to exp-033 (seed 0, 0.12681/0.13531) to measure board seed sigma at this recipe | 0.1404 | **0.12562** (Priv **0.13569**) | **seed noise alone: −0.00119 Pub / +0.00038 Priv** vs exp-033 — Public seed-to-seed σ ≈ 0.0012 at this recipe, larger than the HT effect | clean | `fd96a3b4478c` |
 | 56 | 2026-10-28 00:46 UTC | exp-041 | 2x2 replication: exp-039 recipe seed=1 (ht_motor labels) - HT gain replication | HT treatment arm at seed 1: compares to exp-040 (lob seed 1) for the clean HT-vs-lob delta and to exp-039 (ht seed 0) for replication | 0.1385 | **0.12640** (Priv **0.13529**) | **+0.00078 Pub / −0.00040 Priv** vs exp-040 — HT Public gain replicates (2/2 seeds) but is inside seed noise; **Private negative at both seeds (mean −0.00021)** → HT trades Private for Public; port rejected (D-072) | clean | `d0a11d1641bd` |
+| 57 | 2026-10-28 01:13 UTC | emerging-exp-022 | D-069 open item b: buildings/contents split bracket arm B (buildings 0.98 / contents 1.106, property total x1.05 held) | primary change: property forward index split by LOB at constant exposure-weighted total; post-hoc on exp-019 (multipliers verified cell-wise); arm B = contents-heavy; fresh window approved by human 2026-10-28 | 0.1405 | 0.16796 | −0.00040 vs exp-019 — contents-heavy side declines | clean | `7d0832dcaef0` |
+| 58 | 2026-10-28 01:13 UTC | emerging-exp-021 | D-069 open item b: buildings/contents split bracket arm A (buildings 1.12 / contents 0.994, property total x1.05 held) | primary change: property forward index split by LOB at constant exposure-weighted total; post-hoc on exp-019 (multipliers verified cell-wise); arm A = buildings-heavy; fresh window approved by human 2026-10-28 | 0.1405 | 0.16829 | −0.00007 vs exp-019 — **bracket closed: both arms lose to uniform; quadratic vertex at b≈1.075/c≈1.030 gains +0.00003 (below noise) → uniform ×1.05 confirmed, no refinement shot** | clean | `ef2334b6917f` |
 
 **Leaderboard at time of writing:** top 0.12996 (22 teams). Our best **0.11637**
 (exp-007). 8 of 10 slots used in the current window (2 reserved).
@@ -87,12 +89,15 @@ negative results are as valuable as positive ones.
 multi-family ensemble port (D-070, row 53) measured +0.00023 in OOF — below
 the noise threshold, not submitted. **Sandbox campaign (D-072, rows 54–56)
 closed the HT-development question: it trades Private for Public
-(+0.00063/−0.00021 mean) and the Part 2 label port is rejected.** Measured
-board seed noise at the exp-033 recipe ≈ 0.0012 Public — single-seed close
-comparisons are uninformative. Part 1 best remains `exp-036` at 0.12753
-Public / 0.13570 Private (row 31). Quota 2026-10-28: Part 2 10 slots fresh
-(held for explicit human confirmation); Part 1 100 slots (standing
-authorization).
+(+0.00063/−0.00021 mean) and the Part 2 label port is rejected.** The
+buildings/contents split bracket (D-073, rows 57–58) closed the property-split
+question: both arms lose to uniform ×1.05, vertex +0.00003 — no split.
+Measured board seed noise at the exp-033 recipe ≈ 0.0012 Public — single-seed
+close comparisons are uninformative. Part 1 best remains `exp-036` at 0.12753
+Public / 0.13570 Private (row 31). Quota 2026-10-28: Part 2 8 of 10 slots
+remain (fresh window spent with human approval on the bracket); Part 1 100
+slots (standing authorization). In progress: motor per-peril frequency/severity
+structure (local build, per-LOB motor D² 0.071 is the weakest link).
 
 ### Metric validation — local D² is a reliable proxy
 
