@@ -2790,4 +2790,45 @@ brings the prior up to the Part 1 state of the art:
    on both boards (not a Public-fitted multiplier) — the right kind of
    improvement under Private-final rules (D-079).
 
+### D-082 result — gate FAIL: the exp-036 family prior does not transfer; axis closes, slot held
+**2026-10-28 · measured in `scripts/run_emerging_prior.py` (experiment row 71) · no CSV written, no slot spent**
+
+| arm | prior alone (fold-recal.) | OOF seed 0 | OOF seed 1 | OOF seed 2 |
+|---|---:|---:|---:|---:|
+| record prior (D-066, LGBM-only) | +0.13855 | +0.14074 | +0.14080 | +0.14116 |
+| variant prior (exp-036 family blend) | +0.13852 | +0.14044 | +0.14081 | +0.14095 |
+| **paired delta (variant − record)** | −0.00003 | **−0.00030** | **+0.00002** | **−0.00022** |
+
+Mean paired delta **−0.00017** against the pre-registered **+0.0002** gate →
+**FAIL**. Per the pre-registered rule: no CSV, the Part 2 slot is held, and
+this axis closes.
+
+1. **The comparison is faithful.** The record arm reproduced the record OOF
+   contract at seed 0 with drift **7.7e-07** (tol 1e-5) — the negative cannot
+   be blamed on implementation drift (the D-079 precedent: a negative verdict
+   is only credible with the contract held).
+2. **Why it failed — the informative measurement is the prior-alone row.**
+   The exp-036 family blend is *flat* where it matters: +0.13852 vs +0.13855
+   (−0.00003). D-064's family complementarity (XGBoost + pooled leg) was
+   measured on the Part 1 feature set (relativity/hist columns, full category
+   space); on the **shared feature subset at developed-market scale** the
+   blend adds nothing, and the offset layer has no reason to prefer it. This
+   is the third port of a Part 1 ensemble idea to fail to travel (D-070,
+   D-079, here) — the rule of thumb now is that *model-form diversity gains
+   are location-specific and do not transfer through the prior*.
+3. **No ablation — the arithmetic forbids it.** The bundle measured −0.00017;
+   for any component (e.g. `occ_clean`-only removal) to clear the gate it
+   would have to contribute **+0.00037** on its own — larger than anything
+   measured anywhere in the adaptation space (D-075's whole tuning gain was
+   +0.0003). The most likely component effect is ≈ 0. Per the pre-registration
+   the axis closes; an unregistered ablation would be selection-chasing.
+4. **Endgame consequence (D-079 frame strengthened again).** The transfer
+   prior was the only remaining channel through which Part 1 work could raise
+   Part 2 — and it is now measured. The validated improvement queue remains
+   empty; the gap to the podium (+0.00178) cannot be closed by mean-chasing in
+   the remaining windows. Write-up and deliverables stay the priority. The
+   human's proposed direction ("improve the Part 1 model to lift Part 2") is
+   answered with a measurement rather than a vote: **the prior is already at
+   the effective state of the art for this location.**
+
 

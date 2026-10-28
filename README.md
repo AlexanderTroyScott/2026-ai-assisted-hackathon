@@ -82,9 +82,10 @@ in motor and in property, independently).
 
 Equally important, the ideas we **killed with evidence** — each one logged:
 
-- **Ensembles** — a winning idea in Part 1, tested twice in Part 2, lost both times
-  (the second test was pre-registered and its rule stopped the submission before it
-  cost us anything).
+- **Ensembles** — a winning idea in Part 1, tested three times in Part 2
+  (including as an upgrade to the transfer "starting point" model itself), and
+  it lost every time. Each test was pre-registered, so each rule stopped the
+  submission before it cost us anything.
 - **Fancy claim-development schemes** — two alternatives to our simple development
   factors were tested on the Part 1 laboratory. One traded hidden-board score for
   public-board score; the other lost on both. Simple won.

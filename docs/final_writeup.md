@@ -112,9 +112,11 @@ A sample of the calls that shaped the result — each one measured, logged and d
   on the leaderboard, well below our contemporaneous runs. Restraint — fewer,
   shallower trees — transferred reliably. This became the default.
 - **Ensembles: tried, measured, rejected.** Combining XGBoost and LightGBM won in
-  Part 1 (+0.003). We ported the idea to Part 2 twice and it **failed both times** —
-  including a pre-registered test where the blend lost 0.0002 on average. We kept the
-  rejection on the record and spent no submission on it.
+  Part 1 (+0.003). We ported the idea to Part 2 three times — including as an
+  upgrade to the transfer "starting point" model itself — and it **failed all
+  three times**. The tests were pre-registered, so their rules stopped the
+  submissions before any of them cost us anything, and the rejections stayed
+  on the record.
 - **Trust live measurement over local scores for the final adjustments.** The 2025
   forward factors were shaped by small, careful leaderboard probes. We also measured
   the leaderboard's *own noise* (a redraw of the same model moves the score by about

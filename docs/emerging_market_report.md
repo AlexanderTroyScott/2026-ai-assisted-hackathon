@@ -186,6 +186,14 @@ per arm for board claims), and the board is the confirmation.
   (per-seed `+0.00009`/`−0.00023`/`−0.00046`). The seed-0 arm reproduced the
   record OOF to 1e-6, so the negative is a faithful comparison. No CSV; the
   day's slot was held.
+- **D-082 — the upgraded transfer prior.** Porting the Part 1 winning recipe
+  (exp-036 family blend: per-LOB LGBM + per-LOB XGBoost + pooled LGBM, with
+  occupation dropped) into the developed-market prior — the carrier of 98% of
+  pipeline skill — measured **flat where it matters** (prior-alone +0.13852
+  vs +0.13855) and **−0.00017** through the pipeline (per-seed
+  −0.00030/+0.00002/−0.00022; record contract held, drift 7.7e-07). Third
+  failed port of a Part 1 ensemble idea (D-070, D-079, here): model-form
+  diversity gains are location-specific and do not travel through the prior.
 - **D-073 / D-074 — structure sweeps.** Property per-LOB split flat; motor
   per-peril frequency/severity decomposition **−0.00036** OOF — sparse perils
   (theft 390 / BI 450 claims in the emerging motor book) cannot carry
@@ -231,7 +239,9 @@ entry = best Public at the deadline), we state the endgame plainly:
 
 1. **Mean-chasing cannot close the +0.00178 gap in the remaining windows.**
    The largest validated remaining mean-raiser is an order of magnitude
-   smaller; after D-079 the validated improvement queue is empty.
+   smaller; after D-079/D-082 the validated improvement queue is empty —
+   including the transfer-prior channel (D-082), the last route through which
+   Part 1 work could have raised Part 2.
 2. **Seed redraws are EV-neutral and are not played.** Board seed noise
    (σ ≈ 0.0013 Public / ≈ 0.002 Private) can move a redraw across the gap on
    the *Public* board, but our seed-level Public/Private pairs moved in

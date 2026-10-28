@@ -1,0 +1,39 @@
+{
+  "name": "emerging-prior-exp36",
+  "primary_change": "transfer prior upgraded to Part 1 state of the art: 42% per-LOB LGBM (exp-033) + 40% per-LOB XGB (exp-035) + 18% pooled LGBM (exp-032), occ_clean dropped (D-056), 0.6/0.4 wp legs kept (record: LGBM-only, occ_clean in)",
+  "weights": {
+    "lgbm_lob": 0.42,
+    "xgb_lob": 0.4,
+    "lgbm_pool": 0.18,
+    "wp": 0.6,
+    "nowp": 0.4
+  },
+  "n_estimators": 400,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "d2_prior_only_record": 0.1385538713842528,
+  "d2_prior_only_variant": 0.13851851303639617,
+  "oof_record": {
+    "0": 0.14074076906018929,
+    "1": 0.14079648373893328,
+    "2": 0.14116486243250181
+  },
+  "oof_variant": {
+    "0": 0.14043802635594171,
+    "1": 0.14081269896129145,
+    "2": 0.14094903015067928
+  },
+  "paired_deltas": [
+    -0.00030274270424757166,
+    1.621522235817352e-05,
+    -0.00021583228182253666
+  ],
+  "mean_paired_delta": -0.00016745325457064494,
+  "gate": 0.0002,
+  "pass": false,
+  "record_contract_drift_seed0": 7.690601892818005e-07,
+  "elapsed_s": 711.0
+}
