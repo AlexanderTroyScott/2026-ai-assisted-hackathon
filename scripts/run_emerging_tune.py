@@ -65,6 +65,11 @@ CONFIGS = {
     "lr_001_x2n":  (3, 600, 100.0, 0.01, 2.0, 0.8, 0.8, 0),
     "lr_004_halfn": (3, 600, 100.0, 0.04, 0.5, 0.8, 0.8, 0),
     "ff_10":       (3, 600, 100.0, 0.02, 1.0, 1.0, 1.0, 0),
+    "combo_top2":  (4, 1200, 100.0, 0.02, 1.0, 0.8, 0.8, 0),
+    "combo_top2_s1": (4, 1200, 100.0, 0.02, 1.0, 0.8, 0.8, 1),
+    "combo_top2_s2": (4, 1200, 100.0, 0.02, 1.0, 0.8, 0.8, 2),
+    "incumbent_s2": (3, 600, 100.0, 0.02, 1.0, 0.8, 0.8, 2),
+    "combo_all3":  (4, 1200, 100.0, 0.02, 1.0, 1.0, 1.0, 0),
     "seed_1":      (3, 600, 100.0, 0.02, 1.0, 0.8, 0.8, 1),
 }
 
@@ -138,7 +143,13 @@ def main() -> int:
         return 1
 
     seed_sigma = abs(results["seed_1"]["total_d2"] - results["incumbent"]["total_d2"])
-    best = max((k for k in results if k not in ("seed_1",)), key=lambda k: results[k]["total_d2"])
+    # paired replication of the winner across seeds (winner's-curse protection)
+    paired = {}
+    for s, ck, ik in ((0, "combo_top2", "incumbent"), (1, "combo_top2_s1", "seed_1"),
+                      (2, "combo_top2_s2", "incumbent_s2")):
+        paired[s] = results[ck]["total_d2"] - results[ik]["total_d2"]
+    best = max((k for k in results if results[k]["config"]["seed"] == 0),
+               key=lambda k: results[k]["total_d2"])
     gate_pass = results[best]["total_d2"] > INCUMBENT_D2 + GATE
 
     OUT_MET.mkdir(parents=True, exist_ok=True)
@@ -146,14 +157,18 @@ def main() -> int:
         "incumbent_d2": INCUMBENT_D2,
         "results": results,
         "seed_sigma_local": seed_sigma,
+        "combo_top2_paired_deltas": paired,
         "best_config": best,
         "best_d2": results[best]["total_d2"],
         "gate_pass": gate_pass,
-        "note": "winner's curse: best of 10 configs needs second-seed confirmation before adoption",
+        "note": ("winner's curse: best of 15 configs; combo_top2 sits at the +0.0003 gate "
+                 "boundary - paired seed deltas decide adoption"),
         "elapsed_s": round(time.time() - t0, 1),
     }, indent=2, default=float))
 
     print(f"\nlocal OOF seed sigma (incumbent s0 vs s1): {seed_sigma:.5f}")
+    print("combo_top2 paired deltas vs incumbent, per seed:",
+          {s: round(v, 5) for s, v in paired.items()})
     print(f"best config: {best} at {results[best]['total_d2']:+.5f} "
           f"(incumbent {INCUMBENT_D2:+.5f}, delta {results[best]['total_d2'] - INCUMBENT_D2:+.5f})")
     print("GATE PASSED - second-seed confirmation required before any submission"

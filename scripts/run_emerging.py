@@ -138,6 +138,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", default="emerging-exp-001")
     ap.add_argument("--use-cache", action="store_true")
+    ap.add_argument("--num-leaves", type=int, default=3,
+                    help="offset layer num_leaves (D-067 incumbent 3; D-075 combo_top2 = 4)")
+    ap.add_argument("--min-leaf", type=int, default=600,
+                    help="offset layer min_data_in_leaf (D-067 incumbent 600; D-075 combo_top2 = 1200)")
     args = ap.parse_args()
 
     print(f"=== Part 2 Emerging Market Pipeline: {args.name} ===")
@@ -214,8 +218,8 @@ def main() -> int:
             cat_a = [c for c in cats_ad if c in c_a]
             m_off = lgb.LGBMRegressor(
                 objective="tweedie", tweedie_variance_power=1.5,
-                n_estimators=lob_n_est[ln], learning_rate=0.02, num_leaves=3,
-                min_data_in_leaf=600, feature_fraction=0.8, bagging_fraction=0.8,
+                n_estimators=lob_n_est[ln], learning_rate=0.02, num_leaves=args.num_leaves,
+                min_data_in_leaf=args.min_leaf, feature_fraction=0.8, bagging_fraction=0.8,
                 bagging_freq=1, lambda_l2=100.0, verbose=-1, random_state=0,
             )
             m_off.fit(
@@ -268,8 +272,8 @@ def main() -> int:
         for seed in [0, 1, 2]:
             m_off = lgb.LGBMRegressor(
                 objective="tweedie", tweedie_variance_power=1.5,
-                n_estimators=lob_n_est[ln], learning_rate=0.02, num_leaves=3,
-                min_data_in_leaf=600, feature_fraction=0.8, bagging_fraction=0.8,
+                n_estimators=lob_n_est[ln], learning_rate=0.02, num_leaves=args.num_leaves,
+                min_data_in_leaf=args.min_leaf, feature_fraction=0.8, bagging_fraction=0.8,
                 bagging_freq=1, lambda_l2=100.0, verbose=-1, random_state=seed,
             )
             m_off.fit(
