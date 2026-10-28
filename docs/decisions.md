@@ -2646,4 +2646,40 @@ paired-seed (0/1/2) 5-fold OOF gain ≥ +0.0002, blend weights fixed a priori at
    (pre-registered): port to Part 2 only if Private improves (the HT failure
    mode was Private-negative) and Public does not degrade materially.
 
+## D-080 — Peril-level label development: board-verified negative on both boards → axis closed, `EM_LDF` uniform development stands
+**2026-10-28 · measured in the Part 1 sandbox paired 2×2 (rows 67–68) · port not made · closes D-028's open LB tie-break and D-072's motor-BI item**
+
+D-079 item 4's pre-registered test, run as the D-072 2×2 pattern: exp-033 recipe
+(`per_lob`, rate target, lv=6, lr=0.05, `--final-fit`), single change
+`development='peril'` (D-028 level-preserving per-peril factors from
+`src/development.py`, frozen from developed-market incurred triangles) vs the
+scored `'lob'` controls at matched seeds:
+
+| Δ peril − lob | seed 0 (exp-042 vs exp-033) | seed 1 (exp-043 vs exp-040) | mean |
+|---|---:|---:|---:|
+| Public | −0.00301 | −0.00222 | **−0.00262** |
+| Private | −0.00316 | −0.00348 | **−0.00332** |
+
+1. **Verdict: negative on both boards, 2/2 seeds, 2–8× outside the noise band**
+   (σ ≈ 0.0012 Pub / 0.0004 Priv). The Private effect is tight across seeds
+   (−0.00316 / −0.00348), so this is a level effect, not a draw. Per the
+   pre-registered rule's third branch: **no port to Part 2** — `EM_LDF`'s
+   uniform LOB development of emerging labels stays as-is.
+2. **The D-028 local tie ("LB tie-break still open") breaks decisively against
+   per-peril development.** Even with native-triangle factors and exact level
+   preservation, redistributing development toward long-tail perils (motor BI
+   age-0→ult 1.708 vs own_damage 1.039) *hurts* 2025 cost prediction at this
+   recipe. Consistent reading: the ×1.7 label inflation on sparse BI claims
+   adds label variance the ultra-shallow trees cannot resolve, while uniform
+   LOB factors act as a variance shrinker; chain-ladder factors off incurred
+   triangles are also contaminated by closure artefacts (D-007's BI severity
+   "trend"). The motor-BI development hypothesis (D-072 item 4) is falsified.
+3. **Sandbox instrument validated twice in one day:** the same board that
+   validated the HT label port as Public-for-Private (D-072) rejects this one
+   on *both* boards outright. Label-space changes now have zero untested
+   candidates: `lob` (adopted), `bf`/`split` (local negatives), `ht_motor`
+   (D-072), `peril` (here). Any remaining Part 2 improvement must come from
+   feature-space or vehicle-space changes, of which the validated queue is
+   empty (D-079). The write-up becomes the priority.
+
 
