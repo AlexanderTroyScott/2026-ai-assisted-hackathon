@@ -2970,3 +2970,80 @@ median row rel-diff 0.085%, diffs concentrated in low-prediction rows) — the
 residue is XGBoost multithreaded run-to-run nondeterminism, not a spec
 difference. exp-036's blend arithmetic remains verified against the recorded
 component CSVs (1.8e-12), so recorded scores are unaffected.
+
+## D-085 (proposed) — Anchoring-convention experiment: the true 2025 level is FLAT (Private K* = 0.95); Public and Private disagree by 5%
+**2026-10-29 · human-directed ("do the anchoring experiment") · `scripts/scale_submission.py` + 7 Part 1 sandbox probes (exp-047…exp-053) · no modelling code changed**
+
+D-084 deferred the level/anchoring ambiguity: `--final-fit` recalibrates per-LOB
+scales on the **2021–24 average level** then applies the **one-year 2025/2024
+forward step** (`forward_factors`, D-009 central 1.035 motor / 1.056 buildings /
+1.041 contents) — a 4.7% convention gap (expected test total 2.15e8 vs 2.06e8).
+The local holdout cannot resolve it (D-025: quadratic vertex K* = 1.005, D²
+spread < 0.0002 over ±5%, per-LOB optima offsetting: motor 0.98, buildings
+1.025). The Part 1 sandbox board (100 slots/day, both boards visible) can.
+
+### Design
+
+One primary change per probe: a global level scalar K applied to the exp-046
+control blend (K = 1.0 = 0.12751 Pub / 0.13577 Priv). Bracket
+K ∈ {0.955, 0.980, 1.020, 1.047} (exp-047…050), then a pre-registered
+refinement {0.950, 0.930, 0.910} (exp-051…053) after the first quadratic put
+the Private vertex at the bracket edge. 7 slots of the 100/day sandbox.
+
+### Measured response (deterministic board scoring; one submission each)
+
+| K | expected total | Public | Private |
+|---|---|---|---|
+| 0.910 | 1.965e8 | 0.12608 | 0.13578 |
+| 0.930 | 2.009e8 | 0.12663 | 0.13599 |
+| **0.950** | **2.052e8** | 0.12704 | **0.13608** |
+| 0.955 | 2.063e8 | 0.12712 | **0.13608** |
+| 0.980 | 2.117e8 | 0.12741 | 0.13597 |
+| 1.000 | 2.160e8 | **0.12751** | 0.13577 |
+| 1.020 | 2.203e8 | 0.12750 | 0.13545 |
+| 1.047 | 2.261e8 | 0.12731 | 0.13488 |
+
+### Findings
+
+1. **The Private (honest) optimum is K* ≈ 0.95, turnover confirmed on both
+   sides** (0.13599 at 0.93, 0.13597 at 0.98). Expected 2025 ultimate total =
+   **2.05e8 ≈ the AY2024 actual total (2.061e8)**: the true 2025 level is
+   **flat vs 2024** — no forward step. This converges with the audit's
+   alternative-convention figure (2.055e8) and with the independent evidence:
+   claims growth cooled to **+1.3%** in 2024 (174.8M → 191.5M → 203.5M →
+   206.1M for 2021–24) while the D-009 central step extrapolates the 2021–24
+   CAGR (+5.6%/yr), and the model already carries the 2025 level through
+   2025-priced `written_premium` features (+2.7% motor / +5.3% property over
+   2024) — the forward step plausibly **double-counts** the trend.
+2. **Public and Private disagree by 5% in level** (Public vertex 1.008 vs
+   Private 0.950). A model tuned on the Public board (our historical practice)
+   systematically sits 5% too high on the honest board. This is the audit's
+   🔴 public-tuning concern measured end-to-end on Part 1, and it is why D-009
+   must be signed off against Private, not Public.
+3. Level matters less than ranking: the whole 5% bracket moves Private by only
+   0.0012 — but it is a *free* 0.00031 for the calibrated blend and it makes
+   the calibration claim in the write-up defensible.
+
+### Honesty caveat (applies to any quoted score from this experiment)
+
+`0.13608` is a **bracket peak** — K* was located by 7 adaptive probes on the
+Private board, so the peak score is an in-sample estimate of the probe set, not
+an unbiased Private estimate. The *convention conclusion* (flat 2025 level) has
+independent actuarial support (2024 cooling; premium-embedded level) and does
+not rest on the peak score alone. Same discipline as Part 2's D-068/D-076
+probes: the write-up must say the level was set on sandbox-board evidence.
+
+### Proposed adoption (judgement call — awaiting human sign-off)
+
+- **Convention:** the expected 2025 total is the AY2024 actual total (flat
+  level). For premium-featured rate models, do **not** apply a forward step on
+  top of `--final-fit`; if a level factor is used instead, K ≈ 0.95 on the
+  current blend (calibrated file = `exp-051-scale0950.csv`, best Private
+  recorded 0.13608).
+- **D-009** moves from `proposed` to `resolved (measured)`: central/low/high
+  trend scenarios are superseded for level purposes by the measured flat
+  level; the trend *shape* per LOB was not probed (see options).
+- Not done here: per-LOB level probes (local optima differ by LOB), the
+  double-count test (refit without `written_premium` and re-probe — if the
+  optimum moves back up, the double-count story is confirmed), and any change
+  to production code or deliverables.
