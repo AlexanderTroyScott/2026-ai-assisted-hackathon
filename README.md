@@ -157,6 +157,12 @@ python3 scripts/ensemble_blend.py --weights 0.40,0.42,0.18 \
     outputs/submissions/exp-035-xgb.csv outputs/submissions/exp-033.csv outputs/submissions/exp-032.csv
 ```
 
+The same recipe **without** `--legacy-features` is `exp-046` (D-084, leak-free
+pipeline): **0.12751 Public / 0.13577 Private** — impact-neutral vs exp-036
+(−0.00002 / +0.00007, both boards inside noise) and marginally our best Private
+score. The strict pipeline is the production pipeline; `--legacy-features`
+exists only to reproduce pre-D-084 runs.
+
 **For the judging panel** — where each axis is evidenced: pricing performance &
 adaptation → §2–§3 and `docs/emerging_market_report.md`; effective use of AI → §5 and
 `docs/ai_workflow_log.md`; trust, validation & guardrails → §4 and `tests/`;

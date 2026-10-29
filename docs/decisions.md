@@ -2936,3 +2936,25 @@ anchoring-convention experiment (see options) changes the level basis.
   list.
 - Part 2 items (public-board-tuned forward index presentation, emerging orphan
   doc, `estimate_forward_index` dedup keys) — out of scope.
+
+### D-084 outcome (validation submission `exp-046`, 2026-10-29 14:18 UTC)
+
+The exp-036 recipe and weights (0.40 xgb / 0.42 per-LOB LGBM / 0.18 pooled
+LGBM) rebuilt on the fixed (strict) pipeline scored **0.12751 Public /
+0.13577 Private** vs exp-036's 0.12753 / 0.13570 — **−0.00002 Public /
++0.00007 Private: impact-neutral confirmed on both boards**, matching the
+pre-registered hypothesis and the local evidence (blend val D² 0.140732 vs
+0.14076; every component neutral-or-better vs its legacy counterpart).
+
+Consequences:
+- The leak-free pipeline is now the production pipeline; `--legacy-features` is
+  reproduction-only. The fix bundle closes the D-065 mild-leak finding at
+  effectively zero cost.
+- exp-046's Private 0.13577 is marginally the best Private score recorded
+  (exp-036 0.13570), but the 0.00007 gap is deep inside board noise (D-025);
+  treat the two blends as tied and keep both on record. Choice of the Week 1
+  deliverable file (exp-036 as disclosed in D-081 vs exp-046 on the clean
+  pipeline) is left to the human — see options list.
+- Anchoring/level convention still unresolved (D-084 "deferred"); the +0.39%
+  prediction-total shift between exp-036 and exp-046 (2.151e8 → 2.160e8) is
+  within the 4.7% convention ambiguity and not an independent effect.
