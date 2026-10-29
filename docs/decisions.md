@@ -3053,3 +3053,11 @@ probes: the write-up must say the level was set on sandbox-board evidence.
   double-count test (refit without `written_premium` and re-probe — if the
   optimum moves back up, the double-count story is confirmed), and any change
   to production code or deliverables.
+
+**Convention file scored (exp-054, 2026-10-29 16:09 UTC): 0.12700 Public /
+0.13600 Private** — 0.00008 below the bracket peak (exp-047/051 0.13608) and
++0.00023 over the exp-046 control, exactly as pre-registered ("Private
+~0.1360"). The convention-derived file lands at the measured optimum without
+being board-fitted to the last digit; the bracket-peak caveat still applies to
+any quoted peak-adjacent score. Public 0.12700 confirms the documented
+Public/Private level divergence (Public prefers the +5% level).

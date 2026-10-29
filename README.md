@@ -17,7 +17,7 @@ average for everyone" and 1 means "perfect".*
 | Competition | Our entry | Score | Standing |
 |---|---|---|---|
 | **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-025` | **0.16994** | **4th of 33** — within 0.0018 of the podium |
-| **Part 1** — developed market (closed 2026-10-23) | `exp-027` | 0.12984 (hidden board) | 41st of 54 — our best model `exp-036` (0.13570) came just after the deadline and is unranked (disclosed in §2) |
+| **Part 1** — developed market (closed 2026-10-23) | `exp-027` | 0.12984 (hidden board) | 41st of 54 — unranked post-deadline submissions kept scoring: `exp-054` (D-085 convention file) is our best at **0.13600 Private** (exp-036 0.13570; disclosed in §2) |
 
 One nice coincidence of the rules: Part 1's scoring gate stayed open after its
 deadline and reveals both scores — so it became a free, fully labelled **laboratory**
@@ -159,9 +159,27 @@ python3 scripts/ensemble_blend.py --weights 0.40,0.42,0.18 \
 
 The same recipe **without** `--legacy-features` is `exp-046` (D-084, leak-free
 pipeline): **0.12751 Public / 0.13577 Private** — impact-neutral vs exp-036
-(−0.00002 / +0.00007, both boards inside noise) and marginally our best Private
-score. The strict pipeline is the production pipeline; `--legacy-features`
-exists only to reproduce pre-D-084 runs.
+(−0.00002 / +0.00007, both boards inside noise). The strict pipeline is the
+production pipeline; `--legacy-features` exists only to reproduce pre-D-084 runs.
+
+The **D-085 convention file** (`exp-054`, best Private **0.13600**) adds
+`--trend flat` to the three component commands (no forward step — the level is
+learned from 2025-priced premium; D-009 resolved by measurement) and
+calibrates the blend to the AY2024 developed actual ultimate total:
+
+```bash
+python3 scripts/run_experiment.py --name exp-054-pooled --mode tweedie --target rate --num-leaves 16 --lr 0.04 --final-fit --save-val-pred --trend flat \
+    --features base,premium,experience,weather,flags,relativity,address,customer
+python3 scripts/run_experiment.py --name exp-054-perlob --mode per_lob --target rate --num-leaves 6 --lr 0.05 --final-fit --save-val-pred --trend flat \
+    --features base,premium,experience,weather,flags,relativity,address,customer
+python3 scripts/run_experiment.py --name exp-054-xgb --mode per_lob_xgb --target rate --lr 0.05 --final-fit --save-val-pred --trend flat \
+    --features base,premium,experience,weather,flags,address,customer
+python3 scripts/ensemble_blend.py --weights 0.40,0.42,0.18 \
+    --out outputs/submissions/exp-054-raw-blend.csv \
+    outputs/submissions/exp-054-xgb.csv outputs/submissions/exp-054-perlob.csv outputs/submissions/exp-054-pooled.csv
+python3 scripts/scale_submission.py --input outputs/submissions/exp-054-raw-blend.csv \
+    --target-total 206079305 --out outputs/submissions/exp-054-calibrated.csv
+```
 
 **For the judging panel** — where each axis is evidenced: pricing performance &
 adaptation → §2–§3 and `docs/emerging_market_report.md`; effective use of AI → §5 and
