@@ -81,6 +81,18 @@ def blend_lob_costs(p_off, p_prior, lines, w_off):
         out[m] = w * out[m] + (1.0 - w) * p_prior[m]
     return out
 
+
+def parse_seeds(spec: str) -> list[int]:
+    """Parse a comma-separated seed spec ('0,1,2') into a non-empty int list.
+
+    D-088: the record refit averages seeds 0,1,2; redraw tickets swap the
+    seed set through --refit-seeds while everything else stays identical.
+    """
+    seeds = [int(s) for s in spec.split(",") if s.strip()]
+    if not seeds:
+        raise ValueError(f"empty seed spec: {spec!r}")
+    return seeds
+
 ADAPT_CAT = ["region", "gender", "age_band_5", "channel", "cover_type", "flood_zone"]
 ADAPT_NUM = [
     "voluntary_excess", "new_business", "wp_rel", "is_self_employed",
@@ -164,6 +176,9 @@ def main() -> int:
                     help="per-LOB offset weight in the offset/prior blend (D-086 arm C). "
                          "Default all-1.0 = record behaviour (offset-only, D-067). "
                          "e.g. 'motor=1.0,buildings=1.0,contents=0.5'")
+    ap.add_argument("--refit-seeds", default="0,1,2",
+                    help="seeds for the final refit average (D-088 redraw tickets). "
+                         "Default '0,1,2' = the record (emerging-exp-025) exactly.")
     args = ap.parse_args()
 
     print(f"=== Part 2 Emerging Market Pipeline: {args.name} ===")
@@ -281,6 +296,7 @@ def main() -> int:
         w_off[k.strip()] = float(v)
     if set(w_off) != set(LINES):
         raise SystemExit(f"FATAL: --w-off must cover exactly {tuple(LINES)}, got {sorted(w_off)}")
+    refit_seeds = parse_seeds(args.refit_seeds)
     p_te_pred = np.zeros(len(em_te))
     p_te_prior = np.zeros(len(em_te))
     for ln in LINES:
@@ -298,7 +314,7 @@ def main() -> int:
         w_tr = np.clip(exp_all[m_tr], 1e-3, None)
 
         preds_off = np.zeros(m_te.sum())
-        for seed in [0, 1, 2]:
+        for seed in refit_seeds:
             m_off = lgb.LGBMRegressor(
                 objective="tweedie", tweedie_variance_power=1.5,
                 n_estimators=lob_n_est[ln], learning_rate=0.02, num_leaves=args.num_leaves,
@@ -314,7 +330,7 @@ def main() -> int:
             rate_te_hat = pr_te_cal * np.exp(m_off.predict(X_ad_te.loc[m_te, c_a], raw_score=True))
             cost_tr_hat = rate_tr_hat * exp_all[m_tr]
             cost_te_hat = rate_te_hat * exp_te[m_te]
-            preds_off += cost_te_hat * (y_all[m_tr].sum() / cost_tr_hat.sum()) / 3.0
+            preds_off += cost_te_hat * (y_all[m_tr].sum() / cost_tr_hat.sum()) / len(refit_seeds)
 
         p_te_pred[m_te] = preds_off  # D-067 offset-only
         p_te_prior[m_te] = pr_te_cal * exp_te[m_te]

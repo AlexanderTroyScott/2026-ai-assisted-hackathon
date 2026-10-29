@@ -1,29 +1,35 @@
 # Part 2 Actuarial Report — Emerging Market Expansion (`iaa-ai-assisted-hackathon-2026-part-2`)
 
 **Status:** Verified empirically from `developed/` and `emerging/` Parquet tables
-(2026-10-23; write-up refreshed through D-080 on 2026-10-28).
+(2026-10-23; write-up refreshed through D-088 on 2026-10-29).
 **Executable pipeline:** `src/emerging.py`, `scripts/run_emerging.py`, `tests/test_emerging.py`.
-**Leaderboard:** best is `emerging-exp-025` at **0.16994**
-Public on `iaa-ai-assisted-hackathon-2026-part-2` (rank 4 of 33 at 2026-10-28;
-D-076: property NB/ren cohort ridge on top of the D-075 tuned offset layer.
-Record chain: `emerging-exp-002` base 0.16297 → `emerging-exp-019` 0.16836
+**Leaderboard:** best is `emerging-exp-033` at **0.17019**
+Public on `iaa-ai-assisted-hackathon-2026-part-2` (rank 4 of 33 at 2026-10-29) —
+the D-088 level-bet ticket (record configuration, redrawn refit seeds, global
+level ×0.98), which as best Public is the counted entry at the deadline. The
+**record configuration** is `emerging-exp-025` at **0.16994** (D-076: property
+NB/ren cohort ridge on top of the D-075 tuned offset layer). Record chain:
+`emerging-exp-002` base 0.16297 → `emerging-exp-019` 0.16836
 (D-069: 2025 forward index built into the pipeline — per-line/cohort trend +
 transfer-book reconciliation at scoring; `emerging-exp-016`/`017` post-hoc
 recipe scored 0.16833) → `emerging-exp-024` 0.16879 (D-075 tuning) →
-`emerging-exp-025` 0.16994). Consistent with Part 1
-experience, the leaderboard score sits above the 5-Fold CV estimate (+0.14074
-record config) — CV folds train on 4/5 of two thin years, so the honest CV is
-the conservative number.
+`emerging-exp-025` 0.16994 → `emerging-exp-033` 0.17019 (D-088). Consistent
+with Part 1 experience, the leaderboard score sits above the 5-Fold CV
+estimate (+0.14074 record config) — CV folds train on 4/5 of two thin years,
+so the honest CV is the conservative number.
 
 **Scoring rules and standing (confirmed 2026-10-28):** the final ranking runs
 on **Private**, and the counted entry is the **best Public submission at the
 deadline** (2026-10-31 03:59 UTC) — the same mechanism as Part 1. Gaps from
-`emerging-exp-025` to the podium: +0.00178 (3rd), +0.00198 (2nd), +0.00309
+`emerging-exp-033` to the podium: +0.00153 (3rd), +0.00173 (2nd), +0.00284
 (1st). Measured board seed noise per config redraw is σ ≈ 0.0013 Public and
 σ ≈ 0.002 Private (3-seed `lob` arm, D-080 supplement), and seed-level
 Public/Private movements are uncorrelated to anti-correlated in our pairs — so
-seed redraws are EV-neutral and only the Private *mean* quality of the vehicle
-counts (§6–§7).
+pure seed redraws are EV-neutral and only the Private *mean* quality of the
+vehicle counts (§6–§7). **The counted entry is a deliberate exception to the
+level status quo (D-088):** it carries a −2% global level cut on the measured
+Part 1 evidence (D-085) that Public-tuned levels sit above Private optima —
+disclosed in §7 as a bet, decided at final ranking.
 
 > **In plain terms.** This report documents how we priced a brand-new insurance
 > market that had only two thin years of history. The short version: we learned
@@ -244,33 +250,40 @@ double-count before upload).
 
 ## 7. Standing, Endgame, and Disclosed Limitations
 
-At 2026-10-28 the record `emerging-exp-025` (0.16994 Public) stands **4th of
-33**: HS 0.17303 / SnorlaxCode 0.17192 / Actuarial NOOB 0.17172 / us 0.16994 /
-ManuelRodríguez 0.16914. With the scoring rules of the header (Private final,
-entry = best Public at the deadline), we state the endgame plainly:
+At 2026-10-29 the counted entry `emerging-exp-033` (0.17019 Public) stands
+**4th of 33**: HS 0.17303 / SnorlaxCode 0.17192 / Actuarial NOOB 0.17172 / us
+0.17019 / ManuelRodríguez 0.16914. With the scoring rules of the header
+(Private final, entry = best Public at the deadline), we state the endgame
+plainly:
 
-1. **Mean-chasing cannot close the +0.00178 gap in the remaining windows.**
+1. **Mean-chasing cannot close the +0.00153 gap in the remaining windows.**
    The largest validated remaining mean-raiser is an order of magnitude
    smaller; after D-079/D-082 the validated improvement queue is empty —
    including the transfer-prior channel (D-082), the last route through which
    Part 1 work could have raised Part 2.
-2. **Seed redraws are EV-neutral and are not played.** Board seed noise
+2. **Pure seed redraws are EV-neutral and are not played.** Board seed noise
    (σ ≈ 0.0013 Public / ≈ 0.002 Private) can move a redraw across the gap on
    the *Public* board, but our seed-level Public/Private pairs moved in
    opposite directions (`exp-033`→`exp-040`: Pub −0.00119 / Priv +0.00038) —
-   Public luck does not buy the final metric. We do not run a seed lottery on
-   the submission budget.
+   Public luck does not buy the final metric, and a clearing redraw also
+   *raises the bar* our own level tickets must clear (D-088). Redraws appear
+   only as noise carriers *inside* D-088's level tickets, never alone.
 3. **The record's fitted multipliers are Public-fitted (D-068/D-076) and are
    disclosed as such.** D-072's lesson — public-fitted corrections can
    disappoint on Private — applies to them. Part 1's sandbox measured the
    divergence directly (D-085: the Public and Private level optima sat ~5%
    apart, the Public-tuned level being the higher one), and Part 2's Private
-   split is hidden, so the record's level may sit above its Private optimum —
-   while the "best Public at the deadline" selection rule rewards it
-   regardless. Exposure is bounded by construction: the multiplier shapes are
-   constrained to measured response-curve families, the property total is
-   held at ×1.05, and the joint optimum was settled at the flat end of the
-   ridge (D-077, implied gain +0.000004) rather than chased.
+   split is hidden, so the record's level may sit above its Private optimum.
+   **D-088 acts on this instead of only disclosing it:** the counted entry
+   `emerging-exp-033` carries a −2% global level cut on the D-085-measured
+   direction (expected ≈ +0.0002 Private if the divergence transfers; the
+   realized value carries draw luck ±0.002 and is decided at final ranking).
+   Exposure is bounded by construction: the multiplier shapes are constrained
+   to measured response-curve families, the property total is held at ×1.05,
+   the joint optimum was settled at the flat end of the ridge (D-077, implied
+   gain +0.000004) rather than chased, and the D-088 cut is sized to the
+   measured Part 1 curve (−2%, not the −5% probe optimum: the deeper cut's
+   Public cost left it below the best-Public bar).
 
 **Reproducibility.** `python3 scripts/run_emerging.py --use-cache --num-leaves 4
 --min-leaf 1200` reproduces the record submission byte-equivalently (max rel

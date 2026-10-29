@@ -234,3 +234,14 @@ def test_blend_lob_costs_per_lob_weights():
     with pytest.raises(ValueError):
         blend_lob_costs(p_off, p_pr, lines,
                         {"motor": 1.5, "buildings": 1.0, "contents": 1.0})
+
+
+def test_parse_seeds_record_default_unchanged():
+    """D-088: --refit-seeds parses to a non-empty int list; default = the record."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from run_emerging import parse_seeds
+
+    assert parse_seeds("0,1,2") == [0, 1, 2]  # record (emerging-exp-025) seeds
+    assert parse_seeds("3,4,5") == [3, 4, 5]  # a redraw ticket's seed set
+    with pytest.raises(ValueError):
+        parse_seeds("")

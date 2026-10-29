@@ -16,7 +16,7 @@ average for everyone" and 1 means "perfect".*
 
 | Competition | Our entry | Score | Standing |
 |---|---|---|---|
-| **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-025` | **0.16994** | **4th of 33** — within 0.0018 of the podium |
+| **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-033` | **0.17019** | **4th of 33** — within 0.0015 of the podium (record config `emerging-exp-025` 0.16994; exp-033 adds a disclosed −2% level bet, D-088) |
 | **Part 1** — developed market (closed 2026-10-23) | `exp-027` | 0.12984 (hidden board) | 41st of 54 — unranked post-deadline submissions kept scoring: `exp-054` (D-085 convention file) is our best at **0.13600 Private** (exp-036 0.13570; disclosed in §2) |
 
 One nice coincidence of the rules: Part 1's scoring gate stayed open after its
@@ -101,7 +101,7 @@ Equally important, the ideas we **killed with evidence** — each one logged:
 - **Rules before results.** Each experiment declared its pass/fail bar in advance
   ("the blend must beat the baseline by 0.0002 across three matched seeds"), which is
   why a good-looking ensemble stayed unsubmitted.
-- **100 automated guardrail tests** run before every commit: leakage rules, label
+- **103 automated guardrail tests** run before every commit: leakage rules, label
   arithmetic, calibration invariants, submission format checks.
 - **Reproducibility.** One command regenerates the Part 2 submission of record
   byte-for-byte (differences below 1e-15) — the leaderboard number is not an artefact.
@@ -132,16 +132,22 @@ and `docs/decisions.md`.
 | `docs/ai_workflow_log.md` | AI interaction evidence trail |
 | `docs/submission_protocol.md` | Submission rules and safety rails |
 | `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
-| `tests/` | 102 guardrail tests (`python3 -m pytest tests/ -q`) |
+| `tests/` | 103 guardrail tests (`python3 -m pytest tests/ -q`) |
 
-Reproducing the Part 2 (`emerging-exp-025`) and Part 1 (`exp-054`, the Week 1
-deliverable) submissions of record:
+Reproducing the Part 2 (`emerging-exp-033`, the counted entry) and Part 1
+(`exp-054`, the Week 1 deliverable) submissions of record:
 
 ```bash
-python3 -m pytest tests/ -q            # 102 guardrails
-# Part 2 submission of record (0.16994 Public, 4th of 33):
+python3 -m pytest tests/ -q            # 103 guardrails
+# Part 2 record configuration (emerging-exp-025, 0.16994 Public):
 python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 # -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent, max rel diff 8e-16)
+
+# Part 2 counted entry (emerging-exp-033, 0.17019 Public) = the same config at
+# redrawn refit seeds with a -2% global level cut (D-088 level bet, disclosed):
+python3 scripts/run_emerging.py --name d088-s678-base --use-cache --num-leaves 4 --min-leaf 1200 --refit-seeds 6,7,8
+python3 scripts/scale_submission.py --input outputs/submissions/d088-s678-base.csv \
+    --scale 0.98 --out outputs/submissions/emerging-exp-033.csv
 
 # Part 1 multi-family rate blend (0.12753 Public / 0.13570 Private).
 # --legacy-features reproduces the pre-D-084 feature construction exactly

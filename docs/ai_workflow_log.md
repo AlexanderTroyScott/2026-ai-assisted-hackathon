@@ -681,6 +681,24 @@ calls arose.
   6/28/2 by loss year; 9,102 non-repudiated) and the D-002 drop treatment
   documented in `emerging_market_report.md` §3. Test suite grew to **102
   passing** (blend-math + dedup-inertness guardrails).
+- **D-088 — the expiring-window play, pre-registered and factorized (human
+  approved the 4-shot 2×2).** With 9 slots burning at midnight and the
+  mean-quality queue empty, the one directional lever was the D-085 port:
+  Part 1's sandbox measured Public-tuned levels ~5% above Private optima, and
+  the final metric is the Private of the best-Public entry. Structural analysis
+  ruled out the naive plays: a cut can never ride behind its own carrier (the
+  uncut file out-Publics it and takes the counted slot), and pure redraws are
+  strictly harmful (they raise the bar our cuts must clear). Each ticket
+  therefore carried draw+cut in one file: record config at seeds 3,4,5 / 6,7,8
+  × global K 0.98 / 0.95. Contract run proved the seed flag inert to 8.1e-16.
+  The 2×2 returned a textbook factorial (level −0.00037 per −3% at both
+  draws; draw spread +0.00036 at both Ks) and one clearing ticket —
+  **exp-033 at 0.17019, the new best Public and counted entry, carrying the
+  −2% level bet** whose truth the hidden Private ranking decides at the
+  deadline. An amendment forced by the selection mechanics (the bar is the
+  running best Public, not 0.16994) was recorded before any further
+  submission; the remaining-window EV analysis (deepening ≈ +0.00001/shot)
+  kept the budget from being spent on noise.
 
 **Output.** `emerging-exp-030` (submitted, 0.16991), `scripts/run_emerging{,_priorweight,_wprel,_wblend}.py`,
 `src/emerging.py` (`CLAIM_DEDUP_KEYS`), `tests/test_emerging.py` (+2),

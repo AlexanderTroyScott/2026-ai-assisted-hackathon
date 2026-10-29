@@ -3211,3 +3211,117 @@ The three items D-084 parked are done and evidenced:
    orphans 6/28/2 by loss year, 9,102 non-repudiated; D-002 drop rule, counted).
 3. **`estimate_forward_index` dedup keys** → `CLAIM_DEDUP_KEYS` constant shared
    by both call sites + inertness test (D-086 recon: measured inert).
+
+## D-088 (proposed) — Part 2 endgame play: Private-level bet tickets (the D-085 port) — pre-registered before submission
+**2026-10-29 · human-directed to spend the expiring Part 2 window ("use some of those available slots") · pre-registered before any board result · 4 slots of today's 9**
+
+### The structural constraint (why the obvious plays are wrong)
+
+The counted entry is the **best Public file at the deadline** (D-079 frame).
+Two consequences that rule out whole strategies:
+1. **A same-draw "cut" can never be counted behind its own carrier.** Submitting
+   a redraw at K=1.0 and then its lower-level variant is self-defeating: the
+   uncut file always out-Publics its own cut and takes the counted slot. Every
+   level ticket must carry its draw and its cut **in one file** and clear
+   0.16994 on its own.
+2. **Pure redraw arms are strictly harmful here** (not just EV-neutral): a
+   clearing redraw replaces exp-025 with a mean-equal Private draw *and* raises
+   the bar our level tickets must clear. Seed lottery excluded — consistent
+   with D-079's refusal, now derived from the selection rule itself.
+
+### The hypothesis (the only directional lever left)
+
+**The record's Public-fitted level sits above the Part 2 Private optimum.**
+Support: (a) D-085's Part 1 sandbox measured the divergence end-to-end on 8
+deterministic probes — Public vertex K*=1.008 vs Private K*=0.950, i.e. a
+Public-tuned level lands ~5% high, and the Private response is concave with
+its optimum near K≈0.955; (b) Part 2's own claims-based index reads the fitted
+NB level as high (`f_data` 0.93/0.80/1.15 vs probe constants 1.32/1.12/1.12);
+(c) Part 2's Public top is flat (property total ±3% moves Public ≤ 0.00008 —
+exp-028 0.16986 / exp-025 0.16994 / exp-029 0.16992), so a small cut costs
+little Public while the Private bet follows D-085's measured slope
+(Part 1: −2% level ≈ +0.0002 Private at 0.0001 Public cost; peak gain
++0.00031 at K≈0.955). The final metric is **Private of the counted entry**
+(D-079), so a clearing lower-level file is the only route to a better final
+score. Mean-chasing is closed (D-086); this is a level/anchoring bet.
+
+### Tickets (pre-registered arms, 2 draws × 2 levels = 2×2)
+
+Record config byte-identical except `--refit-seeds` (the final refit averages
+3 seeds; the record set is 0,1,2) and `scale_submission.py --scale K`:
+
+| ticket | refit seeds | global K | role |
+|---|---|---|---|
+| `emerging-exp-031` | 3,4,5 | 0.98 | level contrast arm |
+| `emerging-exp-032` | 3,4,5 | 0.95 | level contrast arm (D-085 optimum depth) |
+| `emerging-exp-033` | 6,7,8 | 0.98 | draw contrast arm |
+| `emerging-exp-034` | 6,7,8 | 0.95 | draw contrast arm |
+
+vs `emerging-exp-025` each ticket changes two components (seed set + level) —
+marked **`confounded`** per protocol rule 2; the 2×2 recovers both effects from
+the four Public read-outs: A1 vs A2 = level cost at fixed draw, A1 vs A3 =
+board redraw noise at fixed K. Contract run (`--refit-seeds 0,1,2`) must
+reproduce the record file before any ticket counts.
+
+### Pre-registered read-out (before results)
+
+- **Primary:** does any ticket clear 0.16994 Public? If yes → the counted entry
+  becomes a lower-level file and the deadline's Private ranking tests the bet.
+  If all miss → exp-025 stands untouched (slots lost as foreseen).
+- **Secondary:** realized Public of K=0.98 vs K=0.95 on the same draw sets the
+  cut depth for tomorrow's adaptive phase (cut as deep as the realized margin
+  above 0.16994 allows).
+- **Tertiary:** the draw contrast estimates board redraw noise σ for the record
+  config (3-seed average).
+- **Honesty:** the expected gain is small and high-variance (best case
+  +0.0003 Private on the counted entry per D-085's curve; seed noise ≈ ±0.002
+  Private; Part 2 Private is hidden and unverifiable before final ranking).
+  The bet rests on transferring D-085's measured divergence; if the transfer
+  fails, a clearing ticket is worse than exp-025 — accepted knowingly, one
+  expiring slot per shot.
+
+PASS/FAIL framing does not apply (no local gate exists for a hidden-split
+level bet); the human confirmed spending the slots on this campaign. Results
+to be appended below with the realized Public read-out.
+
+### D-088 results (2026-10-29, the 2×2 fired; contract 8.1e-16)
+
+Contract run (`--refit-seeds 0,1,2`) reproduced the record file to 8.1e-16 —
+the flag is proven inert at its default. Realized Public (deterministic board):
+
+| ticket | seeds | K | Public | factorized effect |
+|---|---|---|---:|---|
+| exp-031 | 3,4,5 | 0.98 | 0.16983 | level arm |
+| exp-032 | 3,4,5 | 0.95 | 0.16946 | level arm |
+| **exp-033** | **6,7,8** | **0.98** | **0.17019** | **draw arm — CLEARS** |
+| exp-034 | 6,7,8 | 0.95 | 0.16983 | draw arm |
+
+1. **`emerging-exp-033` is the new best Public (0.17019, +0.00025 over
+   exp-025) and therefore the counted entry at the deadline.** The D-088 bet
+   is live: the counted entry carries a **−2% global level** vs the
+   Public-fitted record. If the D-085 divergence transfers, its Private sits
+   ≈ +0.0002 above exp-025's expected Private (Part 1 curve: −2% ≈ +0.0002);
+   the realized outcome includes draw luck (±0.002 Private, unobservable) and
+   is decided at final ranking. Marked `confounded` vs exp-025 (seeds + level);
+   the 2×2 decomposes the movement.
+2. **Factorial read-out (clean):** level cost = −0.00037 per −3% K at BOTH
+   draws (0.16983→0.16946 and 0.17019→0.16983; interaction 0.00001) ≈
+   −0.00012 per 1% level; draw spread = +0.00036 at BOTH Ks (σ_draw ≈ 0.00029
+   for 3-seed averages, consistent with the D-079 noise estimate). The record
+   draw s012 sits between s345 and s678 at K-equivalent 0.98 (~0.16970).
+3. **Amendment to the pre-registered secondary read-out (forced by the
+   selection mechanics, noted before further submissions):** the pre-reg text
+   said "cut as deep as the realized margin above 0.16994 allows". The
+   counted entry is the max Public over ALL submissions — exp-033's 0.17019
+   is now the bar, so a same-draw deeper cut (e.g. s678 × K=0.965 ≈ 0.17001)
+   can never be counted and is pointless. Any further ticket must beat
+   0.17019 outright. Consequence: the level deepening is capped by draw luck
+   (a fresh draw at K=0.97 clears with P ≈ 10%, K=0.95 with P ≈ 3-5%), and
+   the marginal Private gain is small (K 0.98→0.955 ≈ +0.0001). Further
+   tickets are expiring-slot long shots with per-shot EV ≈ +0.00001.
+4. **Pure redraw arms confirmed excluded by construction** — every ticket
+   carried a cut; no ticket could raise the bar without also carrying the bet.
+
+Outcome vs the pre-registered primary read-out: **ticket cleared → the counted
+entry is a lower-level file and the deadline tests the bet.** exp-025 stands
+as the record-config benchmark (0.16994) and the D-088 write-up reference.
