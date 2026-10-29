@@ -856,6 +856,19 @@ def test_final_fit_refuses_freq_sev_mode():
     assert "freq_sev" in (proc.stderr + proc.stdout)
 
 
+def test_scale_submission_multiplies_and_floors():
+    """D-085: level probes scale every prediction by K and keep the 1e-3 floor."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.scale_submission import scale_frame
+
+    df = pd.DataFrame({"row_id": ["M1", "M2"], "prediction": [100.0, 0.002]})
+    out = scale_frame(df, 0.5)
+    assert out["prediction"].tolist() == [50.0, 0.001]
+    with pytest.raises(ValueError):
+        scale_frame(df, -1.0)
+
+
 def test_kaggle_validate_rejects_non_finite_predictions(tmp_path):
     """D-084: the submission gate must reject inf as well as NaN."""
     import sys
