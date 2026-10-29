@@ -1,0 +1,58 @@
+{
+  "name": "emerging-wprel",
+  "primary_change": "wp_rel re-keyed from within-(line,year) to a fixed per-line base (train-derived, shared train/test) \u2014 cross-year premium level becomes visible to prior+offset",
+  "arms": [
+    "A_full (prior+offset)",
+    "B_offset_only"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "oof": {
+    "record": {
+      "0": 0.14074076906018929,
+      "1": 0.14079648373893328,
+      "2": 0.14116486243250181
+    },
+    "A_full": {
+      "0": 0.14080799050730464,
+      "1": 0.14078351183968718,
+      "2": 0.14120985358621385
+    },
+    "B_offset_only": {
+      "0": 0.14071551038863894,
+      "1": 0.14062867196036266,
+      "2": 0.14104329988017128
+    }
+  },
+  "verdicts": {
+    "A_full": {
+      "deltas": [
+        6.722144711535094e-05,
+        -1.2971899246094765e-05,
+        4.4991153712037324e-05
+      ],
+      "mean_paired_delta": 3.3080233860431164e-05,
+      "all_seeds_positive": false,
+      "pass": false
+    },
+    "B_offset_only": {
+      "deltas": [
+        -2.5258671550343337e-05,
+        -0.00016781177857061458,
+        -0.00012156255233053415
+      ],
+      "mean_paired_delta": -0.00010487766748383069,
+      "all_seeds_positive": false,
+      "pass": false
+    }
+  },
+  "gate": 0.0002,
+  "gate_rule": "mean paired delta >= +0.0002 AND 3/3 seeds positive (2 arms)",
+  "contract_ok": true,
+  "record_contract_drift_seed0": 7.690601892818005e-07,
+  "pass": false,
+  "elapsed_s": 223.1
+}

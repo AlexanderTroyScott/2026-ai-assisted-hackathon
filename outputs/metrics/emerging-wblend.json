@@ -1,0 +1,38 @@
+{
+  "name": "emerging-wblend",
+  "primary_change": "per-LOB offset/prior blend w_off (1.0,1.0,0.5) from D-067's old-config grid vs record offset-only",
+  "w_off_variant": {
+    "motor": 1.0,
+    "buildings": 1.0,
+    "contents": 0.5
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "oof": {
+    "record": {
+      "0": 0.14074076906018929,
+      "1": 0.14079648373893328,
+      "2": 0.14116486243250181
+    },
+    "d067_contents_shrink": {
+      "0": 0.14084992801319585,
+      "1": 0.14083927269142937,
+      "2": 0.1412599680525336
+    }
+  },
+  "deltas": [
+    0.00010915895300656064,
+    4.278895249609782e-05,
+    9.510562003178791e-05
+  ],
+  "mean_paired_delta": 8.235117517814879e-05,
+  "gate": 0.0002,
+  "gate_rule": "mean paired delta >= +0.0002 AND 3/3 seeds positive (2 arms)",
+  "contract_ok": true,
+  "record_contract_drift_seed0": 7.690601892818005e-07,
+  "pass": false,
+  "elapsed_s": 8.8
+}
