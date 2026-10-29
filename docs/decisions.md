@@ -2958,3 +2958,15 @@ Consequences:
 - Anchoring/level convention still unresolved (D-084 "deferred"); the +0.39%
   prediction-total shift between exp-036 and exp-046 (2.151e8 → 2.160e8) is
   within the 4.7% convention ambiguity and not an independent effect.
+
+### D-084 addendum — exp-035 artefact gap closed (2026-10-29)
+
+`exp-035` (40% of the record blend) previously had no metrics JSON or valpred.
+`exp-035-xgb-repro` (same recipe under `--legacy-features`) reproduces the
+recorded Fold-2024 OOF D² to the digit (`d2_model 0.1401392867009036` = D-083's
+0.14014) and is now persisted with full metadata. Its submission CSV matches
+the recorded `exp-035-xgb.csv` to 0.02% in total (per-LOB ratios 0.9994–1.0003,
+median row rel-diff 0.085%, diffs concentrated in low-prediction rows) — the
+residue is XGBoost multithreaded run-to-run nondeterminism, not a spec
+difference. exp-036's blend arithmetic remains verified against the recorded
+component CSVs (1.8e-12), so recorded scores are unaffected.
