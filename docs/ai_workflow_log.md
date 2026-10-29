@@ -699,6 +699,20 @@ calls arose.
   running best Public, not 0.16994) was recorded before any further
   submission; the remaining-window EV analysis (deepening ≈ +0.00001/shot)
   kept the budget from being spent on noise.
+- **D-089 — the bet withdrawn by human risk preference (same day).** In
+  review the human pressed on the bet's weakest link — the Public→Private
+  level-optimum shift is a fixed-but-unknown split property, and Part 1's ~5%
+  gap is n=1 evidence of its direction — and chose not to carry the tilt. The
+  uncut s678 carrier `emerging-exp-035` (K=1.0, the record level) was
+  pre-registered and fired; it scored **0.17028**, out-Publicing exp-033's
+  0.17019, so the carrier took the counted slot and the final ranking runs at
+  the record level with no level deviation. The read-out also completed the
+  s678 level response (K 0.95→0.16983, 0.98→0.17019, 1.00→0.17028): concave,
+  vertex at/above K≈1.0, so the withdrawn cut's Public cost was only 0.00009 —
+  an honest measure of how small the stakes of the whole episode were. The
+  D-088 redraw-preclusion ("pure redraws are strictly harmful") was formally
+  superseded by explicit human direction, and exp-035 is disclosed as a
+  mean-equal redraw whose +0.00034 is draw luck, not improvement.
 
 **Output.** `emerging-exp-030` (submitted, 0.16991), `scripts/run_emerging{,_priorweight,_wprel,_wblend}.py`,
 `src/emerging.py` (`CLAIM_DEDUP_KEYS`), `tests/test_emerging.py` (+2),

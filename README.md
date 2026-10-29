@@ -16,7 +16,7 @@ average for everyone" and 1 means "perfect".*
 
 | Competition | Our entry | Score | Standing |
 |---|---|---|---|
-| **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-033` | **0.17019** | **4th of 33** — within 0.0015 of the podium (record config `emerging-exp-025` 0.16994; exp-033 adds a disclosed −2% level bet, D-088) |
+| **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-035` | **0.17028** | **4th of 33** — within 0.0014 of the podium (record config `emerging-exp-025` 0.16994; exp-035 is the record model at re-rolled seeds, no level deviation — see D-088/D-089) |
 | **Part 1** — developed market (closed 2026-10-23) | `exp-027` | 0.12984 (hidden board) | 41st of 54 — unranked post-deadline submissions kept scoring: `exp-054` (D-085 convention file) is our best at **0.13600 Private** (exp-036 0.13570; disclosed in §2) |
 
 One nice coincidence of the rules: Part 1's scoring gate stayed open after its
@@ -134,7 +134,7 @@ and `docs/decisions.md`.
 | `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
 | `tests/` | 103 guardrail tests (`python3 -m pytest tests/ -q`) |
 
-Reproducing the Part 2 (`emerging-exp-033`, the counted entry) and Part 1
+Reproducing the Part 2 (`emerging-exp-035`, the counted entry) and Part 1
 (`exp-054`, the Week 1 deliverable) submissions of record:
 
 ```bash
@@ -143,11 +143,10 @@ python3 -m pytest tests/ -q            # 103 guardrails
 python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 # -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent, max rel diff 8e-16)
 
-# Part 2 counted entry (emerging-exp-033, 0.17019 Public) = the same config at
-# redrawn refit seeds with a -2% global level cut (D-088 level bet, disclosed):
-python3 scripts/run_emerging.py --name d088-s678-base --use-cache --num-leaves 4 --min-leaf 1200 --refit-seeds 6,7,8
-python3 scripts/scale_submission.py --input outputs/submissions/d088-s678-base.csv \
-    --scale 0.98 --out outputs/submissions/emerging-exp-033.csv
+# Part 2 counted entry (emerging-exp-035, 0.17028 Public) = the same config at
+# redrawn refit seeds 6,7,8 at the uncut record level (D-089; the withdrawn
+# D-088 bet ticket exp-033 is this file x 0.98):
+python3 scripts/run_emerging.py --name emerging-exp-035 --use-cache --num-leaves 4 --min-leaf 1200 --refit-seeds 6,7,8
 
 # Part 1 multi-family rate blend (0.12753 Public / 0.13570 Private).
 # --legacy-features reproduces the pre-D-084 feature construction exactly

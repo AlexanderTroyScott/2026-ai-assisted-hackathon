@@ -192,13 +192,17 @@ Stated plainly, because the honest version is the useful one:
 ## 7. Results, and one disclosure
 
 **Part 2 (emerging market) — the live competition.** Our best entry
-`emerging-exp-033`: **0.17019, 4th of 33 teams**, reaching within 0.0015 of the
+`emerging-exp-035`: **0.17028, 4th of 33 teams**, reaching within 0.0014 of the
 podium. The chain of measured improvements: 0.1630 (transfer baseline) → 0.1684
 (2025 forward index) → 0.1688 (model restraint) → 0.1699 (new-business/renewal
-pricing split) → 0.17019 (a deliberately slightly lower price level, on the
-evidence from our Part 1 laboratory that public-tuned levels sit above
-hidden-board optima; the final ranking is on that hidden board, so this is a
-disclosed bet measured there).
+pricing split) → 0.17028 (re-rolled training seeds; the model is unchanged).
+We also ran a disclosed price-level experiment (D-088/D-089): a −2% level
+ticket gained +0.00025 on the public board and briefly held the top entry, on
+the Part 1 laboratory evidence that public-tuned levels sit above hidden-board
+optima. On reflection that direction rests on a single past measurement of an
+unobservable split property, so the bet was withdrawn the same day by decision
+and the counted entry runs at the plain record level — the experiment and its
+2×2 measurement trail stand in the log.
 
 **Part 1 (developed market).** The entry counted by the leaderboard is
 `exp-027` (0.12436 public → **0.12984 private**, 41st of 54). **Disclosure:** our

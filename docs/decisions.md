@@ -3325,3 +3325,61 @@ the flag is proven inert at its default. Realized Public (deterministic board):
 Outcome vs the pre-registered primary read-out: **ticket cleared → the counted
 entry is a lower-level file and the deadline tests the bet.** exp-025 stands
 as the record-config benchmark (0.16994) and the D-088 write-up reference.
+
+## D-089 (human-directed, accepted) — Withdraw the D-088 level bet via the uncut K=1.0 carrier
+**2026-10-29 · explicit human direction ("I say submit a 6,7,8 seed with k=1 and see how it does", confirmed via the cancel option) · one slot of today's remaining 5**
+
+The D-088 discussion surfaced the honest weakness of the bet: the
+Public→Private level-optimum shift is a **fixed-but-unknown split property**,
+and Part 1's ~5% gap is n=1 evidence of its direction. If Part 2's split runs
+the other way, the −2% cut costs ≈ −0.0001 to −0.0002 on the final metric.
+The human chose not to carry that tilt: **`emerging-exp-035` = the s678 draw at
+K=1.0 (the record level, no bet)** — the exact uncut carrier of exp-033.
+
+Pre-registered read-out (before submission):
+
+- The structural asymmetry of D-088 cuts the other way here: an uncut file can
+  always out-Public a cut one. If exp-035 scores **> 0.17019** it becomes the
+  counted entry and the deadline's final ranking runs at the record level —
+  **the bet is withdrawn** (est. by the measured level slope ≈ 0.17043).
+- If exp-035 scores **≤ 0.17019**, exp-033 stays counted and the −2% bet
+  survives by default (a carrier that cannot clear cannot cancel).
+- Science either way: completes the s678 level response at a third point
+  (K 0.95 / 0.98 / 1.00) and the draw contrast at K=1.0, refining the measured
+  slope (currently −0.00012 Public per 1% level) and the σ_draw estimate.
+- Marked **`confounded`** vs `emerging-exp-025` (pure redraw: seeds 6,7,8 vs
+  0,1,2 at the record level) and vs exp-033 (level ×1.0204 only). The D-088
+  "pure redraws are strictly harmful" pre-registration is **superseded by
+  human risk preference**: that argument maximised EV under the bet; the human
+  has declined the bet and directed the uncut file. The 2×2 results stand as
+  recorded; exp-030…034 remain the evidence trail.
+
+### D-089 results (2026-10-29, carrier fired; bet withdrawn)
+
+`emerging-exp-035` (s678 × K=1.0, sha256 `f5337d71`) scored **0.17028** —
+above exp-033's 0.17019. Per the pre-registered read-out: **the uncut carrier
+takes the counted slot and the D-088 level bet is withdrawn.** The final
+ranking on Private runs at the record level, with no level deviation. Standing:
+4th of 33; gaps to podium +0.00144 (3rd) / +0.00164 (2nd) / +0.00275 (1st).
+
+1. **The s678 level response is concave, vertex at/above K≈1.0:** K 0.95 →
+   0.16983, 0.98 → 0.17019, 1.00 → 0.17028. The realized gain for +2% level
+   was +0.00009 against the +0.00025 linear estimate from the 2×2 slope —
+   consistent with D-085's Public vertex at K*≈1.008. The measured cost of the
+   withdrawn −2% bet on Public was therefore only 0.00009; its Private stake
+   (±0.0002, n=1 directional evidence) was the whole of what was at issue.
+2. **The D-088 2×2 stands as science** (rows 83–86 unchanged): level −0.00037
+   per −3% at both draws, draw spread +0.00036 at both Ks. The draw contrast
+   is unchanged at K=1.0 in the sense that s678 > s012 > s345 on Public; the
+   measured σ_draw ≈ 0.00029 (3-seed averages) is confirmed.
+3. **Bar amendment (again, before any further submission):** the bar for any
+   new ticket is now **0.17028**. With the counted entry at the Public-vertex
+   level, the level axis is closed in both directions: no cut can clear 0.17028
+   and no uncut file can improve the expected Private (pure redraws are
+   mean-equal; Public-max selection among them is a winner's-curse lottery on a
+   hidden metric). The remaining-window queue is empty.
+4. **Disclosure for the write-up:** exp-033 held the counted slot for ~50
+   minutes carrying the −2% bet; the human withdrew the bet the same day after
+   the n=1-transfer weakness was surfaced explicitly. This is recorded as a
+   risk-preference decision, not a scored failure of D-088 — the bet's truth
+   was never observed (it never reached final ranking).
