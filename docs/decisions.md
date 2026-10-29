@@ -2831,4 +2831,26 @@ this axis closes.
    answered with a measurement rather than a vote: **the prior is already at
    the effective state of the art for this location.**
 
+## D-083 — Part 1 & Part 2 model audit: `exp-036` reproduction wired, `sum_insured` note reconciled, customer-level claim history gated and closed
+**2026-10-29 · human-directed audit · `scripts/run_experiment.py`, `scripts/ensemble_blend.py`, `outputs/metrics/emerging-cust-exp.json` · no slot spent**
+
+Audit of the Part 1 and Part 2 models surfaced three actionable items, all executed and verified:
+
+1. **Part 1 `exp-035` / `exp-036` end-to-end reproducibility wired into `scripts/`:**
+   - Added `--mode per_lob_xgb` to `scripts/run_experiment.py` implementing the exact D-064 Per-LOB XGBoost rate specification (`objective='reg:tweedie'`, `tweedie_variance_power=1.5`, `max_depth=3`, `learning_rate=0.05`, `min_child_weight=200`, `reg_lambda=5.0`, `enable_categorical=True`), verified to reproduce `exp-035` Fold 2024 OOF D² = `0.14014`.
+   - Added `--weights` (`blend_frames`) to `scripts/ensemble_blend.py`, verified against `exp-036-xgb-lgb-blend.csv` (`0.40 * exp-035-xgb + 0.42 * exp-033 + 0.18 * exp-032`, max abs diff `1.8e-12`).
+2. **`sum_insured` cap/flag reconciliation (`D-043`):**
+   - `scripts/run_experiment.py::add_derived()` now populates `si_artefact` (`sum_insured > 1e7`) and `sum_insured_clean` (`min(sum_insured, 1e7)`), selectable via `--features ...,si_clean` while keeping default `BASE_FEATURES` unchanged so historical Part 1 contracts stay byte-identical. `docs/actuarial_report.md` §2.2(c) updated to state where the cap/flag is active (`src/glm.py`, `src/emerging.py`, and `--features si_clean`).
+3. **Pre-registered Part 2 feature check (`emerging-cust-exp`, experiment row 72) — gate FAIL, slot held:**
+   - **Hypothesis:** `src/emerging.py::build_market_frame` joins lagged claims at the within-LOB policy level (`pol_claims_all`, `4.27%` of emerging train rows, `3.24%` of test rows), omitting customer-level cross-LOB claim history (`cust_claims_all`, `6.70%` of train rows, `5.04%` of test rows — +2,653 train rows with `pol_claims_all == 0` and `cust_claims_all > 0`).
+   - **Pre-registered gate:** paired-seed (`0/1/2`) 5-fold GroupKFold OOF mean delta ≥ `+0.0002` vs the `0.14074` seed-0 contract (`record_oof`: `0.14074 / 0.14080 / 0.14116`).
+   - **Results (`outputs/metrics/emerging-cust-exp.json`):**
+     - **Arm A1 (Stage-2 offset + `cust_claims_all, cust_cost_all`):** OOF `0.14053 / 0.14042 / 0.14096` → mean paired delta **`−0.00026`** (3/3 seeds negative — FAIL).
+     - **Arm A2 (Stage-2 offset + `cust_claims_all` only):** OOF `0.14059 / 0.14018 / 0.14155` → mean paired delta **`−0.00013`** (FAIL).
+     - **Arm B (Stage-1 prior + `cust_claims_all, cust_cost_all, cust_claims_1y, cust_cost_1y`):** prior-alone drops `+0.13855 → +0.13836` (`−0.00019`); pipeline OOF `0.14056 / 0.14050 / 0.14109` → mean paired delta **`−0.00018`** (3/3 seeds negative — FAIL).
+   - **Mechanism (why cross-LOB customer claim history fails to transfer):** In `developed/`, customers with a prior claim on *another* line (`pol=0, cust>0`) are multi-policy bundle-holders with **lower or flat** claim rates vs 0-prior (`motor` `459.7` vs `534.6`, `−14%`; `buildings` `405.2` vs `408.0`), whereas in `emerging/` the same cross-LOB cohort runs **higher** (`buildings` `667.9` vs `409.2`, `+63%`; `contents` `131.8` vs `88.4`, `+49%`). Transferring the Stage-1 `developed/` slope therefore pushes `emerging/` predictions in the wrong direction (`−0.00019` on the prior), while in Stage 2 the cohort is too thin per fold (`< 800` buildings rows) to clear `min_data_in_leaf = 1200` and instead dilutes `feature_fraction = 0.8`.
+   - **Side check (`Arm C`, Stage-1 prior without `exposure` in `SHARED_NUM`):** At Stage-1 `pseed=0`, dropping `exposure` jumped `buildings` prior-alone `+0.10151 → +0.10636` (`+0.00485`) and `contents` `+0.10478 → +0.10827` (`+0.00348`), but 3-seed Stage-1 replication (`pseed = 0, 1, 2`) exposed it as a `feature_fraction = 0.8` column-shift draw on the heavy property tail: `buildings` flipped to **`−0.00156` at `pseed=1`**, `contents` flipped to **`−0.00064` at `pseed=2`**, and `motor` was `−0.00026` at `pseed=0` (while `WITH` itself spans `0.09999–0.10436` on `buildings` across Stage-1 seeds).
+   - **Verdict:** No CSV written, no Part 2 slot spent; `emerging-exp-025` (`0.16994`) stands unchanged. Test suite expanded from 89 to **91 passed guardrails**.
+
+
 

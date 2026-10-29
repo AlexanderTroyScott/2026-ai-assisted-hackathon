@@ -121,11 +121,16 @@ def add_derived(df: pd.DataFrame) -> pd.DataFrame:
     df["age_band"] = pd.cut(age, [0, 24, 69, 200], labels=[0, 1, 2]).astype(float)
     df["ncb_band"] = pd.cut(df["ncb_years"].fillna(0), [-1, 0, 4, 200], labels=[0, 1, 2]).astype(float)
     df["vvg_log"] = np.log1p(df["vehicle_value_group"].fillna(0))
+    si = pd.to_numeric(df.get("sum_insured", pd.Series(np.nan, index=df.index)), errors="coerce")
+    df["si_artefact"] = (si > 1e7).astype(float)
+    df["sum_insured_clean"] = np.where(si.notna(), np.minimum(si, 1e7), np.nan)
     return df
 
 
 def feature_cols(groups: str) -> list[str]:
     cols = list(BASE_FEATURES)
+    if "si_clean" in groups:
+        cols = [c for c in cols if c != "sum_insured"] + ["sum_insured_clean", "si_artefact"]
     if "address" in groups:
         cols += ADDRESS_NUMERIC + ["listed_building"]
     if "customer" in groups:
@@ -274,7 +279,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True)
     ap.add_argument("--features", default="base,premium")
-    ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev", "per_lob"])
+    ap.add_argument("--mode", default="tweedie", choices=["tweedie", "freq_sev", "per_lob", "per_lob_xgb"])
     ap.add_argument("--development", default="lob", choices=["lob", "peril", "bf", "split", "ht_motor"])
     ap.add_argument("--norm-rel", action="store_true",
                     help="D-065: normalize _hist_rate and _hist_freq within (line, acc_year) to mean 1.0")
@@ -433,6 +438,54 @@ def main() -> int:
         best_iter = int(np.mean(list(lob_best_iters.values())))
         imp = imp_accum.sort_values(ascending=False)
         print(f"per_lob best_iters={lob_best_iters}")
+    elif args.mode == "per_lob_xgb":
+        import xgboost as xgb
+
+        lob_models = {}
+        lob_active_cols = {}
+        lob_best_iters = {}
+        p_raw = np.zeros(len(va), dtype=float)
+        p_tr_raw = np.zeros(len(tr), dtype=float)
+        imp_accum = pd.Series(0.0, index=use)
+        xgb_params = dict(
+            objective="reg:tweedie", tweedie_variance_power=1.5,
+            n_estimators=2500,
+            learning_rate=args.lr if args.lr is not None else 0.05,
+            max_depth=3, min_child_weight=200,
+            subsample=0.8, colsample_bytree=0.8,
+            reg_lambda=args.l2 if args.l2 is not None else 5.0,
+            random_state=args.seed,
+            tree_method="hist", enable_categorical=True, n_jobs=-1,
+        )
+        for ln in LINES:
+            m_tr_ln = (tr["line"] == ln).to_numpy()
+            m_va_ln = (va["line"] == ln).to_numpy()
+            sub_tr = X_tr.loc[m_tr_ln]
+            c_ln = [c for c in use if sub_tr[c].nunique(dropna=False) > 1]
+            cat_ln = [c for c in cats if c in c_ln]
+            lob_active_cols[ln] = (c_ln, cat_ln)
+            m_ln = xgb.XGBRegressor(**xgb_params, early_stopping_rounds=60, eval_metric="tweedie-nloglik@1.5")
+            y_fit_ln, w_fit_ln, _ = _fit_target_weights(
+                tr.loc[m_tr_ln, "y_ult"].to_numpy(float), exp_tr_arr[m_tr_ln], rec_w[m_tr_ln]
+            )
+            y_eval_ln, _, w_eval_ln = _fit_target_weights(
+                va.loc[m_va_ln, "y_ult"].to_numpy(float), exp_va_arr[m_va_ln], np.ones(m_va_ln.sum())
+            )
+            m_ln.fit(
+                X_tr.loc[m_tr_ln, c_ln], y_fit_ln,
+                sample_weight=w_fit_ln,
+                eval_set=[(X_va.loc[m_va_ln, c_ln], y_eval_ln)],
+                sample_weight_eval_set=w_eval_ln,
+                verbose=False,
+            )
+            lob_models[ln] = m_ln
+            lob_best_iters[ln] = max(int(m_ln.best_iteration) + 1, 50)
+            p_raw[m_va_ln] = to_cost(np.maximum(m_ln.predict(X_va.loc[m_va_ln, c_ln]), 1e-3), exp_va_arr[m_va_ln])
+            p_tr_raw[m_tr_ln] = to_cost(np.maximum(m_ln.predict(X_tr.loc[m_tr_ln, c_ln]), 1e-3), exp_tr_arr[m_tr_ln])
+            imp_accum[c_ln] += m_ln.feature_importances_
+        best_iter = int(np.mean(list(lob_best_iters.values())))
+        imp = imp_accum.sort_values(ascending=False)
+        print(f"per_lob_xgb best_iters={lob_best_iters}")
     else:
         model = lgb.LGBMRegressor(**params)
         y_fit, w_fit, _ = _fit_target_weights(tr["y_ult"].to_numpy(float), exp_tr_arr, rec_w)
@@ -478,22 +531,27 @@ def main() -> int:
                  * np.maximum(smodel.predict(X_va), 1e-3))
         p_te = lob_recalibrate(p_te, test["line"], ref_lines=va["line"],
                                ref_pred=p_ref, ref_actual=yv)
-    elif args.mode == "per_lob":
+    elif args.mode in ("per_lob", "per_lob_xgb"):
         p_te = np.zeros(len(test), dtype=float)
         if args.final_fit:
-            print(f"\nD-045/D-063 per-LOB final refit on ALL {len(train):,} training rows "
+            print(f"\nD-045/D-063 {args.mode} final refit on ALL {len(train):,} training rows "
                   f"(AY 2021-2024) with fixed n_estimators={lob_best_iters}")
             p_all = np.zeros(len(train), dtype=float)
             for ln in LINES:
                 m_all_ln = (train["line"] == ln).to_numpy()
                 m_te_ln = (test["line"] == ln).to_numpy()
                 c_ln, cat_ln = lob_active_cols[ln]
-                f_params = dict(params, n_estimators=lob_best_iters[ln])
-                f_ln = lgb.LGBMRegressor(**f_params)
                 y_all_ln, w_all_ln, _ = _fit_target_weights(
                     train.loc[m_all_ln, "y_ult"].to_numpy(float), exp_all_arr[m_all_ln], rec_w_all[m_all_ln]
                 )
-                f_ln.fit(X_all.loc[m_all_ln, c_ln], y_all_ln, sample_weight=w_all_ln, categorical_feature=cat_ln)
+                if args.mode == "per_lob_xgb":
+                    import xgboost as xgb
+                    f_ln = xgb.XGBRegressor(**dict(xgb_params, n_estimators=lob_best_iters[ln]))
+                    f_ln.fit(X_all.loc[m_all_ln, c_ln], y_all_ln, sample_weight=w_all_ln, verbose=False)
+                else:
+                    f_params = dict(params, n_estimators=lob_best_iters[ln])
+                    f_ln = lgb.LGBMRegressor(**f_params)
+                    f_ln.fit(X_all.loc[m_all_ln, c_ln], y_all_ln, sample_weight=w_all_ln, categorical_feature=cat_ln)
                 p_all[m_all_ln] = to_cost(np.maximum(f_ln.predict(X_all.loc[m_all_ln, c_ln]), 1e-3), exp_all_arr[m_all_ln])
                 p_te[m_te_ln] = to_cost(np.maximum(f_ln.predict(X_te.loc[m_te_ln, c_ln]), 1e-3), exp_te_arr[m_te_ln])
             p_te = lob_recalibrate(p_te, test["line"], ref_lines=train["line"],

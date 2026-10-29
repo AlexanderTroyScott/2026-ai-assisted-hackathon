@@ -84,8 +84,12 @@ between 1M and 10M, and a separate population above 10M (1,395 rows per line, 0.
 max 594,000,000) whose `premium/sum_insured` ratio is 1,000× lower than the rest —
 ordinary premiums against implausible sums insured. The rows carry no claims signal
 (buildings claims in the 10M–100M band: 14 claims at mean cost 3,749 versus 9,588 for
-the 100k–1M band). **Adjustment:** capped at 1e7 and flagged (`si_artefact`) rather
-than deleted — deletion would break the 626,639-row submission contract. Recorded as
+the 100k–1M band). **Adjustment:** never deleted (deletion would break the 626,639-row
+submission contract). In the GLM (`src/glm.py`) and the Part 2 transfer pipeline
+(`src/emerging.py`), `sum_insured` is capped at `1e7` (`sum_insured_clean`) and flagged
+(`si_artefact`); in the Part 1 tree models (`scripts/run_experiment.py`), trees split
+natively at the 1M–10M gap (an explicit cap/flag was measured in D-043 at `+0.0003`
+local D², inside noise, and is available via `--features ...,si_clean`). Recorded as
 a field error, plausibly a unit or code column.
 
 **(d) Identifier and claim-level defects (D-051).** Motor `customer_id` has lost

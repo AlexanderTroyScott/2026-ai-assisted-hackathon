@@ -221,7 +221,7 @@ heavy tail with zero corruptions. Nothing is capped: the top 10 rows carry
 8.3% of `y_ult` and 4.9% of Tweedie deviance (buildings top-10 = 25.6% of
 line cost), so part of any board movement is irreducible claim randomness.
 
-**Guardrails.** 89 tests (`tests/`), including claims-table integrity
+**Guardrails.** 91 tests (`tests/`), including claims-table integrity
 invariants and the `si_artefact`-orthogonality of the top claims; the
 `Σpred ≈ Σy` total-cost calibration invariant; and submission-time validation
 in `scripts/kaggle_submit.py` (row count, row_id prefix/LOB consistency,

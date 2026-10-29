@@ -1,0 +1,57 @@
+{
+  "name": "emerging-cust-exp",
+  "primary_change": "D-083 pre-registered check: (A) strictly-lagged customer-level cross-LOB claim history (cust_claims_all, cust_cost_all, cust_claims_1y, cust_cost_1y) in Stage-2 offset and Stage-1 prior; (B) Stage-1 prior without exposure across 3 prior seeds",
+  "record_contract_seed0": 0.14074076906018929,
+  "record_oof": {
+    "0": 0.14074076906018929,
+    "1": 0.14079648373893328,
+    "2": 0.14116486243250181
+  },
+  "arm_A1_offset_cust_claims_and_cost": {
+    "oof": {
+      "0": 0.1405310290185583,
+      "1": 0.14041932781248023,
+      "2": 0.14095706640159134
+    },
+    "mean_paired_delta": -0.00026489733299817075,
+    "pass": false
+  },
+  "arm_A2_offset_cust_claims_only": {
+    "oof": {
+      "0": 0.14058589156282264,
+      "1": 0.14017647949103218,
+      "2": 0.1415527394939956
+    },
+    "mean_paired_delta": -0.00012900156125798348,
+    "pass": false
+  },
+  "arm_B_stage1_prior_with_cust_exp": {
+    "d2_prior_only_record": 0.13855,
+    "d2_prior_only_variant": 0.13836,
+    "oof": {
+      "0": 0.140559959528059,
+      "1": 0.140503637701489,
+      "2": 0.14108581212667037
+    },
+    "mean_paired_delta": -0.00018423529180200404,
+    "pass": false
+  },
+  "arm_C_stage1_prior_no_exposure_3seed_replication": {
+    "buildings_prior_zero": {
+      "pseed_0": {"with_exp": 0.10151, "no_exp": 0.10636, "delta": 0.00485},
+      "pseed_1": {"with_exp": 0.10436, "no_exp": 0.10280, "delta": -0.00156},
+      "pseed_2": {"with_exp": 0.09999, "no_exp": 0.10506, "delta": 0.00507}
+    },
+    "contents_prior_zero": {
+      "pseed_0": {"with_exp": 0.10478, "no_exp": 0.10827, "delta": 0.00348},
+      "pseed_1": {"with_exp": 0.10524, "no_exp": 0.10574, "delta": 0.00050},
+      "pseed_2": {"with_exp": 0.10716, "no_exp": 0.10652, "delta": -0.00064}
+    },
+    "motor_prior_zero": {
+      "pseed_0": {"with_exp": 0.06964, "no_exp": 0.06938, "delta": -0.00026},
+      "pseed_1": {"with_exp": 0.06890, "no_exp": 0.06940, "delta": 0.00050},
+      "pseed_2": {"with_exp": 0.06971, "no_exp": 0.06989, "delta": 0.00018}
+    },
+    "note": "pseed=0 apparent +0.00201 prior_zero jump is a feature_fraction=0.8 column-shift draw on buildings/contents; flips negative on buildings at pseed=1 (-0.00156) and contents at pseed=2 (-0.00064), motor negative at pseed=0 (-0.00026)."
+  }
+}

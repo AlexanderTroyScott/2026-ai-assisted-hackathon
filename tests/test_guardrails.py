@@ -764,4 +764,68 @@ def test_rate_target_excludes_earned_premium_and_uses_rate_in_final_fit():
     assert 'if args.target == "rate" and "earned_premium" in cols:' in src
     assert "final_model = lgb.LGBMRegressor(**final_params)" in src
     assert "final_model.fit(X_all, y_all_fit, sample_weight=w_all_fit" in src
+    assert '"per_lob_xgb"' in src
+
+
+def test_add_derived_populates_si_artefact_and_sum_insured_clean():
+    """D-043/D-083: add_derived populates si_artefact (>1e7) and sum_insured_clean
+    (capped at 1e7), and feature_cols('base,si_clean') swaps sum_insured for the
+    cleaned pair while keeping default feature_cols('base') unchanged."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import add_derived, feature_cols
+
+    df = pd.DataFrame({
+        "driver_age": [30.0, 45.0],
+        "policyholder_age": [30.0, 45.0],
+        "ncb_years": [2.0, 6.0],
+        "vehicle_value_group": [5.0, 10.0],
+        "sum_insured": [250_000.0, 50_000_000.0],
+    })
+    out = add_derived(df)
+    assert list(out["si_artefact"]) == [0.0, 1.0]
+    assert list(out["sum_insured_clean"]) == [250_000.0, 10_000_000.0]
+    base_cols = feature_cols("base")
+    assert "sum_insured" in base_cols and "si_artefact" not in base_cols
+    clean_cols = feature_cols("base,si_clean")
+    assert "sum_insured" not in clean_cols
+    assert "sum_insured_clean" in clean_cols and "si_artefact" in clean_cols
+
+
+def test_ensemble_blend_supports_equal_and_weighted_blends():
+    """D-064/D-083: ensemble_blend.py supports both equal-weight seed blends and
+    explicitly weighted multi-family blends (such as exp-036 = 0.40*exp-035 +
+    0.42*exp-033 + 0.18*exp-032)."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.ensemble_blend import blend_frames
+
+    f1 = pd.DataFrame({"row_id": ["r1", "r2"], "prediction": [100.0, 200.0]})
+    f2 = pd.DataFrame({"row_id": ["r1", "r2"], "prediction": [200.0, 400.0]})
+    f3 = pd.DataFrame({"row_id": ["r1", "r2"], "prediction": [300.0, 600.0]})
+
+    eq = blend_frames([f1, f2])
+    assert np.allclose(eq["prediction"], [150.0, 300.0])
+
+    wt = blend_frames([f1, f2, f3], weights=[0.40, 0.42, 0.18])
+    expected = 0.40 * f1["prediction"] + 0.42 * f2["prediction"] + 0.18 * f3["prediction"]
+    assert np.allclose(wt["prediction"], expected)
+
+    with pytest.raises(ValueError, match="sum to 1.0"):
+        blend_frames([f1, f2], weights=[0.5, 0.2])
+
+    # If the Part 1 component CSVs are present locally, verify exp-036 reproduction
+    sub_dir = ROOT / "outputs" / "submissions"
+    p35 = sub_dir / "exp-035-xgb.csv"
+    p33 = sub_dir / "exp-033.csv"
+    p32 = sub_dir / "exp-032.csv"
+    p36 = sub_dir / "exp-036-xgb-lgb-blend.csv"
+    if all(p.exists() for p in (p35, p33, p32, p36)):
+        got = blend_frames(
+            [pd.read_csv(p, dtype={"row_id": str}) for p in (p35, p33, p32)],
+            weights=[0.40, 0.42, 0.18],
+        )
+        ref = pd.read_csv(p36, dtype={"row_id": str})
+        assert np.allclose(got["prediction"], ref["prediction"], rtol=0, atol=1e-11)
+
 

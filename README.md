@@ -101,7 +101,7 @@ Equally important, the ideas we **killed with evidence** — each one logged:
 - **Rules before results.** Each experiment declared its pass/fail bar in advance
   ("the blend must beat the baseline by 0.0002 across three matched seeds"), which is
   why a good-looking ensemble stayed unsubmitted.
-- **89 automated guardrail tests** run before every commit: leakage rules, label
+- **91 automated guardrail tests** run before every commit: leakage rules, label
   arithmetic, calibration invariants, submission format checks.
 - **Reproducibility.** One command regenerates the Part 2 submission of record
   byte-for-byte (differences below 1e-15) — the leaderboard number is not an artefact.
@@ -132,15 +132,26 @@ and `docs/decisions.md`.
 | `docs/ai_workflow_log.md` | AI interaction evidence trail |
 | `docs/submission_protocol.md` | Submission rules and safety rails |
 | `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
-| `tests/` | 89 guardrail tests (`python3 -m pytest tests/ -q`) |
+| `tests/` | 91 guardrail tests (`python3 -m pytest tests/ -q`) |
 
-Reproducing the Part 2 submission of record:
+Reproducing the Part 2 (`emerging-exp-025`) and Part 1 (`exp-036`) submissions of record:
 
 ```bash
-python3 -m pytest tests/ -q            # 89 guardrails
+python3 -m pytest tests/ -q            # 91 guardrails
+# Part 2 submission of record (0.16994 Public, 4th of 33):
 python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
-# -> outputs/submissions/emerging-exp-025-repro.csv
-#    byte-equivalent predictions to the 0.16994 submission (max rel diff 8e-16)
+# -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent, max rel diff 8e-16)
+
+# Part 1 multi-family rate blend (0.12753 Public / 0.13570 Private):
+python3 scripts/run_experiment.py --name exp-032 --mode tweedie --target rate --num-leaves 16 --lr 0.04 --final-fit \
+    --features base,premium,experience,weather,flags,relativity,address,customer
+python3 scripts/run_experiment.py --name exp-033 --mode per_lob --target rate --num-leaves 6 --lr 0.05 --final-fit \
+    --features base,premium,experience,weather,flags,relativity,address,customer
+python3 scripts/run_experiment.py --name exp-035-xgb --mode per_lob_xgb --target rate --lr 0.05 --final-fit \
+    --features base,premium,experience,weather,flags,address,customer
+python3 scripts/ensemble_blend.py --weights 0.40,0.42,0.18 \
+    --out outputs/submissions/exp-036-xgb-lgb-blend.csv \
+    outputs/submissions/exp-035-xgb.csv outputs/submissions/exp-033.csv outputs/submissions/exp-032.csv
 ```
 
 **For the judging panel** — where each axis is evidenced: pricing performance &
