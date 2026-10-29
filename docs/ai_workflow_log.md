@@ -713,6 +713,16 @@ calls arose.
   D-088 redraw-preclusion ("pure redraws are strictly harmful") was formally
   superseded by explicit human direction, and exp-035 is disclosed as a
   mean-equal redraw whose +0.00034 is draw luck, not improvement.
+- **D-090 — the right side of the level curve (human-directed, 2 slots).**
+  The user asked for s678 × K 1.02 / 1.05; a quadratic through the three
+  available points (vertex Kv≈1.005) predicted 0.17025 / 0.16998 *before*
+  submission, and the board returned 0.17025 / 0.17002 — extrapolation
+  accurate to ±0.00004. Neither probe cleared the bar, so the counted entry is
+  unchanged (exp-035, 0.17028) and no level bet rides into the final ranking.
+  The s678 response is now mapped on both sides of its peak (Kv ≈ 1.005,
+  flat top ±0.00003), independently confirming D-085's Part 1 Public vertex
+  (1.008) on a second market — and closing the level axis for good: the
+  counted entry already sits at the Public optimum level.
 
 **Output.** `emerging-exp-030` (submitted, 0.16991), `scripts/run_emerging{,_priorweight,_wprel,_wblend}.py`,
 `src/emerging.py` (`CLAIM_DEDUP_KEYS`), `tests/test_emerging.py` (+2),

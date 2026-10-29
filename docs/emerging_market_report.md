@@ -288,9 +288,10 @@ plainly:
    `emerging-exp-035` (0.17028) took the counted slot and the final entry runs
    at the record level with **no level deviation**. The bet's truth was never
    observed (it never reached final ranking); the 2×2 stands as measurement —
-   notably the s678 level response is concave with vertex at/above K≈1.0
-   (0.95→0.16983, 0.98→0.17019, 1.00→0.17028), so the withdrawn cut's Public
-   cost was only 0.00009 and its Private stake was ±0.0002 at most.
+   notably the s678 level response is concave with vertex at K≈1.005,
+   confirmed on both sides (0.95→0.16983, 0.98→0.17019, 1.00→0.17028,
+   1.02→0.17025, 1.05→0.17002; D-090), so the withdrawn cut's Public cost was
+   only 0.00009 and its Private stake was ±0.0002 at most.
    Exposure is bounded by construction: the multiplier shapes are constrained
    to measured response-curve families, the property total is held at ×1.05,
    and the joint optimum was settled at the flat end of the ridge (D-077,

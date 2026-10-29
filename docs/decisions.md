@@ -3383,3 +3383,53 @@ ranking on Private runs at the record level, with no level deviation. Standing:
    the n=1-transfer weakness was surfaced explicitly. This is recorded as a
    risk-preference decision, not a scored failure of D-088 — the bet's truth
    was never observed (it never reached final ranking).
+
+## D-090 (human-directed) — Right-side level probes: s678 × K {1.02, 1.05}
+**2026-10-29 · explicit human direction ("Lets try a k=1.02 and 1.05 with seeds 6,7,8 if we haven't yet") · 2 slots of the remaining 4 today · pre-registered before submission**
+
+We have not: the s678 draw has been fired only at K 0.95 / 0.98 / 1.00. These
+tickets complete the level response on the right side.
+
+**Pre-score prediction (quadratic through the three s678 points):** the fit
+reproduces the left side exactly and puts the Public vertex at **Kv ≈ 1.005**,
+peak f ≈ 0.170284 — consistent with D-085's Part 1 Public vertex K*≈1.008.
+Predicted: exp-036 (K=1.02) ≈ **0.17025**, exp-037 (K=1.05) ≈ **0.16998**.
+Both predicted to miss the 0.17028 bar; the expected value of the slots is
+the curve read-out (vertex located to ±0.01), not a new counted entry.
+
+**Disclosed implication (accepted by the human in directing the shots):** if a
+probe *does* clear 0.17028, it becomes the counted entry carrying a +2% / +5%
+global level — a level bet opposite to the withdrawn D-088 cut and opposite to
+the Part 1-measured Private vertex (K≈0.95). Under the D-089 stance (the
+Public→Private level shift is an unknown split property) this is the same
+coin-flip tilt as the withdrawn bet, facing the other way; under Part 1's n=1
+evidence it is the wrong direction. Firing with that understood. Vs exp-035
+each ticket is a **clean single-component contrast** (level only, same draw);
+vs exp-025 confounded (seeds + level), as with the whole D-088 family.
+
+Read-out to append below: realized Public of both probes, whether the
+quadratic extrapolation held, and whether the counted entry changes.
+
+### D-090 results (2026-10-29, both probes fired; curve closed)
+
+| ticket | K | predicted | realized | vs bar 0.17028 |
+|---|---|---|---|---|
+| exp-036 | 1.02 | 0.17025 | 0.17025 | −0.00003 |
+| exp-037 | 1.05 | 0.16998 | 0.17002 | −0.00026 |
+
+1. **The quadratic extrapolation held to ±0.00004.** The pre-score fit (vertex
+   Kv ≈ 1.005) predicted both values; realized 0.17025 / 0.17002. Neither
+   cleared the bar, so **the counted entry is unchanged (`emerging-exp-035`,
+   0.17028)** and no level bet is carried into the final ranking.
+2. **The s678 level response is now fully mapped:** K 0.95 → 0.16983, 0.98 →
+   0.17019, 1.00 → 0.17028, 1.02 → 0.17025, 1.05 → 0.17002. The Public vertex
+   is bracketed in (1.00, 1.02), flat to ±0.00003 at the top — confirming
+   Kv ≈ 1.005 and independently validating D-085's Part 1 Public vertex
+   K*≈1.008 on a second market. Curvature α ≈ 0.15 per unit².
+3. **The level axis is closed for good on this draw:** K=1.0 sits at the
+   peak, so no level move in either direction (the D-088 cut or the D-090
+   raise) can out-Public the counted entry. Combined with D-089's withdrawal,
+   the final ranking runs at the plain record level.
+4. **Cost accounting:** 2 expiring slots for the curve's right side; the
+   pre-registered expectation was that the slots bought information, not a
+   counted entry, and that is what they bought.
