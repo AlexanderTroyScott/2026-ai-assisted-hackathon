@@ -3117,3 +3117,54 @@ held at `emerging-exp-025`'s, isolating the shape change) or it double-counts.
 PASS → build the submission, request one Part 2 slot (human confirmation at
 submission time per protocol §3). FAIL → no CSV, axis closes with the verdict
 recorded. Results to be appended below.
+
+### D-086 results (2026-10-29, all three arms measured)
+
+Contract reproduced to 7.7e-07 on every harness (seed-0 record arm = 0.14074),
+so all comparisons are faithful.
+
+| arm | candidate | per-seed paired deltas | mean | gate |
+|---|---|---|---:|---|
+| 1 | prior leg weight `w_wp` grid | see below | — | **FAIL all** |
+| 2A | `wp_rel` fixed-base, prior+offset | +0.00007 / −0.00001 / +0.00004 | +0.00003 | **FAIL** |
+| 2B | `wp_rel` fixed-base, offset-only | −0.00003 / −0.00017 / −0.00012 | −0.00010 | **FAIL** |
+| 3 | per-LOB `w_off` (1.0, 1.0, 0.5) | +0.00011 / +0.00004 / +0.00010 | **+0.00008** | FAIL (effect bar) — 3/3 positive |
+
+1. **Prior leg weight — record 0.6 is at the peak.** Grid OOF (seeds 0/1/2):
+   0.4: 0.14052/0.14076/0.14115 (mean Δ −0.00009) · 0.5: −0.00008 ·
+   **0.6: 0.14074/0.14080/0.14116 (record, contract 7.7e-07)** · 0.7:
+   +0.00004/+0.00001/−0.00018 (mean −0.00004) · 0.8: −0.00015. D-067's
+   endpoint choice is now **settled by a full grid** — axis closes.
+2. **`wp_rel` cross-year normalization (the audit idea) — gated out.** The
+   fixed base (train-derived per-line constant, shared train/test) buys
+   +0.00003 at best through the developed-prior slope and is negative in the
+   offset alone — exactly the pre-registered counter-evidence's prediction
+   (emerging's own 23→24 drift is flat/wrong-signed vs rates). The 2025
+   premium level (+11.6% motor) remains a LEVEL effect that PROBE_FORWARD
+   already carries; nothing in the axis improves *ranking*. Axis closes.
+3. **Per-LOB offset/prior blend (contents w_off=0.5) — real but small.**
+   D-067's fixed weights, gated at the record config: 3/3 paired seeds
+   positive, mean +0.00008 (below the +0.0002 effect bar → pre-registered
+   FAIL). Supplemental 6 seeds (post-hoc, labelled): 9/9 positive, mean
+   +0.00009, spread ±0.00002 — the effect is real (variance reduction on the
+   thin contents book) but an order below the gap to the podium (+0.00178).
+
+**Gate-override (human-approved 2026-10-29):** the human accepted spending
+one Part 2 slot on arm 3 as an explicit, disclosed gate-override, on the
+endgame asymmetry: a submission below 0.16994 Public cannot displace
+`emerging-exp-025` (it costs only one expiring slot of the day's 10), while
+one above becomes the counted entry with expectedly better Private mean
+quality (Tweedie D² = the Private metric). Counter-evidence disclosed: the
+2026-10-26 board test of the same idea (exp-004) scored −0.00004 against a
++0.00005 local gain. One primary change per submission (the blend weight);
+record chain untouched otherwise.
+
+**Board outcome (exp-030, 2026-10-29 18:18 UTC): 0.16991 — gate-override LOST
+(−0.00003 vs exp-025's 0.16994).** The exp-004 counter-evidence repeated
+precisely: local +0.00009 → board −0.00003. The pre-registered gate's
+judgement stands validated; the override cost one expiring slot, exactly the
+downside the human-approved asymmetry argument accepted. `emerging-exp-025`
+is untouched and remains the record and the counted entry. A second lesson
+joins exp-004: **on Part 2, sub-+0.0002 local contents-shrink effects do not
+transfer to the board** — the axis stays closed and no further override of
+this kind is proposed. Row 82 of `docs/experiment_log.md`.
