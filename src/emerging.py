@@ -24,6 +24,15 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DEV_DIR = ROOT / "developed"
 EM_DIR = ROOT / "emerging"
+
+# Claim dedup keys — one list for both consumers (D-086: the two paths
+# historically listed 9 vs 11 keys; measured inert on the current table
+# because claim_id is unique, but a future data refresh must not let labels
+# and the trend index diverge silently).
+CLAIM_DEDUP_KEYS = [
+    "policy_id", "line", "peril", "loss_date", "report_date", "status",
+    "paid_to_date", "incurred_to_date", "recoveries", "repairer_id", "third_party_id",
+]
 LINES = ["motor", "buildings", "contents"]
 
 AGE_BANDS = ["17-24", "25-34", "35-49", "50-64", "65+"]
@@ -149,9 +158,7 @@ def estimate_forward_index(
     if claims is None:
         claims = pd.read_parquet(EM_DIR / "claims.parquet")
     c = claims.copy()
-    dedup_keys = ["policy_id", "line", "peril", "loss_date", "report_date", "status",
-                  "paid_to_date", "incurred_to_date", "recoveries"]
-    c = c.drop_duplicates(subset=[k for k in dedup_keys if k in c.columns], keep="first")
+    c = c.drop_duplicates(subset=[k for k in CLAIM_DEDUP_KEYS if k in c.columns], keep="first")
     c = c[c["status"] != "repudiated"].copy()
     c["loss"] = pd.to_datetime(c["loss_date"])
     c["rep"] = pd.to_datetime(c["report_date"])
@@ -244,11 +251,8 @@ def build_market_frame(folder: Path, split: str = "train", ldf_tab: dict | None 
     w["year"] = w["year"].astype(int)
 
     claims = pd.read_parquet(folder / "claims.parquet")
-    dedup_keys = [
-        "policy_id", "line", "peril", "loss_date", "report_date", "status",
-        "paid_to_date", "incurred_to_date", "recoveries", "repairer_id", "third_party_id",
-    ]
-    claims = claims.drop_duplicates(subset=[k for k in dedup_keys if k in claims.columns], keep="first")
+    claims = claims.drop_duplicates(
+        subset=[k for k in CLAIM_DEDUP_KEYS if k in claims.columns], keep="first")
     claims = claims[claims["status"] != "repudiated"].copy()
     claims["loss"] = pd.to_datetime(claims["loss_date"])
     claims["rep"] = pd.to_datetime(claims["report_date"])

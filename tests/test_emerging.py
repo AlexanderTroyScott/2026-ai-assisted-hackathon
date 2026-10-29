@@ -192,3 +192,45 @@ def test_emerging_top_claims_not_on_si_artefact_rows(emerging_frames):
     assert len(m) > 9_000  # the bulk of claims attach to a train row
     top = m.nlargest(25, "net")
     assert not top.si_artefact.fillna(0).astype(bool).any()
+
+
+def test_claim_id_unique_and_dedup_keys_inert():
+    """D-086 recon: the two claim-dedup key sets must agree on this data.
+
+    `estimate_forward_index` (9 keys) and `build_market_frame` (11 keys,
+    adding repairer_id/third_party_id) historically listed different keys.
+    Measured 2026-10-29: claim_id is unique across all 9,258 rows and neither
+    key set drops a single row, so the inconsistency is inert — but if a data
+    refresh ever introduces duplicates the two paths could silently diverge
+    (labels vs trend index). Pin both facts.
+    """
+    from src.emerging import CLAIM_DEDUP_KEYS
+
+    cl = pd.read_parquet(EM_DIR / "claims.parquet")
+    assert cl["claim_id"].is_unique
+    dropped = cl.drop_duplicates(subset=CLAIM_DEDUP_KEYS, keep="first")
+    assert len(dropped) == len(cl), "dedup keys must be inert on the current claims table"
+
+
+def test_blend_lob_costs_per_lob_weights():
+    """D-086 arm C: per-LOB offset/prior blend at level-calibrated costs."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from run_emerging import blend_lob_costs
+
+    lines = np.array(["motor", "motor", "contents"])
+    p_off = np.array([100.0, 200.0, 50.0])
+    p_pr = np.array([10.0, 20.0, 30.0])
+
+    # record behaviour: all weights 1.0 -> offset untouched
+    out = blend_lob_costs(p_off, p_pr, lines,
+                          {"motor": 1.0, "buildings": 1.0, "contents": 1.0})
+    assert out.tolist() == p_off.tolist()
+
+    # contents shrunk to 0.5, motor untouched
+    out = blend_lob_costs(p_off, p_pr, lines,
+                          {"motor": 1.0, "buildings": 1.0, "contents": 0.5})
+    assert out.tolist() == [100.0, 200.0, 40.0]
+
+    with pytest.raises(ValueError):
+        blend_lob_costs(p_off, p_pr, lines,
+                        {"motor": 1.5, "buildings": 1.0, "contents": 1.0})

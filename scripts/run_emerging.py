@@ -63,6 +63,24 @@ SHARED_CAT = [
     "marital_status", "marketing_segment", "occ_clean", "vehicle_colour",
 ]
 
+
+def blend_lob_costs(p_off, p_prior, lines, w_off):
+    """Per-LOB offset/prior blend (D-067 axis, D-086 arm C).
+
+    `w_off[ln]` is the offset weight for LOB `ln`; the prior leg carries
+    (1 - w_off[ln]). Both inputs must be fold/level-calibrated costs on the
+    same rows. With w_off = 1.0 everywhere this returns `p_off` unchanged
+    (the record behaviour).
+    """
+    out = np.array(p_off, dtype=float).copy()
+    p_prior = np.asarray(p_prior, dtype=float)
+    for ln, w in w_off.items():
+        if not 0.0 <= w <= 1.0:
+            raise ValueError(f"w_off[{ln}]={w} outside [0, 1]")
+        m = np.asarray(lines) == ln
+        out[m] = w * out[m] + (1.0 - w) * p_prior[m]
+    return out
+
 ADAPT_CAT = ["region", "gender", "age_band_5", "channel", "cover_type", "flood_zone"]
 ADAPT_NUM = [
     "voluntary_excess", "new_business", "wp_rel", "is_self_employed",
@@ -142,6 +160,10 @@ def main() -> int:
                     help="offset layer num_leaves (D-067 incumbent 3; D-075 combo_top2 = 4)")
     ap.add_argument("--min-leaf", type=int, default=600,
                     help="offset layer min_data_in_leaf (D-067 incumbent 600; D-075 combo_top2 = 1200)")
+    ap.add_argument("--w-off", default="motor=1.0,buildings=1.0,contents=1.0",
+                    help="per-LOB offset weight in the offset/prior blend (D-086 arm C). "
+                         "Default all-1.0 = record behaviour (offset-only, D-067). "
+                         "e.g. 'motor=1.0,buildings=1.0,contents=0.5'")
     args = ap.parse_args()
 
     print(f"=== Part 2 Emerging Market Pipeline: {args.name} ===")
@@ -253,7 +275,14 @@ def main() -> int:
         print(f"   {ln:10s} D2 = {per_lob_d2[ln]:+.5f}")
 
     # ---- Full refit on all 2023-2024 emerging rows -> predict 2025 test ----
+    w_off = {}
+    for kv in args.w_off.split(","):
+        k, v = kv.split("=")
+        w_off[k.strip()] = float(v)
+    if set(w_off) != set(LINES):
+        raise SystemExit(f"FATAL: --w-off must cover exactly {tuple(LINES)}, got {sorted(w_off)}")
     p_te_pred = np.zeros(len(em_te))
+    p_te_prior = np.zeros(len(em_te))
     for ln in LINES:
         m_tr = (em_tr["line"] == ln).to_numpy()
         m_te = (em_te["line"] == ln).to_numpy()
@@ -288,6 +317,13 @@ def main() -> int:
             preds_off += cost_te_hat * (y_all[m_tr].sum() / cost_tr_hat.sum()) / 3.0
 
         p_te_pred[m_te] = preds_off  # D-067 offset-only
+        p_te_prior[m_te] = pr_te_cal * exp_te[m_te]
+
+    if any(w < 1.0 for w in w_off.values()):
+        # D-086 arm C: per-LOB offset/prior blend at level-calibrated costs
+        p_te_pred = blend_lob_costs(p_te_pred, p_te_prior,
+                                    em_te["line"].to_numpy(), w_off)
+        print(f"\nper-LOB offset/prior blend (D-086 arm C): {w_off}")
 
     # ---- D-069: 2025 forward index applied at scoring (D-008) ----
     fwd, fwd_stats = estimate_forward_index(em_tr, em_te)
