@@ -3061,3 +3061,59 @@ probes: the write-up must say the level was set on sandbox-board evidence.
 being board-fitted to the last digit; the bracket-peak caveat still applies to
 any quoted peak-adjacent score. Public 0.12700 confirms the documented
 Public/Private level divergence (Public prefers the +5% level).
+
+## D-086 (proposed) — Part 2 mean-quality candidates: prior-leg weight grid + `wp_rel` cross-year normalization (audit idea) — pre-registered gates
+**2026-10-29 · pre-registered BEFORE results (running) · compute-only · D-079(c): "mean quality of the vehicle is the only lever left"**
+
+Part 2 recon (2026-10-29) closed the flagged audit items and left exactly two
+live mean-quality candidates. Everything else is closed (D-070/079 ensemble,
+D-080 peril development, D-082 prior family, D-083 customer history, D-075
+singles, D-076/D-077 level axis).
+
+**Recon findings (measured, not assumed):**
+1. **`estimate_forward_index` dedup-key inconsistency is INERT.** `emerging/claims.parquet`
+   has `claim_id` unique across all 9,258 rows; both key sets (the 9-key
+   `estimate_forward_index` list vs the 11-key `build_market_frame` list that
+   adds `repairer_id`/`third_party_id`) drop **0 rows**. No prediction can
+   differ. Latent hygiene issue only — fix + pin test, no submission impact.
+2. **Claim-history features are strictly lagged** (`loss < ps`, `build_market_frame`)
+   — no Part 1-style experience leak in Part 2.
+3. **Part 2 quota is 10/day with daily reset** (API: `num_today=0,
+   num_allowed_now=10` on 2026-10-29) — the "1 of 10 slots remains" note in
+   `docs/experiment_log.md` described the 2026-10-28 window only. Slots expire
+   at reset (D-068), so today's budget is use-it-or-lose-it. Endgame frame
+   unchanged (D-079): best Public entry at the 2026-10-31 deadline is counted,
+   final ranking on Private; a submission that loses to `emerging-exp-025`
+   (0.16994 Public) cannot displace it — it costs a slot and nothing else.
+
+**Candidate 1 — prior leg blend weight `w_wp` (grid).** `prior_rate_blend =
+w_wp * dev_prior_rate + (1-w_wp) * dev_prior_rate_nowp`. D-067 compared only
+the endpoints 0.6 (record) and 1.0 (pure wp leg, OOF 0.14007 = −0.00038) —
+the response curve interior was never located. `scripts/run_emerging_priorweight.py`:
+grid {0.4, 0.5, 0.6, 0.7, 0.8}, paired-seed (0/1/2) 5-fold GroupKFold(customer_id)
+OOF at record config (lv=4/min_leaf=1200), identical folds/seeds, contract
+check = 0.14074 at seed 0 (tol 1e-5). **Gate: mean paired delta ≥ +0.0002 AND
+3/3 seeds positive** (winner's-curse control for the 4-way grid — stricter than
+D-083's single-candidate rule).
+
+**Candidate 2 — `wp_rel` cross-year normalization (the audit idea).** The record
+definition `wp_rel = written_premium / mean(line, acc_year)` erases the
+cross-year premium level — the one feature that could carry the 2024→2025
+trend (D-068: "a trend/level correction the model cannot express… express this
+properly"). Variant: fixed per-line base (exposure-weighted mean
+`written_premium` over train rows, shared by train and test of the same
+market). Arms A (prior+offset) and B (offset-only), same paired-seed protocol
+and gate as candidate 1 (2 arms → same winner's-curse control).
+**Counter-evidence measured before the run (kept honest):** in emerging train
+the cross-year drift does NOT track the rate trend — motor rate +10.7% 23→24
+while premium flat +0.01%; buildings rate −36.8% vs premium +6.4%; contents
+rate −2.2% vs premium +5.7%. Any gain must come from the developed-prior
+slope (dev premium ~+5%/yr vs claims ~+5.6%/yr), not from emerging's own
+years. The 2025 premium level shift is motor +11.6% / buildings +5.2% /
+contents +4.4% — a LEVEL effect that PROBE_FORWARD already carries, so a
+passing submission must be **level-preserving** (per-(line,cohort) cell totals
+held at `emerging-exp-025`'s, isolating the shape change) or it double-counts.
+
+PASS → build the submission, request one Part 2 slot (human confirmation at
+submission time per protocol §3). FAIL → no CSV, axis closes with the verdict
+recorded. Results to be appended below.
