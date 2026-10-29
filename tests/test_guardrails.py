@@ -829,3 +829,47 @@ def test_ensemble_blend_supports_equal_and_weighted_blends():
         assert np.allclose(got["prediction"], ref["prediction"], rtol=0, atol=1e-11)
 
 
+def test_align_maps_train_unseen_test_levels_to_other():
+    """D-084: the category space is defined by the training sample; test-only
+    levels map to "other" instead of leaking the test category space into fit."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.run_experiment import align
+
+    train = pd.DataFrame({"num": [1.0, 2.0], "cat": ["a", "b"]})
+    test = pd.DataFrame({"num": [3.0], "cat": ["zzz"]})
+    X_tr, X_te, _, _ = align(train, test, ["num"], ["cat"])
+    assert list(X_te["cat"].astype(str)) == ["other"]
+    assert sorted(X_tr["cat"].astype(str).unique()) == ["a", "b"]
+
+
+def test_final_fit_refuses_freq_sev_mode():
+    """D-084: --final-fit was silently ignored in freq_sev mode; it must refuse."""
+    import subprocess
+
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "run_experiment.py"),
+         "--name", "x", "--mode", "freq_sev", "--final-fit"],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert proc.returncode != 0
+    assert "freq_sev" in (proc.stderr + proc.stdout)
+
+
+def test_kaggle_validate_rejects_non_finite_predictions(tmp_path):
+    """D-084: the submission gate must reject inf as well as NaN."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scripts.kaggle_submit import validate
+
+    bad = tmp_path / "bad.csv"
+    pd.DataFrame({"row_id": ["M1"], "prediction": [float("inf")]}).to_csv(bad, index=False)
+    checks = {name: ok for name, ok, _ in validate(bad)}
+    assert checks["all finite"] is False
+
+    ok = tmp_path / "ok.csv"
+    pd.DataFrame({"row_id": ["M1"], "prediction": [1.0]}).to_csv(ok, index=False)
+    checks = {name: ok_ for name, ok_, _ in validate(ok)}
+    assert checks["all finite"] is True
+
+

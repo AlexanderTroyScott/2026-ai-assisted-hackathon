@@ -432,20 +432,30 @@ def row_target_split(policies: pd.DataFrame, claims: pd.DataFrame,
     return out
 
 
-def experience_features(policies: pd.DataFrame, claims: pd.DataFrame) -> pd.DataFrame:
+def experience_features(policies: pd.DataFrame, claims: pd.DataFrame,
+                        legacy_dedup: bool = False) -> pd.DataFrame:
     """Strictly lagged claim history (D-014): only losses before period_start.
 
-    Built at customer level (cross-LOB) and at policy level.
+    Built at customer level (cross-LOB) and at policy level. Distinct claims are
+    kept distinct by `claim_id` (D-084). `legacy_dedup=True` restores the pre-D-084
+    `(customer_id, loss, cost)` collapse, which silently merged away 598 distinct
+    claims on this book (two claims sharing a customer, loss date and net cost);
+    it is retained only for byte-exact reproduction of pre-D-084 runs.
     """
     cust = policies[["row_id", "policy_id", "customer_id", "ps"]].merge(
         claims[["claim_id", "policy_id", "loss", "cost"]], on="policy_id", how="left"
     )
     # customer-level history: any claim on any of the customer's policies
+    cl_cust = claims[["claim_id", "policy_id", "loss", "cost"]].merge(
+        policies[["policy_id", "customer_id"]].drop_duplicates(), on="policy_id", how="inner"
+    )
+    if legacy_dedup:
+        cl_cust = cl_cust[["customer_id", "loss", "cost"]].drop_duplicates()
+    else:
+        cl_cust = cl_cust.drop_duplicates(subset=["claim_id", "customer_id"])[
+            ["customer_id", "loss", "cost"]]
     cust_all = policies[["row_id", "customer_id", "ps"]].merge(
-        claims[["claim_id", "policy_id", "loss", "cost"]].merge(
-            policies[["policy_id", "customer_id"]].drop_duplicates(), on="policy_id", how="inner"
-        )[["customer_id", "loss", "cost"]].drop_duplicates(),
-        on="customer_id", how="left",
+        cl_cust, on="customer_id", how="left",
     )
     lagged = cust_all[cust_all["loss"] < cust_all["ps"]]
     for window, label in [(365, "1y"), (730, "2y"), (1460, "4y"), (10**9, "all")]:
@@ -515,8 +525,13 @@ def load_raw_claims() -> pd.DataFrame:
     return c
 
 
-def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
-    """Full modelling frame for one split, all LOBs concatenated."""
+def build_frame(split: str = "train", development: str = "lob",
+                legacy_features: bool = False) -> pd.DataFrame:
+    """Full modelling frame for one split, all LOBs concatenated.
+
+    `legacy_features=True` selects the pre-D-084 experience-history dedup for
+    byte-exact reproduction of pre-D-084 runs (see `experience_features`).
+    """
     claims = load_claims()
     if split == "train":
         # D-002: orphan audit is book-level — written once over all lines, not
@@ -530,7 +545,7 @@ def build_frame(split: str = "train", development: str = "lob") -> pd.DataFrame:
     frames = []
     for ln in LINES:
         pol = attach_attributes(canonicalise(load_policies(ln, split)))
-        feats = experience_features(pol, claims)
+        feats = experience_features(pol, claims, legacy_dedup=legacy_features)
         feats = feats.merge(denial_features(pol, load_denied_claims()), on="row_id", how="left")
         df = pol.merge(feats, on="row_id", how="left")
         if split == "train":

@@ -148,7 +148,7 @@ What made this *governed* rather than "AI did stuff":
 - **Contract checks and automated tests.** The final Part 2 model reproduces its
   scored predictions **byte-for-byte** (differences below 1e-15), and a validation run
   reproduced its recorded score to 1e-6 before we trusted a negative result. The test
-  suite has **91 automated guardrails** — leakage rules, label invariants, calibration
+  suite has **98 automated guardrails** — leakage rules, label invariants, calibration
   invariants, submission format checks.
 - **Incidents become process.** One run accidentally uploaded a submission twice (two
   parallel calls raced). The duplicate scored identically, but we treated it as a real
@@ -214,7 +214,7 @@ price — driven by the flood-zone, age-band and new-business mispricings in §3
 | Deep technical reports (Part 1: `actuarial_report.md`; Part 2: `emerging_market_report.md`) | `docs/` |
 | AI working protocol and interaction evidence | `docs/ai_workflow_log.md`, `docs/submission_protocol.md` |
 | The pipelines | `src/`, `scripts/` (one command reproduces the Part 2 submission byte-for-byte) |
-| Automated guardrails | `tests/` (91 tests) |
+| Automated guardrails | `tests/` (98 tests) |
 
 *Everything above is reproducible from the repository. Where a number is an estimate
 or a judgement rather than a measurement, this write-up says so.*

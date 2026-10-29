@@ -21,6 +21,7 @@
   "d2_oracle_inflation": 0.0004253568092584814,
   "d2_model_raw": 0.13964978306300369,
   "n_iter": 287,
+  "note": "D-084 audit: d2 values verify exactly against exp-033_valpred.parquet. The top_features block is unverified (byte-identical to exp-032.json despite a different architecture) - treat as unreliable; regenerate from code before citing.",
   "top_features": {
     "region": 294.0,
     "written_premium": 279.0,

@@ -21,6 +21,7 @@
   "d2_oracle_inflation": 0.0009,
   "d2_model_raw": 0.1376,
   "n_iter": 318,
+  "note": "D-084 audit: this file was hand-assembled after the run - the d2 values verify exactly against exp-032_valpred.parquet, but the top_features block is unverified (byte-identical to exp-033.json despite a different architecture) and the d2 fields are hand-rounded. Treat top_features as unreliable; regenerate from code before citing.",
   "top_features": {
     "region": 294.0,
     "written_premium": 279.0,

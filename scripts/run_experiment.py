@@ -151,15 +151,18 @@ def feature_cols(groups: str) -> list[str]:
     return cols
 
 
-def prepare(groups: str, development: str = "lob", weather_lag: bool = False):
-    df = add_derived(build_frame("train", development=development))
+def prepare(groups: str, development: str = "lob", weather_lag: bool = False,
+            legacy_features: bool = False):
+    df = add_derived(build_frame("train", development=development,
+                                 legacy_features=legacy_features))
     if "weather" in groups:
         df = add_weather(df, lag=weather_lag)
-    te = add_derived(build_frame("test"))
+    te = add_derived(build_frame("test", legacy_features=legacy_features))
     if "weather" in groups:
         te = add_weather(te, lag=weather_lag)
     if "relativity" in groups:
-        df, te = historical_relativities(df, te, CAT_FEATURES)
+        df, te = historical_relativities(
+            df, te, CAT_FEATURES, prior="legacy" if legacy_features else "strict")
     return df, te
 
 
@@ -177,9 +180,15 @@ def align(train: pd.DataFrame, test: pd.DataFrame, cols: list[str], cats: list[s
     for c in cats:
         train[c] = train[c].astype(str).fillna("other")
         test[c] = test[c].astype(str).fillna("other")
-        levels = sorted(set(train[c]) | set(test[c]))
+        # D-084: the category space is defined by the training sample; test-only
+        # levels map to "other" instead of leaking the test category space into
+        # the fit (the old union(train, test) was transductive). Inert on this
+        # book (no train-unseen test levels exist in developed/).
+        train_levels = set(train[c])
+        levels = sorted(train_levels | {"other"})
+        test[c] = pd.Categorical(test[c].where(test[c].isin(train_levels), "other"),
+                                 categories=levels)
         train[c] = pd.Categorical(train[c], categories=levels)
-        test[c] = pd.Categorical(test[c], categories=levels)
     use = [c for c in cols + cats if c in train.columns]
     num = [c for c in use if c not in cats]
     for c in num:
@@ -307,10 +316,17 @@ def main() -> int:
                          "scoring test (D-045). Uses the CV best_iteration as a "
                          "fixed tree count; local D2 is then unavailable.")
     ap.add_argument("--weather-lag", action="store_true")
+    ap.add_argument("--legacy-features", action="store_true",
+                    help="D-084: pre-audit feature construction (full-sample relativity "
+                         "prior + (customer_id, loss, cost) claim dedup). Only for "
+                         "byte-exact reproduction of pre-D-084 runs such as exp-036.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--save-val-pred", action="store_true")
     ap.add_argument("--no-submit", action="store_true")
     args = ap.parse_args()
+    if args.final_fit and args.mode == "freq_sev":
+        ap.error("--final-fit is not implemented for --mode freq_sev; "
+                 "refusing instead of silently ignoring it (D-084)")
     groups = set(args.features.split(","))
     holdout_year, train_max_year = FOLDS[args.fold]
     if args.train_max is not None:
@@ -318,7 +334,9 @@ def main() -> int:
 
     print(f"=== {args.name}  features={args.features}  development={args.development}"
           f"  trend={args.trend}  fold={args.fold} ===")
-    train, test = prepare(args.features, development=args.development, weather_lag=args.weather_lag)
+    train, test = prepare(args.features, development=args.development,
+                          weather_lag=args.weather_lag,
+                          legacy_features=args.legacy_features)
     print(f"train rows {len(train):,}  test rows {len(test):,}")
 
     # ---- baselines on the same holdout (developed truth) ----
@@ -356,11 +374,13 @@ def main() -> int:
         cols = [c for c in cols if c != "earned_premium"]
     X_all, X_te, use, cats = align(train, test, cols, CAT_FEATURES)
     if args.norm_rel:
+        # D-084: same normalization basis on both sides — within (line, acc_year)
+        # on each frame (test = AY 2025). Group means are target-free.
         hist_cols = [c for c in use if "_hist_rate" in c or "_hist_freq" in c]
         for c in hist_cols:
             grp_tr = X_all[c].groupby([train["line"], train["acc_year"]]).transform("mean")
             X_all[c] = X_all[c] / grp_tr.replace(0, 1.0)
-            grp_te = X_te[c].groupby(test["line"]).transform("mean")
+            grp_te = X_te[c].groupby([test["line"], test["acc_year"]]).transform("mean")
             X_te[c] = X_te[c] / grp_te.replace(0, 1.0)
     X_tr = X_all.loc[tr.index]
     X_va = X_all.loc[va.index]
@@ -608,6 +628,10 @@ def main() -> int:
     (MET / f"{args.name}.json").write_text(json.dumps({
         "name": args.name, "features": args.features, "mode": args.mode, "seed": args.seed,
         "development": args.development, "trend": args.trend, "fold": args.fold,
+        "target": args.target, "final_fit": bool(args.final_fit),
+        "norm_rel": bool(args.norm_rel), "weather_lag": bool(args.weather_lag),
+        "legacy_features": bool(args.legacy_features),
+        "num_leaves": args.num_leaves, "lr": args.lr, "l2": args.l2,
         "holdout_year": holdout_year, "train_max_year": train_max_year,
         "forward_factor": fwd_tab, "recency_lambda": args.recency_lambda,
         "d2_constant": float(d2(pred_const)), "d2_premium_lr": float(d2(pred_prem)),

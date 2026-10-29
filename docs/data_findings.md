@@ -39,7 +39,9 @@ Verified properties:
 
 - Every claim matches **exactly one** policy row (162,736 of 163,150). Zero claims match >1 row.
 - **414 claims are orphans** (loss date matches no row): 274 with 2020 loss dates (before the
-  policy window), plus 156/115/69 in 2021/2022/2023 falling in gaps. Rule: drop + log. See `docs/decisions.md`.
+  policy window), plus 48/48/44 in 2021/2022/2023 falling in gaps (D-084 correction: the
+  previously recorded 156/115/69 breakdown was wrong; recomputed from `developed/`).
+  Rule: drop + log. See `docs/decisions.md`.
 - Repudiated claims carry `paid = incurred = recoveries = 0`, so the "exclude declined" filter is
   **numerically a no-op**. Document it explicitly rather than leaving it ambiguous.
 - `incurred_to_date` is already net of policy excess. Do not deduct the excess again.
@@ -59,7 +61,7 @@ The supplied `exposure` column mixes three conventions and contains unit errors:
 
 | Convention | motor | buildings | contents | test (all lines) |
 |---|---|---|---|---|
-| days / 365 (correct) | 958,703 | 694,632 | 706,957 | 616,486 |
+| days / 365 (correct) | 958,703 | 694,632 | 706,957 | 616,586 |
 | days / 360 (1.0139 for a full year) | 4,802 | 3,526 | 3,582 | 0 |
 | days / 365.25 | 15,529 | 8,912 | 10,349 | 10,053 |
 | **in days (unit error)** | **934** | **656** | **729** | **0** |
@@ -83,6 +85,7 @@ the unit errors. This alone is enough to explain apparent train/test exposure sh
 | Nulls in addresses | flood_zone 2.9%, distance_to_river_km / soil_type / roof_type / energy_rating ≈ 2.5% | explicit missing levels |
 | `renewal_decision` | **training only** and is outcome information | never a feature — enforce with a deny-list test |
 | 2025-only customers | `customer_since_year` max = 2025 | expected; experience features must fall back |
+| Train/test claim-history shift | Rows with any strictly-lagged claim history: **7.74% (train, 2.41M rows) vs 14.64% (test, 626,639 rows)** (verified 2026-10-28; policy- and customer-basis give identical row counts) | test rows are all AY2025 with the full 2021–24 history antecedent; experience features are ~2× more prevalent in test — do not read train-era feature importance as representative of production |
 
 ## 5. Development / IBNR — 2024 labels are understated
 
@@ -177,7 +180,9 @@ Premium per exposure (2021 = 100, exposure summed over **all** policy rows):
 | contents | 100 | 117 | 123 | 130 | **137** | +5.4% |
 
 Absolute premium/exposure: motor 618 → 701 → 725 → 746 → 766; buildings 328 → 385 →
-405 → 427 → 449; contents 141 → 165 → 174 → 183 → 193.
+405 → 427 → 449; contents 141 → 165 → 174 → 183 → 193. **This is a non-exposure-weighted
+ratio of annualised premium — not an earned rate. Use it for the year-on-year steps only,
+never as a price level** (D-084 audit correction).
 
 2025 prices already carry a ~3–5%/yr trended level. Use as sanity check **or** as a level anchor
 (assume 2025 LR ≈ developed 2024 LR). Note the target is net of a **fixed nominal** excess

@@ -21,6 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,8 @@ def validate(path: Path, market: str = "developed") -> list[tuple[str, bool, str
     checks.append(("row count", len(df) == expected_rows, f"{len(df)} expected {expected_rows}"))
     checks.append(("no duplicate row_id", df["row_id"].is_unique, f"{int(df['row_id'].duplicated().sum())} dups"))
     checks.append(("no NaN", not df.isna().any().any(), f"{int(df.isna().sum().sum())} NaN"))
+    checks.append(("all finite", bool(np.isfinite(df["prediction"]).all()),
+                   f"{int(np.isinf(df['prediction']).sum())} inf"))
     checks.append(("strictly positive", bool((df["prediction"] >= FLOOR).all()),
                    f"min={df['prediction'].min()} floor={FLOOR}"))
     checks.append(("numeric prediction", pd.api.types.is_numeric_dtype(df["prediction"]), str(df["prediction"].dtype)))

@@ -2854,3 +2854,85 @@ Audit of the Part 1 and Part 2 models surfaced three actionable items, all execu
 
 
 
+
+## D-084 — Part 1 audit fix bundle: leak-free credibility anchor, claim-id dedup, category-space and norm-rel fixes, submission-gate hardening
+**2026-10-29 · human-directed ("fix anything related to part 1 models and submissions") · `src/features.py`, `src/dataset.py`, `scripts/run_experiment.py`, `scripts/kaggle_submit.py` · validated by byte-level regression, then one Part 1 submission (`exp-046`)**
+
+The three-way audit (reviewer / model-audit / data-audit, 2026-10-29) found no
+hard-rule violations and no score-invalidating defects in Part 1, but surfaced
+five code-level findings and several doc errors. All Part 1 items are fixed here
+as **one primary change** (the audit fix bundle), validated before submission by
+a full-pipeline regression against the recorded `exp-033` artefact.
+
+### Code fixes
+
+1. **Credibility-anchor leakage (`historical_relativities`, D-065 mild-leak finding).**
+   The prior level was the full-period line rate, so the holdout's own outcomes
+   leaked into every thin-cell relativity feature. Now `prior="strict"` (default):
+   the anchor for each row is the line rate over source rows with `pe < ps` — the
+   same boundary rule as the level statistics. Rows with **zero antecedent
+   experience** fall back to a labelled **initial prior** (full-period line rate);
+   on this book those are first-year inception rows only (all `ps = 2021-01-01`,
+   17.9–18.6% of rows per LOB) and holdout/test rows never draw on it. Measured
+   motor anchor path: 456 (2021-03) → 524 → 468 → 493 → 564 (2022-06) → 579.5
+   (full sample) — early-2021 rows sit on genuinely thin history, which is the
+   honest signal. `prior="legacy"` preserves the pre-D-084 anchor.
+2. **Claim dedup (`experience_features`).** `(customer_id, loss, cost)` collapsed
+   598 distinct `claim_id`s on this book (161,439 unique claims). Dedup is now on
+   `(claim_id, customer_id)`. `legacy_dedup=True` restores the old collapse.
+3. **Category space (`align`).** Was `sorted(set(train[c]) | set(test[c]))` —
+   transductive; the category space is now defined by the training sample and
+   train-unseen test levels map to `"other"`. Inert on this book (no train-unseen
+   test levels exist in `developed/`) but closes the hole.
+4. **`--norm-rel` basis.** Test normalization was by `line` alone against train's
+   `(line, acc_year)` — asymmetric. Both sides now normalize within
+   `(line, acc_year)` (test = AY2025), target-free group means only.
+5. **Guardrail hardening.** `--final-fit` with `--mode freq_sev` now refuses
+   (was silently ignored); `kaggle_submit.py` rejects ±inf predictions (was NaN
+   only); metrics JSONs now record `target`, `final_fit`, `norm_rel`,
+   `weather_lag`, `legacy_features`, `num_leaves`, `lr`, `l2` so the anchor
+   convention per run is recoverable from artefacts (audit finding 3).
+
+### Validation
+
+- **Regression (byte-level):** the exp-033 recipe re-run under
+  `--legacy-features` (`exp-046-legacy-check`) matches
+  `exp-033_valpred.parquet`: `y_true` bit-identical, predictions agree to
+  3.8e-14 relative (LightGBM multithreaded FP-summation noise), and every
+  recorded metric reproduces to the last digit
+  (`d2_model_raw 0.13964978306300369`, `d2_model 0.14002359762493188`,
+  `n_iter 287`, per-LOB best_iters 441/186/236). ⇒ the fix bundle is the only
+  behavioural delta and `--legacy-features` reproduces pre-D-084 runs.
+- **Tests:** suite 91 → **98 passed** (strict-anchor lagging, initial-prior
+  backoff, legacy anchor, claim-id dedup, align→"other", freq_sev final-fit
+  refusal, inf rejection).
+- **Doc corrections (recomputed from `developed/`):** orphan year breakdown
+  274/156/115/69 → **274/48/48/44 = 414** (was wrong in `docs/data_findings.md`
+  §2 and the data-facts skill); test `days/365` convention count 616,486 →
+  **616,586** (+10,053 on /365.25, = 626,639); §6 premium/exposure table labelled
+  **not an earned rate — steps only**; train/test claim-history prevalence shift
+  documented (**7.74% → 14.64%** of rows, policy- and customer-basis identical);
+  test counts 48 → 98 in `docs/actuarial_report.md`, 91 → 98 across README /
+  final write-up / emerging report; `exp-032.json` / `exp-033.json` annotated —
+  their d2s verify exactly against valpred parquets but the byte-identical
+  `top_features` blocks are unverified artefacts of hand-assembly.
+
+### Judgement call (flagged, not silently adopted)
+
+The **initial-prior backoff** (full-period line rate for zero-antecedent rows)
+is the only place the strict anchor draws on post-row outcomes. Alternatives
+(prior = 0, or the premium-implied rate) were rejected: zero would poison the
+credibility formula, and the premium-implied rate would entangle the target with
+the pricing formula. It is labelled as an initial prior, never used for holdout
+or test rows. Accepted as part of the human-directed fix scope; revisit if the
+anchoring-convention experiment (see options) changes the level basis.
+
+### Not changed here (deferred)
+
+- The **level/anchoring convention** (4.7% ambiguity between the 2021–24
+  recalibration basis and the one-year 2025/2024 forward step) needs a modelling
+  decision — the exp-036 blend silently mixes differently-anchored components
+  (totals 2.116e8–2.211e8). D² rankings are unaffected. Carried to the options
+  list.
+- Part 2 items (public-board-tuned forward index presentation, emerging orphan
+  doc, `estimate_forward_index` dedup keys) — out of scope.

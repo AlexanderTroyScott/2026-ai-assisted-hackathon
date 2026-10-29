@@ -29,7 +29,7 @@ here and not in `docs/data_findings.md`, it is unverified.
 **and** `period_start ≤ loss_date ≤ period_end`, excluding `status == 'repudiated'`.
 
 - Every claim matches **exactly one** row (162,736). **0 claims match >1 row.**
-- **414 orphans** (274 pre-2021 + 156/115/69 in 2021–23). Rule: drop + log (D-002).
+- **414 orphans** (274 pre-2021 + 48/48/44 in 2021–23). Rule: drop + log (D-002).
 - Repudiated claims all carry `paid = incurred = recoveries = 0` → filter is a
   **numerical no-op**. State this in the write-up.
 - `incurred_to_date` is already net of excess — never deduct excess again.

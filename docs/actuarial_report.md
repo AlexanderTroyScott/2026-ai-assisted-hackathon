@@ -410,7 +410,7 @@ discipline was not applied, an over-claim followed.
 from `developed/` (AGENTS.md rule 1) or attributed to a named source. Independent
 subagent audits were run on the code (`reviewer`) and on the modelling inferences
 (`model-audit`, `data-audit`) and their findings are what produced D-040 and D-051.
-48 automated tests guard the invariants, including mutation-checked leakage tests.
+98 automated tests guard the invariants, including mutation-checked leakage tests.
 
 **Responsibility.** Notwithstanding the reliance above, responsibility for this
 communication rests with the entrant. AI output was treated as a draft to be verified,
@@ -489,7 +489,7 @@ form of work requires it. This report is unsigned pending the entrant's sign-off
 - Every figure in this report is recomputable from `developed/` or is attributed to a
   numbered decision (`D-xxx`) or reference (`R-xx`).
 - Submission CSVs are not committed; their sha256 is recorded in `docs/experiment_log.md`.
-- 48 tests in `tests/` guard the invariants. `pytest -q` is the entry point.
+- 98 tests in `tests/` guard the invariants. `pytest -q` is the entry point.
 
 ---
 

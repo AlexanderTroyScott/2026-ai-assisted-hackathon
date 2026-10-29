@@ -67,11 +67,59 @@ def test_rel_hist_unseen_level_falls_back_to_line_rate():
     ])
     test = pd.DataFrame([_row("t1", "2025-01-01", "2025-12-31", 0.0, 0, "qqq")])
     tr, te = historical_relativities(train, test, ["lvl"])
-    line_rate = train["y_ult"].sum() / train["exposure"].sum()
-    # r2's level has no history before its period_start -> line rate
-    assert tr.loc[tr.row_id == "r2", "lvl_hist_rate"].iloc[0] == pytest.approx(line_rate)
-    # test rows of a level never seen in training also fall back to the line rate
-    assert te["lvl_hist_rate"].iloc[0] == pytest.approx(line_rate)
+    # r2's level has no history before its period_start -> the strictly-lagged
+    # line anchor as of r2.ps, which is r1 alone (D-084)
+    assert tr.loc[tr.row_id == "r2", "lvl_hist_rate"].iloc[0] == pytest.approx(100.0)
+    # test rows of a level never seen in training also fall back to the line rate;
+    # by 2025 the whole training history qualifies -> (100 + 0) / 2
+    assert te["lvl_hist_rate"].iloc[0] == pytest.approx(50.0)
+
+
+def test_rel_hist_prior_is_strictly_lagged():
+    """D-084: the credibility anchor itself must exclude outcomes from rows
+    whose claims can be dated after the target row's period_start.
+
+    Pre-D-084 the anchor was the full-period line rate, so every thin-cell
+    feature carried a slice of the holdout's own outcomes.
+    """
+    train = pd.DataFrame([
+        _row("r1", "2021-01-01", "2021-12-31", 100.0, 1, "a"),
+        _row("r2", "2022-01-01", "2022-12-31", 900.0, 4, "zzz"),  # unseen -> anchor
+    ])
+    test = pd.DataFrame([_row("t1", "2025-01-01", "2025-12-31", 0.0, 0, "qqq")])
+    tr, te = historical_relativities(train, test, ["lvl"])
+    # r2's anchor: only r1 qualifies (pe 2021-12-31 < ps 2022-01-01) -> 100,
+    # NOT the full-period rate (100 + 900) / 2 = 500.
+    assert tr.loc[tr.row_id == "r2", "lvl_hist_rate"].iloc[0] == pytest.approx(100.0)
+    # t1's anchor: the whole training history qualifies -> 500
+    assert te["lvl_hist_rate"].iloc[0] == pytest.approx(500.0)
+
+
+def test_rel_hist_initial_prior_backoff_when_no_history():
+    """D-084: a row with zero antecedent experience falls back to the labelled
+    initial prior (the full-period line rate) - the only place the strict anchor
+    may draw on the full period. On the real book these are AY2021-01-01
+    inception rows only; holdout and test rows never draw on it.
+    """
+    train = pd.DataFrame([
+        _row("r1", "2021-01-01", "2021-12-31", 100.0, 1, "zzz"),
+    ])
+    test = pd.DataFrame([_row("t1", "2025-01-01", "2025-12-31", 0.0, 0, "qqq")])
+    tr, _ = historical_relativities(train, test, ["lvl"])
+    assert tr.loc[tr.row_id == "r1", "lvl_hist_rate"].iloc[0] == pytest.approx(100.0)
+
+
+def test_rel_hist_legacy_prior_reproduces_pre_d084_anchor():
+    train = pd.DataFrame([
+        _row("r1", "2021-01-01", "2021-12-31", 100.0, 1, "a"),
+        _row("r2", "2022-01-01", "2022-12-31", 900.0, 4, "zzz"),
+    ])
+    test = pd.DataFrame([_row("t1", "2025-01-01", "2025-12-31", 0.0, 0, "qqq")])
+    tr, _ = historical_relativities(train, test, ["lvl"], prior="legacy")
+    # pre-D-084 anchor: the full-period line rate for every row
+    assert tr.loc[tr.row_id == "r2", "lvl_hist_rate"].iloc[0] == pytest.approx(500.0)
+    with pytest.raises(ValueError):
+        historical_relativities(train, test, ["lvl"], prior="bogus")
 
 
 def test_rel_hist_frequency_matches_rate_structure():
@@ -227,6 +275,24 @@ def test_experience_windows_bound_the_lookback():
     assert out.loc["r1", "cust_claims_4y"] == 3
     assert out.loc["r1", "cust_claims_all"] == 3
     assert out.loc["r1", "cust_cost_all"] == pytest.approx(7.0)
+
+
+def test_experience_keeps_distinct_claim_ids_with_identical_loss_and_cost():
+    """D-084: two distinct claims sharing (customer, loss date, net cost) must
+    both count. The pre-D-084 `(customer_id, loss, cost)` dedup merged them away
+    (598 claims on the real book)."""
+    import src.dataset as ds
+
+    policies = pd.DataFrame([_prow("r1", "p1", "c1", "2022-01-01")])
+    claims = pd.DataFrame([
+        _claim("cl1", "p1", "2021-06-01", 100.0),
+        _claim("cl2", "p1", "2021-06-01", 100.0),
+    ])
+    out = ds.experience_features(policies, claims).set_index("row_id")
+    assert out.loc["r1", "cust_claims_all"] == 2
+    assert out.loc["r1", "cust_cost_all"] == pytest.approx(200.0)
+    legacy = ds.experience_features(policies, claims, legacy_dedup=True).set_index("row_id")
+    assert legacy.loc["r1", "cust_claims_all"] == 1
 
 
 # --- D-055: the two leakage boundaries that were not pinned at equality ----
