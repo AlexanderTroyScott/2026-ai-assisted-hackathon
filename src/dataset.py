@@ -68,11 +68,18 @@ SEVERITY_INDEX = {
 }
 PREMIUM_ANCHOR = {"motor": 1.027, "buildings": 1.053, "contents": 1.054}
 CLAIMS_WEIGHT, PREMIUM_WEIGHT = 0.7, 0.3  # D-009 — status `proposed`, needs sign-off
-TREND_SCENARIOS = ("premium", "low", "central", "high")
+TREND_SCENARIOS = ("flat", "premium", "low", "central", "high")
 
 
 def forward_factors(scenario: str = "central") -> dict:
     """One-year 2025-vs-2024 level factor per LOB (applied at scoring, D-008).
+
+    'flat' is D-085's adopted convention (human-accepted 2026-10-29): no
+    forward step at all. The measured Private response curve peaked at an
+    expected 2025 total equal to the AY2024 actual (flat level); the step
+    double-counts the trend already carried by 2025-priced premium features
+    and/or extrapolates a stale 2021-24 CAGR. Final outputs are calibrated to
+    the AY2024 actual total instead (scripts/scale_submission.py --target-total).
 
     'central' is D-009's 70/30 blend of the claims-index CAGR and the premium
     anchor. 'low'/'high' bracket it with the two indications themselves, so the
@@ -80,9 +87,11 @@ def forward_factors(scenario: str = "central") -> dict:
     'premium' is the premium anchor on its own — the pre-D-034 level, kept so a
     submission can isolate a label change from a level change.
 
-    D-009 is `proposed`: the *level* is a judgement call awaiting human sign-off
-    (AGENTS.md), so callers must not treat 'central' as verified.
+    D-009 level is `resolved (measured)` as of D-085: 'central'/'low'/'high'
+    are retained as sensitivity scenarios, not as the production level.
     """
+    if scenario == "flat":
+        return {ln: 1.0 for ln in LINES}
     claims = {ln: (SEVERITY_INDEX[ln][2024] / SEVERITY_INDEX[ln][2021]) ** (1.0 / 3.0)
               for ln in LINES}
     if scenario == "central":

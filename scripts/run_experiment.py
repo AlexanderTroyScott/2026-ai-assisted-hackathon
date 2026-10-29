@@ -292,8 +292,10 @@ def main() -> int:
     ap.add_argument("--development", default="lob", choices=["lob", "peril", "bf", "split", "ht_motor"])
     ap.add_argument("--norm-rel", action="store_true",
                     help="D-065: normalize _hist_rate and _hist_freq within (line, acc_year) to mean 1.0")
-    ap.add_argument("--trend", default="central", choices=["premium", "low", "central", "high"],
-                    help="2025 level scenario (D-009, still `proposed`)")
+    ap.add_argument("--trend", default="central", choices=["flat", "premium", "low", "central", "high"],
+                    help="2025 level scenario. 'flat' = D-085 adopted convention (no forward "
+                         "step; calibrate the blend to the AY2024 actual total). Default "
+                         "'central' kept for reproduction of pre-D-085 runs (D-009)")
     ap.add_argument("--fold", default="2024", choices=sorted(FOLDS),
                     help="rolling-origin holdout year (D-006)")
     ap.add_argument("--target", default="cost", choices=["rate", "cost"],

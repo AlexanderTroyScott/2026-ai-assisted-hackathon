@@ -860,13 +860,34 @@ def test_scale_submission_multiplies_and_floors():
     """D-085: level probes scale every prediction by K and keep the 1e-3 floor."""
     import sys
     sys.path.insert(0, str(ROOT))
-    from scripts.scale_submission import scale_frame
+    from scripts.scale_submission import calibrate_to_total, scale_frame
 
     df = pd.DataFrame({"row_id": ["M1", "M2"], "prediction": [100.0, 0.002]})
     out = scale_frame(df, 0.5)
     assert out["prediction"].tolist() == [50.0, 0.001]
     with pytest.raises(ValueError):
         scale_frame(df, -1.0)
+
+    # D-085 adopted convention: calibrate to a data-derived target total
+    cal, k = calibrate_to_total(df, 200.0)
+    assert k == pytest.approx(200.0 / 100.002)
+    assert cal["prediction"].sum() == pytest.approx(200.0, rel=1e-6)
+    with pytest.raises(ValueError):
+        calibrate_to_total(df, -1.0)
+
+
+def test_forward_factors_flat_is_the_d085_convention():
+    """D-085: 'flat' returns no forward step; other scenarios unchanged."""
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from src.dataset import forward_factors
+
+    flat = forward_factors("flat")
+    assert flat == {"motor": 1.0, "buildings": 1.0, "contents": 1.0}
+    central = forward_factors("central")
+    assert all(v > 1.0 for v in central.values())
+    with pytest.raises(ValueError):
+        forward_factors("bogus")
 
 
 def test_kaggle_validate_rejects_non_finite_predictions(tmp_path):
