@@ -627,6 +627,67 @@ this AI-workflow log next).
 **Output.** `README.md`, `emerging_market_report.md` header, Part 1 correction
 note.
 
+## Session 19 — 2026-10-28 → 2026-10-29 · Endgame, audit close-out, pre-registered Part 2 gates, and the honesty/doc pass (D-079…D-087)
+
+**Asked.** First the audits and endgame work ("prioritize anything that would
+alter a Part 2 submission, make those submissions, and then proceed with
+documentation as you have outlined") — with standing batch confirmation for
+Part 2 submissions, plus explicit per-decision human choices where judgement
+calls arose.
+
+**AI did.**
+- **Recon before modelling, measurements before claims.** The flagged
+  `estimate_forward_index` dedup-key inconsistency was measured, not assumed:
+  `claim_id` is unique across all 9,258 emerging claims and both key sets drop
+  0 rows — the bug is **inert** (hygiene fix + pinned test, zero submission
+  impact). Part 2 claim-history features verified strictly lagged (`loss < ps`)
+  — no Part 1-style leak. The stale quota note ("1 of 10 remains") was
+  re-checked against the API: Part 2 is 10/day with daily reset — which
+  changed the strategy from rationing to spend-the-window.
+- **Pre-registration discipline at window scale.** Two mean-quality candidates
+  (prior-leg weight grid; the audit's `wp_rel` cross-year normalization) were
+  written into `docs/decisions.md` with gates *before* results and committed
+  (`f0a9147`). Counter-evidence against the second candidate was measured and
+  disclosed before its run (emerging's own 23→24 drift is flat/wrong-signed vs
+  rates). A third arm (per-LOB `w_off`, D-067's fixed weights) followed the
+  same protocol. Every harness reproduced the record contract (0.14074) to
+  7.7e-07 before any comparison counted.
+- **Results were all gate FAILs and all closed honestly:** the prior-weight
+  grid put the record 0.6 at the response-curve peak; `wp_rel` failed both
+  arms exactly as the pre-registered counter-evidence predicted; the contents
+  shrink was 3/3 (then 9/9) seeds positive but an order below the effect bar.
+- **One judgement call surfaced to the human instead of being silently
+  adopted:** a gate-override on the contents shrink (9/9 positive, +0.00009,
+  supplemental seeds labelled post-hoc) under the endgame asymmetry. The human
+  approved; the counter-evidence (exp-004's board reversal) was disclosed in
+  the question itself. `emerging-exp-030` was built with proof of a single
+  primary change (motor/buildings byte-identical to exp-025, contents only)
+  and submitted through the gate: **0.16991 — the override LOST** (−0.00003),
+  exp-025 stands, and the result is logged as much as the wins (row 82).
+- **Documentation honesty pass on the Part 2 write-up:** Stage 3 now says
+  plainly that the scoring multipliers are Public-fitted constants
+  (`f_final = f_probe`), that the data-estimated index is dead code, that
+  D-076's +0.00115 is peak-picked, and carries the D-085 Public/Private ~5%
+  level-divergence caveat — with `final_writeup.md`'s plain-language trend
+  wording corrected to match (board-set factors, data estimate a cross-check).
+- **Week 1 deliverable decision, human-made (D-087):** the three candidates
+  (exp-054 0.13600 / exp-046 0.13577 / exp-036 0.13570 Private) were presented
+  with all caveats; the human chose **exp-054** (clean pipeline + the
+  data-derived flat-level convention). README, `final_writeup.md` §7 and
+  `actuarial_report.md` updated with the post-deadline and probe-selected-level
+  disclosures; exp-027 remains the board-counted entry.
+- **Remaining Part 2 doc items closed:** the emerging orphan figures were
+  recomputed from the data (9,222/9,258 matched, 0 multi-matched; 36 orphans
+  6/28/2 by loss year; 9,102 non-repudiated) and the D-002 drop treatment
+  documented in `emerging_market_report.md` §3. Test suite grew to **102
+  passing** (blend-math + dedup-inertness guardrails).
+
+**Output.** `emerging-exp-030` (submitted, 0.16991), `scripts/run_emerging{,_priorweight,_wprel,_wblend}.py`,
+`src/emerging.py` (`CLAIM_DEDUP_KEYS`), `tests/test_emerging.py` (+2),
+`docs/decisions.md` (D-086/D-087 + closures), `docs/emerging_market_report.md`,
+`docs/final_writeup.md`, `docs/actuarial_report.md`, `README.md`,
+`docs/experiment_log.md` (row 82).
+
 ## Verification mechanisms (summary for the judging panel)
 
 1. **Pre-registered gates stop submissions.** The +0.0003 OOF gate (D-025)

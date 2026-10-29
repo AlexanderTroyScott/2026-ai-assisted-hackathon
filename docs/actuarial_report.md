@@ -19,7 +19,7 @@ counted-entry correction in §6, sandbox verdicts in §5)
 > slightly better** (a table known to be wrong cannot be defended), removed a
 > misleading "occupation" field, and found that deliberately small, shallow
 > models beat big ones. The leaderboard counted our `exp-027` entry
-> (0.12984 private, 41st of 54); our best model, `exp-036`, scores 0.13570
+> (0.12984 private, 41st of 54); our best model, `exp-054`, scores 0.13600
 > private but was submitted after the deadline and is therefore unranked — it
 > is attached as our Week 1 deliverable with that fact disclosed. The
 > accessible summary is `docs/final_writeup.md`; the sections below are the

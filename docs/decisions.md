@@ -2977,7 +2977,7 @@ residue is XGBoost multithreaded run-to-run nondeterminism, not a spec
 difference. exp-036's blend arithmetic remains verified against the recorded
 component CSVs (1.8e-12), so recorded scores are unaffected.
 
-## D-085 (proposed) — Anchoring-convention experiment: the true 2025 level is FLAT (Private K* = 0.95); Public and Private disagree by 5%
+## D-085 (proposed → accepted 2026-10-29 as option C; see exp-054 / D-087) — Anchoring-convention experiment: the true 2025 level is FLAT (Private K* = 0.95); Public and Private disagree by 5%
 **2026-10-29 · human-directed ("do the anchoring experiment") · `scripts/scale_submission.py` + 7 Part 1 sandbox probes (exp-047…exp-053) · no modelling code changed**
 
 D-084 deferred the level/anchoring ambiguity: `--final-fit` recalibrates per-LOB
@@ -3168,3 +3168,46 @@ is untouched and remains the record and the counted entry. A second lesson
 joins exp-004: **on Part 2, sub-+0.0002 local contents-shrink effects do not
 transfer to the board** — the axis stays closed and no further override of
 this kind is proposed. Row 82 of `docs/experiment_log.md`.
+
+## D-087 — Week 1 deliverable file = `exp-054` (human-accepted; supersedes D-081 item 3)
+**2026-10-29 · human-decided via explicit choice · documentation only, no slot spent**
+
+D-081 named `exp-036` the Week 1 prediction file; D-084 left the choice open
+between exp-036 and exp-046; D-085 built the convention file `exp-054`. The
+human chose **exp-054** over exp-046 and exp-036 (options presented with all
+scores and caveats). Rationale and consequences:
+
+1. **Scores (all post-deadline to the still-open Part 1 gate, equally
+   disclosed):** exp-054 **0.12700 Pub / 0.13600 Priv** · exp-046 0.12751 /
+   0.13577 · exp-036 0.12753 / 0.13570. exp-054 is the best Private recorded
+   and sits at the measured Private optimum (D-085: the convention total
+   206,079,305 falls between the two tied peak probes, both 0.13608 — the
+   bracket-peak caveat applies to any peak-adjacent quote).
+2. **Clean lineage:** exp-054 = exp-046 recipe + weights on the leak-free D-084
+   pipeline with `--trend flat`, blend calibrated to the AY2024 developed
+   actual ultimate total (data-derived anchor, residual trim K=0.995). It
+   carries neither exp-036's legacy-features baggage nor an unevidenced
+   forward step.
+3. **Disclosure (final_writeup §7, actuarial_report "In plain terms", README
+   "One disclosure"):** post-deadline/unranked status is stated; the
+   D-085 convention was selected with sandbox-board evidence (7 probes), so
+   the exact score is measured-in-sample — and the actuarial conclusion (2025
+   flat vs 2024, no forward step) rests on independent evidence (claims
+   growth cooled to +1.3%; premium-embedded level).
+4. **Unchanged:** the board-counted Part 1 entry remains `exp-027` (0.12984
+   Private, 41st of 54); the Week 2 file remains `emerging-exp-025`. D-081's
+   rationale for attaching a post-deadline file (organiser re-scoring gains
+   ≈ +0.006 on the pricing axis) applies with more force to exp-054.
+
+### D-084 deferred Part 2 items — closed (2026-10-29)
+
+The three items D-084 parked are done and evidenced:
+1. **Public-board-tuned forward index presentation** → `emerging_market_report.md`
+   §4 Stage-3 rewritten: `f_final = f_probe` stated as Public-fitted constants,
+   `f_data` named dead code, D-076's +0.00115 labelled peak-picked, D-085
+   Public/Private level-divergence caveat added (also §7 item 3).
+2. **Emerging orphan doc** → `emerging_market_report.md` §3 attribution note
+   (figures recomputed 2026-10-29: 9,222/9,258 matched, 0 multi-matched, 36
+   orphans 6/28/2 by loss year, 9,102 non-repudiated; D-002 drop rule, counted).
+3. **`estimate_forward_index` dedup keys** → `CLAIM_DEDUP_KEYS` constant shared
+   by both call sites + inertness test (D-086 recon: measured inert).

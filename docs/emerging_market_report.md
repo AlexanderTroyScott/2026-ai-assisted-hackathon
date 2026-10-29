@@ -94,6 +94,18 @@ on the Part 1 sandbox (§6). The uniform `EM_LDF` stands; the motor-BI
 open-claim concentration (§2 item 3) is carried as disclosed residual
 uncertainty, not as a label swing.
 
+**Claim attribution and orphan treatment (recomputed 2026-10-29).** Each
+claim is attributed to the unique policy row whose `line`, `policy_id` and
+`[period_start, period_end]` contain its loss date: 9,222 of 9,258 claims
+match, 0 multi-match. The **36 orphans** (loss date matches no row — 6 with
+2021, 28 with 2022, 2 with 2023 loss dates, all outside the 2023–2024 policy
+periods) are **dropped from labels and claims-trend estimation and counted**,
+the same rule as Part 1's D-002; 9,102 matched claims are non-repudiated and
+form the claims basis. Deduplication is on the single `CLAIM_DEDUP_KEYS` list
+(11 columns) shared by label building and the trend index — measured inert on
+this table (`claim_id` unique, 0 rows dropped) but pinned by a test so the two
+paths cannot diverge silently on a data refresh (D-086).
+
 ---
 
 ## 4. Transfer Learning + Credibility-Shrinkage Offset Adaptation (`D-066` → `D-077`)

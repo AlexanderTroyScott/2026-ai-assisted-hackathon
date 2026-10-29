@@ -67,11 +67,11 @@ cover) blending three model families (LightGBM and XGBoost), on cleaned data wit
 properly developed labels.
 
 **One disclosure.** Part 1's leaderboard counted our `exp-027` entry — the best we had
-by the deadline (0.12984 on the hidden board, 41st of 54). In the hours after the
-deadline we built `exp-036`, a family blend that scores **0.13570** on the hidden
-board. The gate still scored it, so it is fully measured, but it is unranked. We
-attach `exp-036` as our Week 1 prediction file with that fact stated openly rather
-than buried.
+by the deadline (0.12984 on the hidden board, 41st of 54). In the days after the
+deadline we built better models, and the gate still scored them, so they are fully
+measured but unranked. We attach `exp-054` as our Week 1 prediction file — our best
+on the hidden board (**0.13600**), the leak-free pipeline under the data-derived
+flat-level convention — with that fact stated openly rather than buried.
 
 ## 3. What moved the needle — and what didn't
 
@@ -132,12 +132,13 @@ and `docs/decisions.md`.
 | `docs/ai_workflow_log.md` | AI interaction evidence trail |
 | `docs/submission_protocol.md` | Submission rules and safety rails |
 | `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
-| `tests/` | 100 guardrail tests (`python3 -m pytest tests/ -q`) |
+| `tests/` | 102 guardrail tests (`python3 -m pytest tests/ -q`) |
 
-Reproducing the Part 2 (`emerging-exp-025`) and Part 1 (`exp-036`) submissions of record:
+Reproducing the Part 2 (`emerging-exp-025`) and Part 1 (`exp-054`, the Week 1
+deliverable) submissions of record:
 
 ```bash
-python3 -m pytest tests/ -q            # 100 guardrails
+python3 -m pytest tests/ -q            # 102 guardrails
 # Part 2 submission of record (0.16994 Public, 4th of 33):
 python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 # -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent, max rel diff 8e-16)
