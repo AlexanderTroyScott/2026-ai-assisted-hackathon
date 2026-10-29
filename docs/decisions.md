@@ -80,6 +80,12 @@ Low/high scenarios bracket it. **Open question for the team:** alternatives are
 pure claims-index or pure premium/LR anchor (2025 prices are already trended
 +5%/yr, arguably the more defensible single source).
 
+> **Resolved 2026-10-29 by D-085 (human-accepted).** The level was measured on
+> the Part 1 sandbox: the Private-optimal expected 2025 total is the AY2024
+> actual (flat level) — none of central/low/high survive as the production
+> level. The 70/30 blend and its scenarios are retained as sensitivity
+> analysis only. See D-085 for the response curve and the honesty caveat.
+
 ## D-010 — Floor predictions at 1e-3
 **2026-10-20 · accepted · verified against sklearn**
 

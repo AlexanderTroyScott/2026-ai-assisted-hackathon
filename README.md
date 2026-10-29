@@ -101,7 +101,7 @@ Equally important, the ideas we **killed with evidence** — each one logged:
 - **Rules before results.** Each experiment declared its pass/fail bar in advance
   ("the blend must beat the baseline by 0.0002 across three matched seeds"), which is
   why a good-looking ensemble stayed unsubmitted.
-- **98 automated guardrail tests** run before every commit: leakage rules, label
+- **100 automated guardrail tests** run before every commit: leakage rules, label
   arithmetic, calibration invariants, submission format checks.
 - **Reproducibility.** One command regenerates the Part 2 submission of record
   byte-for-byte (differences below 1e-15) — the leaderboard number is not an artefact.
@@ -132,12 +132,12 @@ and `docs/decisions.md`.
 | `docs/ai_workflow_log.md` | AI interaction evidence trail |
 | `docs/submission_protocol.md` | Submission rules and safety rails |
 | `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
-| `tests/` | 98 guardrail tests (`python3 -m pytest tests/ -q`) |
+| `tests/` | 100 guardrail tests (`python3 -m pytest tests/ -q`) |
 
 Reproducing the Part 2 (`emerging-exp-025`) and Part 1 (`exp-036`) submissions of record:
 
 ```bash
-python3 -m pytest tests/ -q            # 98 guardrails
+python3 -m pytest tests/ -q            # 100 guardrails
 # Part 2 submission of record (0.16994 Public, 4th of 33):
 python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
 # -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent, max rel diff 8e-16)
