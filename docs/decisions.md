@@ -3470,6 +3470,33 @@ family seed sd 0.00133). Even on adoption, Part 1's board is closed: the
 value is (a) the Week 1 deliverable file (`exp-054` line) and (b) evidence
 for the missing-field hypothesis feeding Part 2.
 
+### D-091 results (2026-10-30, paired probe complete; gate FAILED)
+
+| pair | baseline | +high_value_items | delta |
+|---|---|---|---|
+| fold 2024, seed 0 | 0.134036 | 0.132063 | −0.001974 |
+| fold 2024, seed 1 | 0.132468 | 0.133412 | +0.000945 |
+| fold 2024, seed 2 | 0.131760 | 0.133922 | +0.002163 |
+| **fold 2024 mean** | | | **+0.000378** (2/3 positive) |
+| fold 2023, seed 1 | 0.139482 | 0.138155 | −0.001327 |
+
+1. **Gate failed on two of three conditions:** mean +0.000378 < +0.0005,
+   and the fold-2023 pair disagrees in direction (−0.0013). The 2/3
+   positivity alone was never sufficient.
+2. **The scatter is the story:** −0.0020 / +0.0009 / +0.0022 across matched
+   seeds with opposite signs across folds — sign-flipping noise around
+   zero, not a signal fighting noise. A real single-field effect on a
+   small line does not behave like this.
+3. **Record:** "no measurable gain". `high_value_items` stays out of the
+   Part 1 spec (adding it would import noise into a stable file). Combined
+   with D-092 (make_model, thin-cell overfitting, −0.00128), both
+   missing-field candidates from the 2026-10-30 level audit are now
+   measured negatives. The audit's genuine contribution is the **diagnosis**
+   (the level spreads are real and correctly attributed) plus the negative
+   knowledge: the Part 1 gap, whatever it is, is not hiding in an omitted
+   column — the live candidates are model shape (per-LOB structure,
+   LR>1 mispriced segments, tail behaviour at Tweedie p=1.5).
+
 ---
 
 ## D-092 — `make_model` probe on Part 2 (pre-registered)
