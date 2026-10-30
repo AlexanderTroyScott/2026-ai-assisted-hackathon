@@ -128,36 +128,122 @@ A sample of the calls that shaped the result — each one measured, logged and d
 
 ---
 
-## 5. How we used AI
+## 5. How we used AI — supplementing the actuarial control cycle
 
-An AI agent did the hands-on analytical work — exploring data, writing pipeline code,
-running experiments, computing diagnostics, and drafting this documentation — under a
-strictly human-governed protocol. The human set the rules, judged the ambiguous calls,
-and held the keys to every submission.
+An AI agent did the hands-on analytical work — exploring data, writing pipeline
+code, running experiments, computing diagnostics, and drafting this
+documentation — under a strictly human-governed protocol. The human set the
+scope, judged the ambiguous calls, and held the keys to every submission. This
+section shows where an AI tool fits *inside the actuarial control cycle* and
+how using it exercised the management responsibilities professional practice
+places on the actuary. The division of responsibility in one line: **the AI
+supplied labour, recall and pattern-finding; the human supplied scope,
+judgement, challenge and authorisation.**
 
-What made this *governed* rather than "AI did stuff":
+### Where AI supplemented the control cycle
 
-- **Authorisation gates.** No leaderboard submission could be uploaded without the
-  human's explicit confirmation (Part 2: per submission). One submission carried one
+- **Design and scoping — delegation with an approval gate.** The human
+  delegated the drafting of the project outline (a phased plan: scaffold →
+  data quality → target → development → inflation → features → models →
+  guardrails → submissions) and approved it, setting submission and
+  documentation policy on top. The outline was a draft for the principal to
+  accept, not a decision taken out of the principal's hands.
+- **Domain learning on demand.** The human is a life actuary; this competition
+  is P&C pricing. The human directed the AI to read the P&C actuarial
+  literature the human did not know — Friedland on unpaid-claims estimation,
+  two CAS GLM guides, a CAS model-validation study note — extract the
+  method-relevant sections, and reconcile them against our own measurements,
+  including one honest place where the literature and our data disagreed
+  (frequency–severity versus a single Tweedie). The distilled result
+  (`docs/references.md`, the `actuarial-methods` skill) let the human direct a
+  P&C method chain — claims development, GLM-versus-tree trade-offs, holdout
+  discipline, ASOP 9-style documentation — while every imported method stayed
+  `proposed` until the human accepted it and a measurement gate passed.
+- **Investigating the human's questions.** The human questioned the data
+  quality; the AI's investigation of those questions found that the supplied
+  `exposure` column mixed three conventions and contained unit errors — an
+  inconsistency large enough to explain an apparent train/test exposure shift
+  on its own (D-001). Every model since recomputes exposure from dates, and a
+  guardrail test enforces it.
+- **Cross-practice modelling lessons.** `occupation` topped the tree model's
+  feature importance. In life-style segmentation that would be a familiar
+  rating factor; here the human's challenge ("why is occupation still in the
+  model if it is largely an age proxy?") produced the diagnosis: 64% of its
+  dispersion was Student/Retired — driver age in disguise — plus two
+  single-claim artefacts. Its measured removal was accuracy-neutral but better
+  calibrated on both folds, confirmed on the leaderboard (D-056). Modelling
+  instincts transfer across practice areas; domain facts do not — each must be
+  re-diagnosed in context.
+- **Commissioning independent review.** The highest-yield intervention was a
+  deliberate one: after changing AI models, the human instructed the new one to
+  perform a thorough, adversarial review of the existing work and to challenge
+  prior assumptions. It found two critical implementation bugs in the
+  final-fit path that had caused two earlier submissions to collapse, and
+  produced the breakthrough in a single step: from `exp-031`, the last
+  pre-review submission (**0.12928 Private**), to `exp-033`
+  (**0.13531 Private**) — a chain of work that ran on to the best file of the
+  line, `exp-054` at **0.13600 Private** (submitted after the Part 1 deadline
+  and therefore unranked). For scale: the entry counted at the deadline
+  (`exp-027`) stood at 0.12984 Private. The lesson for practice: an AI
+  reviewer is only as good as its commission — asking a fresh model to attack
+  the work is a cheap, high-yield internal-audit routine.
+- **Documentation and continuity.** The AI kept the evidence trail current at
+  high work rate — every experiment, decision, pre-registration and negative
+  result logged with scores and file hashes — without the attention dilution
+  or context-switching cost of competing work. The trail is the audit
+  evidence: it is what lets a reviewer reconstruct why every decision was made.
+
+### What this exercised in management responsibility
+
+Working through this protocol developed exactly the management duties
+professional practice puts on the actuary in charge:
+
+- **Delegation with acceptance criteria** — drafting and analysis delegated;
+  approval, scope and standards retained.
+- **Authorisation gates** — no leaderboard submission could be uploaded
+  without the human's explicit confirmation; one submission carried one
   explained change, so every score movement has one cause.
-- **Everything recomputed from source.** Numbers that reach the reports must be
-  re-derived from the raw data or marked unverified. AI-drafted claims were checked by
-  rerunning code, not by rereading prose.
-- **Pre-registration.** Before testing an idea we wrote down what would count as
-  success (e.g. "the blend must beat the baseline by 0.0002 across three matched
-  seeds"). This stopped us from reinterpreting noise as signal — it killed two ensemble
-  ideas that looked good after the fact.
-- **Negative results kept.** Roughly half of the ideas failed. They are logged with
-  their measurements. They are the reason the final model is small and stable.
-- **Contract checks and automated tests.** The final Part 2 model reproduces its
-  scored predictions **byte-for-byte** (differences below 1e-15), and a validation run
-  reproduced its recorded score to 1e-6 before we trusted a negative result. The test
-  suite has **100 automated guardrails** — leakage rules, label invariants, calibration
-  invariants, submission format checks.
-- **Incidents become process.** One run accidentally uploaded a submission twice (two
-  parallel calls raced). The duplicate scored identically, but we treated it as a real
-  control failure: it is logged, and a serial-submission rule was added to the protocol
-  the same day.
+- **Commissioning challenge** — adversarial reviews and an independent
+  reviewer subagent were standing routines, not one-offs.
+- **Escalation discipline** — judgement calls stayed `proposed` until the
+  human accepted them; the AI flagged rather than decided.
+- **Ownership of risk** — the human personally made the final risk calls. In
+  the closing days an AI-prepared analysis supported a disclosed price-level
+  bet; once its weakest link was made explicit (the evidence for its direction
+  rested on one past measurement of an unobservable property), the human
+  withdrew the bet on risk preference (D-088/D-089). The analysis informed
+  the decision; it did not make it.
+- **Incident management** — one run accidentally uploaded a submission twice
+  (two parallel calls raced). The duplicate scored identically, but it was
+  treated as a real control failure: logged, and a serial-submission rule
+  added to the protocol the same day.
+
+### Governed, not "AI did stuff"
+
+- **Everything recomputed from source.** Numbers that reach the reports must
+  be re-derived from the raw data or marked unverified. AI-drafted claims were
+  checked by rerunning code, not by rereading prose.
+- **Pre-registration.** Before testing an idea we wrote down what would count
+  as success (e.g. "the blend must beat the baseline by 0.0002 across three
+  matched seeds"). This stopped us from reinterpreting noise as signal — it
+  killed two ensemble ideas that looked good after the fact.
+- **Negative results kept.** Roughly half of the ideas failed. They are logged
+  with their measurements. They are the reason the final model is small and
+  stable.
+- **Contract checks and automated tests.** The final Part 2 model reproduces
+  its scored predictions **byte-for-byte** (differences below 1e-15), and a
+  validation run reproduced its recorded score to 1e-6 before we trusted a
+  negative result. The test suite has **103 automated guardrails** — leakage
+  rules, label invariants, calibration invariants, submission format checks.
+
+### Honest limits
+
+The AI was wrong often enough to matter: an arithmetic error in one
+experiment's summary, a process error on our own Part 1 record, and the bugs
+above — each caught by re-deriving numbers from source and by human review.
+AI output entered this project as hypothesis and draft; the actuarial control
+cycle is what converted it into work product. Used that way, it multiplied one
+actuary's throughput without diluting accountability.
 
 ---
 

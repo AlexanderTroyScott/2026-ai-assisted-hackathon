@@ -120,6 +120,16 @@ flagged and escalated, negative results kept on the record. The full interaction
 (including where AI was wrong and how it was caught) is in `docs/ai_workflow_log.md`
 and `docs/decisions.md`.
 
+The engagement was designed as a supplement to the **actuarial control cycle** and a
+workout for the **management responsibilities** of the actuary in charge — a life
+actuary directing AI through unfamiliar P&C material, delegating drafts and approving
+them, challenging what the model surfaced (`occupation` as top driver turned out to be
+an age proxy), commissioning an adversarial review after changing AI models (which
+found two critical bugs and produced the breakthrough — 0.12928 Private for the last
+pre-review submission to 0.13531 in one step, running on to a best of 0.13600 after
+the deadline), and personally owning every risk call and submission.
+§5 of `docs/final_writeup.md` maps each example onto the control cycle.
+
 ## 6. Where to find things
 
 | Path | What it is |
