@@ -143,6 +143,11 @@ def feature_cols(groups: str) -> list[str]:
         cols += WEATHER
     if "flags" in groups:
         cols += FLAGS
+    if "hvi" in groups:
+        # high_value_items (contents, 0-5): omitted from every block before the
+        # 2026-10-30 level audit, which measured a monotonic dose-response
+        # (idx 0.94 -> 1.27 vs book). Opt-in so recorded runs reproduce exactly.
+        cols += ["high_value_items"]
     if "relativity" in groups:
         cols += [f"{c}_hist_{k}" for c in CAT_FEATURES for k in ("rate", "freq")]
     bad = [c for c in cols if c in DENYLIST]

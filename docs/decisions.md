@@ -3433,3 +3433,39 @@ quadratic extrapolation held, and whether the counted entry changes.
 4. **Cost accounting:** 2 expiring slots for the curve's right side; the
    pre-registered expectation was that the slots bought information, not a
    counted entry, and that is what they bought.
+
+---
+
+## D-091 — `high_value_items` probe on Part 1 (pre-registered)
+
+**2026-10-30 · proposed · analysis-only (Part 1 board closed) · gate pre-registered**
+
+The 2026-10-30 level-vs-target audit (`/tmp/opencode/level_audit*.log`,
+`missing_fields.log`, recomputed from `developed/` via `build_frame`) found
+`high_value_items` (contents, 0–5) omitted from every Part 1 feature block
+despite a monotonic dose-response against `y_ult` per exposure-year:
+idx 0 → 0.943, 1 → 0.994, 2 → 1.029, 3 → 1.123, 4 → 1.100, 5 → 1.269
+(book contents 112.7). The field is already in Part 2's `SHARED_NUM`, so the
+miss is Part-1-specific. `seats` and `days_unoccupied` were audited flat
+(0.96–1.03) and their omission is justified; `make_model` shows real spread
+(MM040 1.30 … MM013 0.76) but is absent from **both** parts' models.
+
+**Change under test (one primary change):** new opt-in `hvi` feature group in
+`scripts/run_experiment.py::feature_cols` appending `high_value_items` as an
+ordinal numeric. Inert unless requested — all recorded runs remain
+byte-reproducible. Nothing else differs from the exp-027 config
+(tweedie, target=cost, development=lob, trend=premium).
+
+**Design.** Paired baseline-vs-variant under the current (D-084 audited)
+feature construction — not against the recorded exp-027/029/030 numbers,
+which predate D-084 and would conflate that change with this one. Matched
+seeds 0/1/2 on fold 2024, matched pair (seed 1) on fold 2023. Runs are
+analysis-only (`run_experiment.py` contains no submission path).
+
+**Gate (stated before the numbers exist).** Adopt only if paired mean ΔD²
+≥ +0.0005 on fold 2024 with ≥2/3 seeds positive **and** the fold-2023 pair
+agrees in direction. Below that: record "no measurable gain" and keep the
+field out — regardless of any flattering single run (D-025 noise band;
+family seed sd 0.00133). Even on adoption, Part 1's board is closed: the
+value is (a) the Week 1 deliverable file (`exp-054` line) and (b) evidence
+for the missing-field hypothesis feeding Part 2.
