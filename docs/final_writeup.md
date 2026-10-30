@@ -24,7 +24,7 @@ means "no better than one flat average" and 1 means "perfect". Claim costs are l
 (a few big fires among thousands of quiet policies), which is exactly what this score
 is designed for.
 
-**Where we finished:** Part 2 — **4th of 33 teams** (0.16994). Part 1 — 41st of 54
+**Where we finished:** Part 2 — **4th of 33 teams** (0.17028). Part 1 — 41st of 54
 with our counted entry; our best Part 1 model, built after the deadline, scores
 notably better (0.13600 vs 0.12984 on the hidden board) but is unranked. Details and
 the disclosure in §7.
