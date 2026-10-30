@@ -179,6 +179,9 @@ def main() -> int:
     ap.add_argument("--refit-seeds", default="0,1,2",
                     help="seeds for the final refit average (D-088 redraw tickets). "
                          "Default '0,1,2' = the record (emerging-exp-025) exactly.")
+    ap.add_argument("--adapt-extra-cat", default="",
+                    help="comma-separated extra categoricals appended to ADAPT_CAT "
+                         "(probe hook, e.g. 'make_model', D-092). Empty = record behaviour.")
     args = ap.parse_args()
 
     print(f"=== Part 2 Emerging Market Pipeline: {args.name} ===")
@@ -196,7 +199,12 @@ def main() -> int:
         em_te = build_market_frame(EM_DIR, "test")
         em_tr, em_te = fit_developed_priors(dev_tr, em_tr, em_te)
 
-    (X_ad_tr, X_ad_te), cols_ad, cats_ad = prep_matrices([em_tr, em_te], ADAPT_NUM, ADAPT_CAT)
+    extra_adapt_cat = [c.strip() for c in args.adapt_extra_cat.split(",") if c.strip()]
+    missing = [c for c in extra_adapt_cat if c not in em_tr.columns or c not in em_te.columns]
+    if missing:
+        raise SystemExit(f"FATAL: --adapt-extra-cat columns absent from the frame: {missing}")
+    (X_ad_tr, X_ad_te), cols_ad, cats_ad = prep_matrices(
+        [em_tr, em_te], ADAPT_NUM, ADAPT_CAT + extra_adapt_cat)
     (X_full_tr, _), cols_full, cats_full = prep_matrices(
         [em_tr, em_te], SHARED_NUM + ["written_premium", "wp_rel", "is_self_employed"], SHARED_CAT + ["region", "gender"]
     )

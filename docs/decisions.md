@@ -3469,3 +3469,40 @@ field out — regardless of any flattering single run (D-025 noise band;
 family seed sd 0.00133). Even on adoption, Part 1's board is closed: the
 value is (a) the Week 1 deliverable file (`exp-054` line) and (b) evidence
 for the missing-field hypothesis feeding Part 2.
+
+---
+
+## D-092 — `make_model` probe on Part 2 (pre-registered)
+
+**2026-10-30 · proposed · probe only; submission needs separate human sign-off**
+
+The level audit found `make_model` (motor) showing real risk spread on the
+developed book (MM040 idx 1.30 / MM005 1.22 / MM259 1.17 vs MM013 0.76,
+~1.7× top-to-bottom) while being absent from **both** parts' models —
+the one missing field with a live transfer channel into Part 2 before the
+2026-10-31 03:59 UTC deadline. Emerging motor carries 300 codes over 47,283
+rows (117–207 rows/level — thin; the record offset layer's
+`num_leaves=3, min_leaf=600` can only use it via grouped categorical
+splits). Caveat: MM codes need not mean the same vehicle across markets;
+the gate is measured on emerging OOF, so it answers the emerging question
+directly.
+
+**Change under test (one primary change).** New opt-in `--adapt-extra-cat`
+hook in `scripts/run_emerging.py`; probe value `make_model`, appended to
+`ADAPT_CAT` (the offset layer = the record scoring path). Empty default =
+record behaviour, byte-reproducible. Absent columns fail loudly rather
+than being silently dropped (the existing `prep_matrices` filter would).
+
+**Design.** Paired baseline vs variant, `--use-cache`, record config
+otherwise. The OOF gate is deterministic (fixed GroupKFold on customer,
+`random_state=0`), so the delta is exact for this book — and `make_model`
+is constant within buildings/contents, where the per-LOB `nunique > 1`
+filter makes it byte-inert. All measured movement must therefore be motor;
+anything elsewhere is a bug.
+
+**Gate (stated before the numbers exist).** Adopt only if Δ `d2_offset_adapted`
+≥ +0.0005 overall, motor Δ ≥ +0.0005, and buildings/contents predictions
+unchanged (inertness contract). Below that: record "no measurable gain",
+keep the record untouched, no submission. Above that: report to the human
+and request explicit submission authorisation — one change per submission
+so the leaderboard movement is attributable.
