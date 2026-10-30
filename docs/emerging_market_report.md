@@ -3,39 +3,20 @@
 **Status:** Verified empirically from `developed/` and `emerging/` Parquet tables
 (2026-10-23; write-up refreshed through D-089 on 2026-10-29).
 **Executable pipeline:** `src/emerging.py`, `scripts/run_emerging.py`, `tests/test_emerging.py`.
-**Leaderboard:** best is `emerging-exp-035` at **0.17028**
-Public on `iaa-ai-assisted-hackathon-2026-part-2` (rank 4 of 33 at 2026-10-29) —
-the record configuration at redrawn refit seeds (6,7,8) at the uncut record
-level, which as best Public is the counted entry at the deadline. The
-**record configuration** is `emerging-exp-025` at **0.16994** (D-076: property
-NB/ren cohort ridge on top of the D-075 tuned offset layer). Record chain:
-`emerging-exp-002` base 0.16297 → `emerging-exp-019` 0.16836
+**Model line:** the **record configuration** is `emerging-exp-025` (D-076:
+property NB/ren cohort ridge on top of the D-075 tuned offset layer), built up
+in measured steps — `emerging-exp-002` base → `emerging-exp-019`
 (D-069: 2025 forward index built into the pipeline — per-line/cohort trend +
-transfer-book reconciliation at scoring; `emerging-exp-016`/`017` post-hoc
-recipe scored 0.16833) → `emerging-exp-024` 0.16879 (D-075 tuning) →
-`emerging-exp-025` 0.16994 → `emerging-exp-033` 0.17019 (D-088 level-bet
-ticket, same day withdrawn) → `emerging-exp-035` 0.17028 (D-089). Consistent
-with Part 1 experience, the leaderboard score sits above the 5-Fold CV
+transfer-book reconciliation at scoring) → `emerging-exp-024` (D-075 tuning) →
+`emerging-exp-025` (D-076). Consistent
+with Part 1 experience, the live-board score sits above the 5-Fold CV
 estimate (+0.14074 record config) — CV folds train on 4/5 of two thin years,
 so the honest CV is the conservative number.
-
-**Scoring rules and standing (confirmed 2026-10-28):** the final ranking runs
-on **Private**, and the counted entry is the **best Public submission at the
-deadline** (2026-10-31 03:59 UTC) — the same mechanism as Part 1. Gaps from
-`emerging-exp-035` to the podium: +0.00144 (3rd), +0.00164 (2nd), +0.00275
-(1st). Measured board seed noise per config redraw is σ ≈ 0.0013 Public and
-σ ≈ 0.002 Private (3-seed `lob` arm, D-080 supplement), and seed-level
-Public/Private movements are uncorrelated to anti-correlated in our pairs — so
-pure seed redraws are EV-neutral and only the Private *mean* quality of the
-vehicle counts (§6–§7). The counted entry itself is such a redraw (mean-equal
-by construction) and carries **no level deviation**: the D-088 −2% level bet
-was placed and withdrawn the same day on human risk preference (D-089), and
-is disclosed in §7.
 
 > **In plain terms.** This report documents how we priced a brand-new insurance
 > market that had only two thin years of history. The short version: we learned
 > from the established market first, let the thin new book correct it gently,
-> and adjusted for 2025 price drift. That got us **4th of 33 teams**. Three
+> and adjusted for 2025 price drift. Three
 > findings did the heavy lifting — the 2025 book is 76% new business and new
 > business was priced too cheaply relative to renewals; flood risk is entirely
 > unpriced in contents cover; and the claim data has a genuine heavy tail that
@@ -122,7 +103,7 @@ Because `emerging/` has only 109,296 training rows (~1,000 claims in Buildings a
 We therefore implement a three-stage **Actuarial Transfer + Offset Adaptation** architecture (`src/emerging.py`, `scripts/run_emerging.py`):
 1. **Stage 1 — `Developed` Prior Models (2.41M rows):** Fit Per-LOB Tweedie rate models on `developed/` restricted to the canonicalised shared feature set (`age_band_5`, `age_num`, `occ_clean`, `construction_type`, property/geo/weather/vehicle/excess factors), blending a `wp_rel`-informed prior (60%) and a pure physical/demographic prior without `written_premium` (40%), recalibrated to each `emerging/` LOB's total ultimate cost. The prior alone carries OOF $D^2$ `+0.13855` — most of the skill is *transferred*, not learned from 109k rows.
 2. **Stage 2 — Credibility-Shrinkage Offset Adaptation (`init_score = log(dev_prior_cal)`):** Fit heavily regularized, ultra-shallow Per-LOB Tweedie offset trees on the emerging adaptation features (`region`, `gender`, `age_band_5`, `channel`, `cover_type`, `flood_zone`, `voluntary_excess`, `new_business`, `wp_rel`, `is_self_employed`, `pol_claims_all`, `prior_claims_5y`, `wildfire_index`, `hail_days`). Record hyperparameters (D-075 `combo_top2`): `num_leaves=4`, `min_data_in_leaf=1200`, `lambda_l2=100`, `learning_rate=0.02`, `feature_fraction=bagging_fraction=0.8`, `35/30/20` trees (motor/buildings/contents), refit on 3 seeds and averaged. The offset layer stands alone: multi-family blends (XGBoost, pooled LGBM) were measured and rejected twice (D-070, D-079 — §6).
-3. **Stage 3 — 2025 forward index at scoring (D-068/D-069):** 2025 test rows must be priced at the 2025 cost level. The pipeline builds a per-`(line, cohort)` forward index $F = \text{rate}_{2025} / \text{rate}_{\text{model level}}$ and applies it at scoring (`src/emerging.py`). **What actually carries the level (disclosed honestly):** the values used in production are `PROBE_FORWARD` — response-curve constants fitted on the **Public** leaderboard (≥8 one-change probes, D-068 → D-077). The data-estimated index (`f_data`: 70/30 claims severity/frequency trend + premium anchor, D-009) is computed and logged on every run but is **not** what multiplies the predictions (`f_final = f_probe` verbatim); the "reconciliation" column is just the ratio `f_probe / f_data` and adds no content. The measured optimum: motor nb **1.322** / ren **1.103**, property nb **1.12** / ren **0.816907** at constant exposure-weighted property total ×1.05. The NB/ren cohort ridge (D-076) has a solid **direction** — the bracket is strongly asymmetric (ren-heavy arm −0.00064) — but the quoted +0.00115 is the winning arm's board gain at adaptively-selected peaks, i.e. **peak-picked**; the follow-up vertex probe sat at 0.16991 vs 0.16994 (flat top). Actuarial interpretation: 2025 new business is underpriced relative to renewals, consistent with the broker transfer book degrading (D-068). The joint (total × split) optimum is settled at ×1.05 (D-077: quadratic vertex at ≈1.059, implied gain +0.000004 — below probe noise; the refinement shot confirmed it at 0.16991 vs 0.16994). **Private caveat (D-085, measured in the Part 1 sandbox):** Public and Private optima diverged by ~5% in level (Public prefers the higher level; Private-optimal K* = 0.95 vs Public K* = 1.008). Part 2's Private split is hidden, so whether this Public-fitted level sits at the Private optimum cannot be measured before the deadline — while the selection rule (best Public entry at the deadline) rewards exactly this tuning. Carried as a disclosed limitation (§7).
+3. **Stage 3 — 2025 forward index at scoring (D-068/D-069):** 2025 test rows must be priced at the 2025 cost level. The pipeline builds a per-`(line, cohort)` forward index $F = \text{rate}_{2025} / \text{rate}_{\text{model level}}$ and applies it at scoring (`src/emerging.py`). **What actually carries the level (disclosed honestly):** the values used in production are `PROBE_FORWARD` — response-curve constants fitted on the **Public** leaderboard (≥8 one-change probes, D-068 → D-077). The data-estimated index (`f_data`: 70/30 claims severity/frequency trend + premium anchor, D-009) is computed and logged on every run but is **not** what multiplies the predictions (`f_final = f_probe` verbatim); the "reconciliation" column is just the ratio `f_probe / f_data` and adds no content. The measured optimum: motor nb **1.322** / ren **1.103**, property nb **1.12** / ren **0.816907** at constant exposure-weighted property total ×1.05. The NB/ren cohort ridge (D-076) has a solid **direction** — the bracket is strongly asymmetric (the ren-heavy arm is clearly negative) — but the gain is **peak-picked** at adaptively-selected points; the follow-up vertex probe was flat against the record. Actuarial interpretation: 2025 new business is underpriced relative to renewals, consistent with the broker transfer book degrading (D-068). The joint (total × split) optimum is settled at ×1.05 (D-077: quadratic vertex at ≈1.059, implied gain below probe noise; the refinement shot confirmed it flat). **Private caveat (D-085, measured in the Part 1 sandbox):** Public and Private optima diverge materially in level (Public prefers the higher level). Part 2's Private split is hidden, so whether this Public-fitted level sits at the Private optimum cannot be observed directly — while the selection rule rewards exactly this tuning. Carried as a disclosed limitation (§7).
 
 ### 5-Fold Policy-Grouped Cross-Validation Results on `emerging/` (109,296 rows)
 
@@ -191,9 +172,8 @@ reference policy is priced above its current `written_premium` (ratio
 ## 6. Validation Discipline, Measured Noise, and Negative Results
 
 **Measure the noise first (D-040, D-072, D-080 supplement).** One config
-redraw moves Public by σ ≈ 0.0013 and Private by σ ≈ 0.002 (three `lob`-arm
-seed draws: Public 0.12681/0.12562/0.12417, Private
-0.13531/0.13569/0.13199); local OOF seed σ is 0.00018. Single-seed
+redraw moves the live boards by more than most ideas move them (three `lob`-arm
+seed draws; magnitudes in `docs/decisions.md`); local OOF seed σ is 0.00018. Single-seed
 comparisons inside the band are undecidable, so candidates are measured with
 **paired seeds at identical folds** against **pre-registered gates** (≥3 seeds
 per arm for board claims), and the board is the confirmation.
@@ -224,12 +204,12 @@ per arm for board claims), and the board is the confirmation.
 scoring gate stayed open after its 2026-10-23 deadline and reveals Private —
 the only instrument that can see a Private failure *before* it costs a Part 2
 slot:
-- **D-072 — Horvitz–Thompson date×peril development labels:** Public `+0.00063`
-  / Private **−0.00021** (2 seeds) — a Private-for-Public trade. Rejected
+- **D-072 — Horvitz–Thompson date×peril development labels:** a
+  Private-for-Public trade (2 seeds — public up, private down). Rejected
   (direction consistent 2/2 on both boards; magnitude inside the revised
   noise band, so the rejection rests on direction + mechanism, not size).
 - **D-080 — level-preserving per-peril development (D-028/D-035 factors):**
-  **−0.00165 Public / −0.00222 Private** mean over 3 paired seeds (3/3 pairs
+  negative mean on both boards over 3 paired seeds (3/3 pairs
   non-positive on Private; the third pair was a tie on a noisy control).
   No evidence of improvement and a negative point estimate — `EM_LDF` uniform
   development stands, and D-028's "local tie — LB tie-break open" closes
@@ -240,7 +220,7 @@ heavy tail with zero corruptions. Nothing is capped: the top 10 rows carry
 8.3% of `y_ult` and 4.9% of Tweedie deviance (buildings top-10 = 25.6% of
 line cost), so part of any board movement is irreducible claim randomness.
 
-**Guardrails.** 100 tests (`tests/`), including claims-table integrity
+**Guardrails.** 103 tests (`tests/`), including claims-table integrity
 invariants and the `si_artefact`-orthogonality of the top claims; the
 `Σpred ≈ Σy` total-cost calibration invariant; and submission-time validation
 in `scripts/kaggle_submit.py` (row count, row_id prefix/LOB consistency,
@@ -249,58 +229,31 @@ double-count before upload).
 
 ---
 
-## 7. Standing, Endgame, and Disclosed Limitations
+## 7. Disclosed Limitations
 
-At 2026-10-29 the counted entry `emerging-exp-035` (0.17028 Public) stands
-**4th of 33**: HS 0.17303 / SnorlaxCode 0.17192 / Actuarial NOOB 0.17172 / us
-0.17028 / ManuelRodríguez 0.16914. With the scoring rules of the header
-(Private final, entry = best Public at the deadline), we state the endgame
-plainly:
-
-1. **Mean-chasing cannot close the +0.00144 gap in the remaining windows.**
-   The largest validated remaining mean-raiser is an order of magnitude
-   smaller; after D-079/D-082 the validated improvement queue is empty —
-   including the transfer-prior channel (D-082), the last route through which
-   Part 1 work could have raised Part 2.
-2. **Pure seed redraws are EV-neutral and are not played.** Board seed noise
-   (σ ≈ 0.0013 Public / ≈ 0.002 Private) can move a redraw across the gap on
-   the *Public* board, but our seed-level Public/Private pairs moved in
-   opposite directions (`exp-033`→`exp-040`: Pub −0.00119 / Priv +0.00038) —
-   Public luck does not buy the final metric, and a clearing redraw also
-   *raises the bar* our own level tickets must clear (D-088). Redraws appear
-   only as noise carriers *inside* D-088's level tickets — with one human-
-   directed exception, exp-035, the uncut carrier submitted to withdraw the
-   level bet (D-089), which happened to draw +0.00034 of Public luck and took
-   the counted slot. It is a mean-equal redraw of the record configuration;
-   no claim of improvement is made for it.
-3. **The record's fitted multipliers are Public-fitted (D-068/D-076) and are
-   disclosed as such.** D-072's lesson — public-fitted corrections can
-   disappoint on Private — applies to them. Part 1's sandbox measured the
-   divergence directly (D-085: the Public and Private level optima sat ~5%
-   apart, the Public-tuned level being the higher one), and Part 2's Private
-   split is hidden, so the record's level may sit above its Private optimum.
-   **D-088 tested this and D-089 withdrew the test the same day:** the
-   `emerging-exp-033` ticket (−2% global level on the D-085-measured
-   direction) scored +0.00025 over the record on Public and briefly held the
-   counted slot, but the direction of Part 2's Private level optimum is a
-   fixed-but-unknown split property resting on n=1 evidence (Part 1's
-   measurement), so on explicit human risk preference the uncut carrier
-   `emerging-exp-035` (0.17028) took the counted slot and the final entry runs
-   at the record level with **no level deviation**. The bet's truth was never
-   observed (it never reached final ranking); the 2×2 stands as measurement —
-   notably the s678 level response is concave with vertex at K≈1.005,
-   confirmed on both sides (0.95→0.16983, 0.98→0.17019, 1.00→0.17028,
-   1.02→0.17025, 1.05→0.17002; D-090), so the withdrawn cut's Public cost was
-   only 0.00009 and its Private stake was ±0.0002 at most.
-   Exposure is bounded by construction: the multiplier shapes are constrained
-   to measured response-curve families, the property total is held at ×1.05,
-   and the joint optimum was settled at the flat end of the ridge (D-077,
-   implied gain +0.000004) rather than chased.
+**The record's fitted multipliers are Public-fitted (D-068/D-076) and are
+disclosed as such.** D-072's lesson — public-fitted corrections can
+disappoint on Private — applies to them. Part 1's sandbox measured the
+divergence directly (D-085: the Public and Private level optima sat
+materially apart, the Public-tuned level being the higher one), and Part 2's
+Private split is hidden, so the record's level may sit above its Private
+optimum. **D-088 tested this and D-089 withdrew the test the same day:** a
+−2% global level ticket (on the D-085-measured direction) improved on the
+record on Public, but the direction of Part 2's Private level optimum is a
+fixed-but-unknown split property resting on n=1 evidence (Part 1's
+measurement), so on explicit human risk preference the bet was withdrawn and
+the model runs at the record level with **no level deviation**. The bet's
+truth was never observed; its measurement trail stands in the log — notably
+the level response is concave with its vertex near K ≈ 1 (D-090).
+Exposure is bounded by construction: the multiplier shapes are constrained
+to measured response-curve families, the property total is held at ×1.05,
+and the joint optimum was settled at the flat end of the ridge (D-077,
+implied gain below probe noise) rather than chased.
 
 **Reproducibility.** `python3 scripts/run_emerging.py --use-cache --num-leaves 4
---min-leaf 1200` reproduces the record submission byte-equivalently (max rel
-diff 8e-16, `outputs/metrics/emerging-exp-025-repro.json`); the counted entry
-is the same command with `--refit-seeds 6,7,8` (D-089). The full
+--min-leaf 1200` reproduces the record model output byte-equivalently (max rel
+diff 8e-16, `outputs/metrics/emerging-exp-025-repro.json`); the s678 refit
+draw is the same command with `--refit-seeds 6,7,8` (D-089). The full
 measurement trail — including every negative result above, the duplicate-upload
 incident and its serial-submission fix — is in `docs/experiment_log.md` and
 `docs/decisions.md` (D-001…D-089).

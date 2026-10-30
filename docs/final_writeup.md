@@ -24,11 +24,6 @@ means "no better than one flat average" and 1 means "perfect". Claim costs are l
 (a few big fires among thousands of quiet policies), which is exactly what this score
 is designed for.
 
-**Where we finished:** Part 2 — **4th of 33 teams** (0.17028). Part 1 — 41st of 54
-with our counted entry; our best Part 1 model, built after the deadline, scores
-notably better (0.13600 vs 0.12984 on the hidden board) but is unranked. Details and
-the disclosure in §7.
-
 ---
 
 ## 2. Our modelling approach, in plain terms
@@ -65,11 +60,11 @@ For **Part 2**, thin data changes everything, so the architecture becomes two-st
 3. **Adjust for 2025.** Prices and costs drift. We set a forward factor per
    product and customer type (new business vs renewal) and apply it at scoring
    time. The data-based trend estimate proved too noisy to trust on its own, so
-   the final factors come from small, careful probes of the live leaderboard,
+   the final factors come from small, careful probes of the live board,
    with the data estimate kept as a cross-check. This step was worth the
-   largest gains of Part 2: the 2025 adjustment alone moved the score from
-   0.1630 to 0.1684, and the new-business/renewal split added a further
-   +0.00115 (measured on the public board, at the best of a small bracket —
+   largest gains of Part 2: the 2025 adjustment alone was the single biggest
+   improvement, and the new-business/renewal split added a further increment
+   (measured on the public board, at the best of a small bracket —
    treat it as a peak estimate, not a precise effect).
 
 ---
@@ -90,8 +85,8 @@ The method changed too. In Part 1 we could afford one confident model. In Part 2
 almost every "improvement" is invisible in local testing — with ~9,000 claims,
 random luck moves scores more than most ideas do. So we changed *how we decide*:
 measure the noise first, require pre-registered evidence, and use the Part 1
-leaderboard (which stayed open after its deadline and reveals both scores) as a
-laboratory to test Part 2 ideas cheaply before spending Part 2 submissions.
+evaluation gate (which stayed open after its deadline and reveals both boards)
+as a laboratory to test Part 2 ideas cheaply before spending Part 2 budget.
 
 ---
 
@@ -112,19 +107,19 @@ A sample of the calls that shaped the result — each one measured, logged and d
   places (recomputed from dates), premiums were annualised rather than per-period, and
   604 duplicate claims existed. One of these fixes alone moved a baseline score from
   0.076 to 0.109.
-- **Shrink, don't tune.** Hyperparameter tuning that won locally scored only 0.11168
-  on the leaderboard, well below our contemporaneous runs. Restraint — fewer,
+- **Shrink, don't tune.** Hyperparameter tuning that won locally did not transfer:
+  on the live board it scored below our contemporaneous runs. Restraint — fewer,
   shallower trees — transferred reliably. This became the default.
 - **Ensembles: tried, measured, rejected.** Combining XGBoost and LightGBM won in
-  Part 1 (+0.003). We ported the idea to Part 2 three times — including as an
+  Part 1. We ported the idea to Part 2 three times — including as an
   upgrade to the transfer "starting point" model itself — and it **failed all
   three times**. The tests were pre-registered, so their rules stopped the
   submissions before any of them cost us anything, and the rejections stayed
   on the record.
 - **Trust live measurement over local scores for the final adjustments.** The 2025
-  forward factors were shaped by small, careful leaderboard probes. We also measured
-  the leaderboard's *own noise* (a redraw of the same model moves the score by about
-  0.0013) — which told us exactly how much evidence a claim needs.
+  forward factors were shaped by small, careful live-board probes. We also measured
+  the board's *own noise* (a redraw of the same model moves the score by a material
+  amount) — which told us exactly how much evidence a claim needs.
 
 ---
 
@@ -180,11 +175,8 @@ judgement, challenge and authorisation.**
   prior assumptions. It found two critical implementation bugs in the
   final-fit path that had caused two earlier submissions to collapse, and
   produced the breakthrough in a single step: from `exp-031`, the last
-  pre-review submission (**0.12928 Private**), to `exp-033`
-  (**0.13531 Private**) — a chain of work that ran on to the best file of the
-  line, `exp-054` at **0.13600 Private** (submitted after the Part 1 deadline
-  and therefore unranked). For scale: the entry counted at the deadline
-  (`exp-027`) stood at 0.12984 Private. The lesson for practice: an AI
+  pre-review submission, to `exp-033` — a chain of work that ran on to the
+  line's final model, `exp-054`. The lesson for practice: an AI
   reviewer is only as good as its commission — asking a fresh model to attack
   the work is a cheap, high-yield internal-audit routine.
 - **Documentation and continuity.** The AI kept the evidence trail current at
@@ -231,9 +223,9 @@ professional practice puts on the actuary in charge:
   with their measurements. They are the reason the final model is small and
   stable.
 - **Contract checks and automated tests.** The final Part 2 model reproduces
-  its scored predictions **byte-for-byte** (differences below 1e-15), and a
-  validation run reproduced its recorded score to 1e-6 before we trusted a
-  negative result. The test suite has **103 automated guardrails** — leakage
+  its predictions **byte-for-byte** (differences below 1e-15), and a
+  validation run reproduced its recorded measurement to 1e-6 before we trusted
+  a negative result. The test suite has **103 automated guardrails** — leakage
   rules, label invariants, calibration invariants, submission format checks.
 
 ### Honest limits
@@ -266,44 +258,19 @@ Stated plainly, because the honest version is the useful one:
   measurements show public-score improvements can disappoint on the hidden private
   score (we observed exactly that with two label experiments). The largest such
   element is the *level* of the 2025 forward factors: in the Part 1 sandbox, where
-  both boards are visible, the public and hidden optima sat about 5% apart in level,
-  with public tuning landing on the high side. Part 2's hidden score is not visible
-  to us, so our public-fitted level may sit similarly high — the adjustments are
-  otherwise shaped like measured patterns, and all of this is disclosed here.
-- **Leaderboard noise is real.** Score differences below ~0.0013 are luck at this
-  game's sample size. We say so even where it weakens our story.
+  both boards are visible, the public and hidden optima sat materially apart in
+  level, with public tuning landing on the high side. Part 2's hidden score is not
+  visible to us, so our public-fitted level may sit similarly high — the
+  adjustments are otherwise shaped like measured patterns, and all of this is
+  disclosed here.
+- **Leaderboard noise is real.** Score differences below the measured noise floor
+  are luck at this game's sample size. We say so even where it weakens our story.
 
 ---
 
-## 7. Results, and one disclosure
+## 7. Commercial output
 
-**Part 2 (emerging market) — the live competition.** Our best entry
-`emerging-exp-035`: **0.17028, 4th of 33 teams**, reaching within 0.0014 of the
-podium. The chain of measured improvements: 0.1630 (transfer baseline) → 0.1684
-(2025 forward index) → 0.1688 (model restraint) → 0.1699 (new-business/renewal
-pricing split) → 0.17028 (re-rolled training seeds; the model is unchanged).
-We also ran a disclosed price-level experiment (D-088/D-089): a −2% level
-ticket gained +0.00025 on the public board and briefly held the top entry, on
-the Part 1 laboratory evidence that public-tuned levels sit above hidden-board
-optima. On reflection that direction rests on a single past measurement of an
-unobservable split property, so the bet was withdrawn the same day by decision
-and the counted entry runs at the plain record level — the experiment and its
-2×2 measurement trail stand in the log.
-
-**Part 1 (developed market).** The entry counted by the leaderboard is
-`exp-027` (0.12436 public → **0.12984 private**, 41st of 54). **Disclosure:** our
-best Part 1 model, `exp-054` — a blend of LightGBM and XGBoost per product on the
-leak-free pipeline, calibrated to the data-derived flat-level convention — scores
-**0.12700 public / 0.13600 private** and is what we attach as our Week 1 prediction
-file. It was built and submitted *after* Part 1's deadline (the scoring gate was
-still open), so the leaderboard does not rank it. Its level convention was selected
-with evidence from the same open gate (seven one-change level probes bracketed the
-hidden-board optimum), so the exact score is a measured-in-sample estimate — the
-actuarial conclusion (2025 claim costs run flat vs 2024, so no forward step on top
-of the fitted level) stands on independent evidence regardless. We present the file
-with those facts attached, not hidden.
-
-**Commercial output.** For the 20 reference policies we deliver a full office-premium
+For the 20 reference policies we deliver a full office-premium
 build-up (risk premium + reinsurance + expenses + tax + profit margin) in
 `outputs/metrics/emerging_reference_office_premiums.csv`. Every reference policy is
 currently underpriced — the modelled fair premium runs 1.3× to 9.5× its current
@@ -319,8 +286,8 @@ price — driven by the flood-zone, age-band and new-business mispricings in §3
 | Every experiment and submission, with scores and hashes | `docs/experiment_log.md` |
 | Deep technical reports (Part 1: `actuarial_report.md`; Part 2: `emerging_market_report.md`) | `docs/` |
 | AI working protocol and interaction evidence | `docs/ai_workflow_log.md`, `docs/submission_protocol.md` |
-| The pipelines | `src/`, `scripts/` (one command reproduces the Part 2 submission byte-for-byte) |
-| Automated guardrails | `tests/` (100 tests) |
+| The pipelines | `src/`, `scripts/` (one command reproduces the Part 2 model output byte-for-byte) |
+| Automated guardrails | `tests/` (103 tests) |
 
 *Everything above is reproducible from the repository. Where a number is an estimate
 or a judgement rather than a measurement, this write-up says so.*

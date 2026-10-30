@@ -3563,3 +3563,36 @@ so the leaderboard movement is attributable.
    form, it is in **model shape** (per-LOB structure, the LR>1 mispriced
    segments `occupancy=let` / `construction_type=non_standard`, the tail
    at Tweedie p=1.5), not in more columns.
+
+---
+
+## D-093 (human-directed) — Presentation-layer scrub: scores, places and submission-derived claims removed from reader-facing documents
+**2026-10-30 · explicit human direction ("Remove the scores, our place, and other things based on our submission"; scope confirmed as presentation layer only) · documentation only, no slot spent**
+
+The reader-facing documents — `README.md`, `docs/final_writeup.md`, and the
+headers/summaries/results content of `docs/emerging_market_report.md` and
+`docs/actuarial_report.md` — no longer carry competition scores, ranks,
+standings, gaps-to-podium, or counted-entry/deliverable-file claims. Rules
+applied:
+
+1. **Removed:** per-file leaderboard scores, ranks and placements, standings
+   and gap arithmetic, board-score deltas, seed-draw board values, and
+   Week-1/Week-2 deliverable-file talk. Where a measurement's *verdict* is
+   part of the method story (gates held, a Private-for-Public trade, a
+   peak-picked gain), the qualitative verdict stays and the figures are
+   pointed back to this record.
+2. **Kept:** local cross-validation OOF numbers (method evidence, not
+   submission-derived), model parameter values (the `PROBE_FORWARD`
+   multipliers are model definition), the commercial office-premium output,
+   and reproduction commands (neutralized).
+3. **Untouched:** `docs/experiment_log.md`, `docs/decisions.md` (this
+   record) and `docs/ai_workflow_log.md` — the append-only measurement and
+   evidence records, where every scrubbed figure remains traceable. No
+   history rewritten, no published entry amended.
+4. **Stale references fixed:** "100 tests" → the current 103 in all four
+   presentation documents.
+
+Consequences: the human will direct which experiment to run for the
+submission once the cleanup is confirmed; results and submissions are
+frozen until then, and the video is deferred to after the cleanup. No
+submission attempted, no slot spent.

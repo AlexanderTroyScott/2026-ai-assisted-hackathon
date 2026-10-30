@@ -2,7 +2,7 @@
 
 We built insurance pricing models for two markets — a mature one with four years of
 history, and a brand-new one with only two thin years — to predict the claim cost of
-every 2025 policy. Our emerging-market model finished **4th of 33 teams**.
+every 2025 policy.
 
 This README is the front door. If you read one document, read
 **`docs/final_writeup.md`** (the concise five-page write-up). The detailed evidence
@@ -11,20 +11,6 @@ lives in `docs/`; the runnable solution in `src/`, `scripts/` and `tests/`.
 *In plain terms: for each policy we predict how much the insurer will pay in claims —
 big fires and all — and we score with Tweedie D², where 0 means "just predict one flat
 average for everyone" and 1 means "perfect".*
-
-## Results at a glance (2026-10-28)
-
-| Competition | Our entry | Score | Standing |
-|---|---|---|---|
-| **Part 2** — emerging market (closes 2026-10-31) | `emerging-exp-035` | **0.17028** | **4th of 33** — within 0.0014 of the podium (record config `emerging-exp-025` 0.16994; exp-035 is the record model at re-rolled seeds, no level deviation — see D-088/D-089) |
-| **Part 1** — developed market (closed 2026-10-23) | `exp-027` | 0.12984 (hidden board) | 41st of 54 — unranked post-deadline submissions kept scoring: `exp-054` (D-085 convention file) is our best at **0.13600 Private** (exp-036 0.13570; disclosed in §2) |
-
-One nice coincidence of the rules: Part 1's scoring gate stayed open after its
-deadline and reveals both scores — so it became a free, fully labelled **laboratory**
-for testing Part 2 ideas before spending Part 2 submissions. Several ideas died there
-cheaply (§3).
-
----
 
 ## 1. The challenge
 
@@ -49,10 +35,10 @@ claims, a model trained from scratch memorises noise. So the model starts from a
 *prior*: strong models trained on the 2.4M-row developed market, recalibrated to the
 new market's cost level. A deliberately tiny correction layer (20–35 shallow trees per
 product) then learns only the *differences* the prior cannot know. Finally, a 2025
-adjustment — measured on the live board, not assumed — accounts for cost drift and for
-the fact that new business and renewals behave differently.
+adjustment — carefully measured, not assumed — accounts for cost drift and for the
+fact that new business and renewals behave differently.
 
-The measured quality ladder (cross-validated, higher is better):
+The measured quality ladder (cross-validated on held-out data, higher is better):
 
 | Model | OOF D² |
 |---|---:|
@@ -66,19 +52,16 @@ The measured quality ladder (cross-validated, higher is better):
 cover) blending three model families (LightGBM and XGBoost), on cleaned data with
 properly developed labels.
 
-**One disclosure.** Part 1's leaderboard counted our `exp-027` entry — the best we had
-by the deadline (0.12984 on the hidden board, 41st of 54). In the days after the
-deadline we built better models, and the gate still scored them, so they are fully
-measured but unranked. We attach `exp-054` as our Week 1 prediction file — our best
-on the hidden board (**0.13600**), the leak-free pipeline under the data-derived
-flat-level convention — with that fact stated openly rather than buried.
-
 ## 3. What moved the needle — and what didn't
 
-The Part 2 climb (public score): **0.1630** transfer baseline → **0.1684** the 2025
-forward adjustment → **0.1688** model restraint → **0.1699** charging new business and
-renewals differently (the 2025 book is underpriced on new business — measured twice,
-in motor and in property, independently).
+One nice coincidence made the method stronger: Part 1's post-deadline evaluation
+environment stayed available, so it became a free, fully labelled **laboratory** for
+testing Part 2 ideas before spending Part 2 budget. Several ideas died there cheaply.
+
+The four steps that mattered for Part 2: the transfer baseline → the 2025 forward
+adjustment → deliberate model restraint → charging new business and renewals
+differently (the 2025 book is underpriced on new business — measured twice, in motor
+and in property, independently).
 
 Equally important, the ideas we **killed with evidence** — each one logged:
 
@@ -87,28 +70,28 @@ Equally important, the ideas we **killed with evidence** — each one logged:
   it lost every time. Each test was pre-registered, so each rule stopped the
   submission before it cost us anything.
 - **Fancy claim-development schemes** — two alternatives to our simple development
-  factors were tested on the Part 1 laboratory. One traded hidden-board score for
-  public-board score; the other lost on both. Simple won.
+  factors were tested in the laboratory. One traded hidden performance for visible
+  performance; the other lost on both. Simple won.
 - **Occupation** — looked predictive, but it was mostly driver age in disguise. Gone.
-- **Aggressive tuning** — won locally, lost on the board. Restraint transferred;
+- **Aggressive tuning** — won locally, failed to transfer. Restraint transferred;
   cleverness didn't.
 
 ## 4. Keeping it honest
 
 - **We measured the noise before claiming signal.** Re-running the same model with a
-  different random seed moves the score by ~0.0013 (hidden board: ~0.002). Any claim
-  smaller than that needs more evidence — and we say so even when it weakens our story.
+  different random seed moves the score by a material amount — often more than the
+  effects under debate. Any claim smaller than that needs more evidence — and we say
+  so even when it weakens our story.
 - **Rules before results.** Each experiment declared its pass/fail bar in advance
   ("the blend must beat the baseline by 0.0002 across three matched seeds"), which is
   why a good-looking ensemble stayed unsubmitted.
 - **103 automated guardrail tests** run before every commit: leakage rules, label
   arithmetic, calibration invariants, submission format checks.
-- **Reproducibility.** One command regenerates the Part 2 submission of record
-  byte-for-byte (differences below 1e-15) — the leaderboard number is not an artefact.
+- **Reproducibility.** One command regenerates the Part 2 model output byte-for-byte
+  (differences below 1e-15) — the recorded numbers are not artefacts.
 - **One submission, one explained change**, uploaded only through a validating script,
-  with an explicit human go-ahead for Part 2 every time. A one-off double upload
-  (two parallel calls raced) is logged honestly and became a permanent serial-submission
-  rule.
+  with an explicit human go-ahead every time. A one-off double upload (two parallel
+  calls raced) is logged honestly and became a permanent serial-submission rule.
 
 ## 5. How AI was used
 
@@ -125,9 +108,8 @@ workout for the **management responsibilities** of the actuary in charge — a l
 actuary directing AI through unfamiliar P&C material, delegating drafts and approving
 them, challenging what the model surfaced (`occupation` as top driver turned out to be
 an age proxy), commissioning an adversarial review after changing AI models (which
-found two critical bugs and produced the breakthrough — 0.12928 Private for the last
-pre-review submission to 0.13531 in one step, running on to a best of 0.13600 after
-the deadline), and personally owning every risk call and submission.
+found two critical bugs and produced the work's largest single improvement), and
+personally owning every risk call and submission.
 §5 of `docs/final_writeup.md` maps each example onto the control cycle.
 
 ## 6. Where to find things
@@ -137,28 +119,27 @@ the deadline), and personally owning every risk call and submission.
 | `docs/final_writeup.md` | **The concise five-page write-up — start here** |
 | `docs/emerging_market_report.md` | Part 2 deep report (market analysis, adaptation method) |
 | `docs/actuarial_report.md` | Part 1 deep report (ASOP 9 documentation standard) |
-| `docs/decisions.md` | Every judgement call, dated (D-001…D-080) |
-| `docs/experiment_log.md` | Every experiment and submission, with scores and file hashes |
+| `docs/decisions.md` | Every judgement call, dated (D-001…D-092) |
+| `docs/experiment_log.md` | Every experiment and submission, with measurements and file hashes |
 | `docs/ai_workflow_log.md` | AI interaction evidence trail |
 | `docs/submission_protocol.md` | Submission rules and safety rails |
 | `src/`, `scripts/` | The pipelines (`scripts/kaggle_submit.py` is the only upload path) |
 | `tests/` | 103 guardrail tests (`python3 -m pytest tests/ -q`) |
 
-Reproducing the Part 2 (`emerging-exp-035`, the counted entry) and Part 1
-(`exp-054`, the Week 1 deliverable) submissions of record:
+Reproducing the model outputs:
 
 ```bash
 python3 -m pytest tests/ -q            # 103 guardrails
-# Part 2 record configuration (emerging-exp-025, 0.16994 Public):
-python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
-# -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent, max rel diff 8e-16)
 
-# Part 2 counted entry (emerging-exp-035, 0.17028 Public) = the same config at
-# redrawn refit seeds 6,7,8 at the uncut record level (D-089; the withdrawn
-# D-088 bet ticket exp-033 is this file x 0.98):
+# Part 2 record configuration:
+python3 scripts/run_emerging.py --use-cache --num-leaves 4 --min-leaf 1200
+# -> outputs/submissions/emerging-exp-025-repro.csv (byte-equivalent to the
+#    recorded run, max rel diff 8e-16)
+
+# The same configuration at redrawn refit seeds 6,7,8 (D-089):
 python3 scripts/run_emerging.py --name emerging-exp-035 --use-cache --num-leaves 4 --min-leaf 1200 --refit-seeds 6,7,8
 
-# Part 1 multi-family rate blend (0.12753 Public / 0.13570 Private).
+# Part 1 multi-family rate blend.
 # --legacy-features reproduces the pre-D-084 feature construction exactly
 # (full-sample relativity prior + (customer_id, loss, cost) claim dedup);
 # omit it for the leak-free D-084 pipeline (strict per-row credibility anchor).
@@ -173,15 +154,15 @@ python3 scripts/ensemble_blend.py --weights 0.40,0.42,0.18 \
     outputs/submissions/exp-035-xgb.csv outputs/submissions/exp-033.csv outputs/submissions/exp-032.csv
 ```
 
-The same recipe **without** `--legacy-features` is `exp-046` (D-084, leak-free
-pipeline): **0.12751 Public / 0.13577 Private** — impact-neutral vs exp-036
-(−0.00002 / +0.00007, both boards inside noise). The strict pipeline is the
-production pipeline; `--legacy-features` exists only to reproduce pre-D-084 runs.
+The same recipe **without** `--legacy-features` is the leak-free D-084 pipeline
+(`exp-046`), measured impact-neutral against the legacy construction (both
+evaluation surfaces inside noise). The strict pipeline is the production pipeline;
+`--legacy-features` exists only to reproduce pre-D-084 runs.
 
-The **D-085 convention file** (`exp-054`, best Private **0.13600**) adds
-`--trend flat` to the three component commands (no forward step — the level is
-learned from 2025-priced premium; D-009 resolved by measurement) and
-calibrates the blend to the AY2024 developed actual ultimate total:
+The **D-085 convention run** (`exp-054`) adds `--trend flat` to the three component
+commands (no forward step — the level is learned from 2025-priced premium; D-009
+resolved by measurement) and calibrates the blend to the AY2024 developed actual
+ultimate total:
 
 ```bash
 python3 scripts/run_experiment.py --name exp-054-pooled --mode tweedie --target rate --num-leaves 16 --lr 0.04 --final-fit --save-val-pred --trend flat \

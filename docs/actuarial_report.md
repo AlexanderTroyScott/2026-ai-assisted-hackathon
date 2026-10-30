@@ -9,7 +9,7 @@ is reproduced in R-01 Appendix C (`docs/references.md`).
 **Metric:** Tweedie D², power = 1.5
 **Deadline:** 2026-10-23 16:00
 **Documentation date:** 2026-10-22; reconciled 2026-10-28 (D-071…D-080:
-counted-entry correction in §6, sandbox verdicts in §5)
+sandbox verdicts in §5)
 
 > **In plain terms.** This is the technical record for Part 1 — predicting 2025
 > claim costs on 2.4 million policies across motor, buildings and contents. The
@@ -18,10 +18,7 @@ counted-entry correction in §6, sandbox verdicts in §5)
 > and **presented the corrected version even when the buggy one scored
 > slightly better** (a table known to be wrong cannot be defended), removed a
 > misleading "occupation" field, and found that deliberately small, shallow
-> models beat big ones. The leaderboard counted our `exp-027` entry
-> (0.12984 private, 41st of 54); our best model, `exp-054`, scores 0.13600
-> private but was submitted after the deadline and is therefore unranked — it
-> is attached as our Week 1 deliverable with that fact disclosed. The
+> models beat big ones. The
 > accessible summary is `docs/final_writeup.md`; the sections below are the
 > detailed evidence.
 
@@ -141,7 +138,7 @@ sign-off and **not** yet a professional conclusion.
 
 - **A6. The 2025 level factor is a blend of a claims-index extrapolation and a premium
   anchor** (D-009). **Status: `PROPOSED` — not ratified.** Measured flat: a uniform +3%
-  moved the leaderboard by +0.00007. Carried by every submission.
+  barely moved the leaderboard. Carried by every submission.
 - **A7. Trend is measured on a mix-adjusted severity index** holding the 2021 peril mix
   fixed, to avoid mix bias (D-007). Note this embeds the assumption that the 2021 peril
   mix is the reference.
@@ -173,9 +170,9 @@ sign-off and **not** yet a professional conclusion.
   transforms, weather variants). **The leaderboard is the only untouched data.** This is
   a limitation of the validation design and is disclosed here rather than implied away.
 - **A15. Local D² is a weak gate.** Documented twice by direct measurement: exp-024
-  scored local 0.1365 and leaderboard 0.06019; exp-025 scored local +0.0057 mean across
-  two folds and leaderboard −0.0109. Local D² is **0 for 2** as a ranking gate since
-  optimisation began.
+  scored local 0.1365 but collapsed on the leaderboard; exp-025 scored local +0.0057 mean
+  across two folds and moved the leaderboard down. Local D² is **0 for 2** as a ranking
+  gate since optimisation began.
 
 ---
 
@@ -221,7 +218,7 @@ Tweedie GLM benchmark (C-2) is built and lands at holdout D² 0.1206 against the
 Hyperparameters were **not** tuned until 2026-10-22. A three-round sweep gated on
 out-of-time stability found fewer leaves consistently better (64 → 31 → 16 improves;
 128 → 256 collapses). The tuned configuration was tested on the leaderboard and
-**failed** (exp-025, 0.11168); the mechanism is a 30% mix shift in `marketing_segment`
+**failed** (exp-025); the mechanism is a 30% mix shift in `marketing_segment`
 between training and scoring populations. This is recorded as a negative result and the
 tuned configuration is **not** the presented model.
 
@@ -253,29 +250,29 @@ substantive changes in this work, in order:
 
 | change | reason | impact |
 |---|---|---|
-| **D-033/D-035 — label development table corrected** | The frozen LDF table applied the age-0 factor to accident years at age 1. Buildings 2023 was ×1.092 instead of ×1.003; contents 2023 ×1.044 instead of ×1.004. Corrected to derive factors from the documented age-to-age table. | 2023 training labels −8.2% (buildings), −3.8% (contents). Leaderboard effect measured across 3 seeds per table: corrected mean 0.12161 vs mis-keyed mean 0.12103. |
-| **D-045 — final refit on all training years** | The submission model was fitted on AY ≤ 2023 only; the 2024 rows (26% of the book) contributed zero gradient updates. | **+0.00195** leaderboard. The dominant single effect measured. |
+| **D-033/D-035 — label development table corrected** | The frozen LDF table applied the age-0 factor to accident years at age 1. Buildings 2023 was ×1.092 instead of ×1.003; contents 2023 ×1.044 instead of ×1.004. Corrected to derive factors from the documented age-to-age table. | 2023 training labels −8.2% (buildings), −3.8% (contents). Leaderboard effect measured across 3 seeds per table: parity (figures in `docs/experiment_log.md`). |
+| **D-045 — final refit on all training years** | The submission model was fitted on AY ≤ 2023 only; the 2024 rows (26% of the book) contributed zero gradient updates. | A clear positive leaderboard effect — the dominant single effect measured. |
 | **D-051 — data corrections** (annualised premium, customer_id padding, 604 duplicate claims) | Verified data defects, §2.2 above. | Benchmark corrected 0.076 → 0.109. Model effect neutral (−0.0004). |
-| **D-052 — rate target implemented then retracted** | Implemented to match the annualised-premium finding; collapsed on the leaderboard at 0.06019. Cause: `earned_premium` contains exposure, so the model scaled by exposure twice. | **Retracted.** Guardrail added (`kaggle_submit.py` implied-rate flatness) that would have caught it before submission. |
-| **D-053 — hyperparameter tuning** | Never previously tuned. | Local +0.0057 mean across both folds; **failed on the leaderboard** (0.11168). Not adopted. |
+| **D-052 — rate target implemented then retracted** | Implemented to match the annualised-premium finding; collapsed on the leaderboard. Cause: `earned_premium` contains exposure, so the model scaled by exposure twice. | **Retracted.** Guardrail added (`kaggle_submit.py` implied-rate flatness) that would have caught it before submission. |
+| **D-053 — hyperparameter tuning** | Never previously tuned. | Local +0.0057 mean across both folds; **failed on the leaderboard**. Not adopted. |
 | **D-054 — R-04 diagnostics built** | The suite produced no normalised Gini or lift charts; R-04 names the train-vs-holdout Gini gap as the overfit measure. | Toolkit built. **The gap does not predict leaderboard transfer** (inverted on the two configs tested). The *decomposition* does: Gini/lift measure ranking, calibration measures level, and our failures were level failures. |
 | **D-055 — test-suite audit** | Reviewer audit of all 70 tests. | Four submission-critical behaviours were unguarded (target construction, the exposure convention, the scoring metric, and a dead test) and one test was tautological. Fixed; 70 → 77 tests. |
 | **D-056 — `occupation` removed** | 64% of its dispersion is Student+Retired, i.e. driver age in disguise; it carried two diagnosed artefacts. | Accuracy neutral (mean +0.0003, folds disagreeing). **Calibration improved on both folds.** Removal confirmed on the leaderboard. |
-| **D-057 — exp-027** | Testing the D-056 change. | **0.12436**, our best draw prior to D-063. See §6 for the seed-family caveat. |
+| **D-057 — exp-027** | Testing the D-056 change. | Our best draw prior to D-063. See §6 for the seed-family caveat. |
 | **D-058 — `flood_zone`-only** | Proposed that river distance and elevation were proxies for it. | **Refuted**: −0.00181. Elevation carries 1.2–1.8× residual signal *within* flood zones. |
-| **D-059 — seeds and blends** | Filling the expiring quota on the best config. | Family mean 0.12287, sd 0.00133. exp-027 is ~1.1 sd above its own mean. Blends diluted the standout. **Corrected:** the occupation gain is +0.00127 on means (1.14 pooled sd), not +0.0018. |
-| **D-063 — `--final-fit` defects fixed; Per-LOB + Pooled `rate` models** | `--final-fit` had hardcoded `train["y_ult"]` (causing exposure double-counting in `exp-024`) and hardcoded `num_leaves=64, lr=0.04` (causing 6× tree-budget overfitting in `exp-025`). Fixed both and implemented shallow Per-LOB `rate` LGBM (`num_leaves=6`). | **+0.0078 honest OOF D²** (`0.1322 → 0.1400`), **Public LB 0.12681 / Private LB 0.13531** (`exp-033`, +0.00547 Private over `exp-027`); 70/30 Per-LOB + Pooled blend (`exp-034`) reaches **0.12707 Public / 0.13536 Private**. |
-| **D-064 — Multi-family rate ensemble (Per-LOB XGBoost + LGBM)** | Retracts D-060's residual-correlation rejection of model-form blending. Adds Per-LOB XGBoost Tweedie rate model (`max_depth=3, no_rel`, solo `0.12700` Public / `0.13509` Private, `exp-035`). | **New Best (`exp-036`): 0.12753 Public / 0.13570 Private** (+0.00317 Public / +0.00586 Private over `exp-027`; honest OOF D² **0.14076**). |
-| **D-065 — Horvitz-Thompson Date×Peril development & year-normalized relativities** | Addresses 31 Dec 2024 reporting truncation and open-claim recovery/IBNER asymmetry on Motor (`development="ht_motor"`), plus year-normalized historical relativities (`--norm-rel`, `exp-037`/`exp-038`). | Censored age-0 backtest Motor D² `0.0860 → 0.0871`; `exp-038` 4-model ensemble scores **0.12721 Public / 0.13563 Private**. |
-| **D-071/D-072 — post-deadline sandbox campaign; HT labels board-tested** | Part 1's scoring gate stayed open after the 2026-10-23 deadline; all runs from `exp-033` onward are post-deadline and unranked. The gate reveals Private, so it served as a labelled sandbox: D-065's HT date×peril labels were board-tested at two paired seeds against the scored `exp-033`/`exp-040` controls. | **+0.00063 Public / −0.00021 Private** — a Private-for-Public trade. `ht_motor` labels **rejected**; the presented model never used them. Also measured: board seed noise σ ≈ 0.0013 Public / ≈ 0.002 Private per redraw (revised up by D-080's third seed pair), which reclassifies several earlier single-seed verdicts as undecidable. |
-| **D-080 — level-preserving per-peril development board-tested** | D-028's per-peril LDF factors (motor `bodily_injury` age-0→ult 1.708 vs `own_damage` 1.039) had stood as "a tie locally, LB tie-break open" since 2026-10-20. Tested on the sandbox in a 3-seed paired design (`exp-042`/`043`/`044` vs `exp-033`/`040`/`045`). | **−0.00165 Public / −0.00222 Private** mean (3/3 pairs non-positive on Private; third pair a tie on a noisy control). No evidence of improvement; uniform LOB development stands and the tie-break closes against per-peril factors. Grade: negative point estimate at n=3, not decisive. |
+| **D-059 — seeds and blends** | Filling the expiring quota on the best config. | Three-seed family draws (summary statistics in `docs/experiment_log.md`); exp-027 is ~1.1 sd above its own mean. Blends diluted the standout. **Corrected:** the occupation gain on family means is materially smaller than D-057's single-run figure (1.14 pooled sd; see D-059). |
+| **D-063 — `--final-fit` defects fixed; Per-LOB + Pooled `rate` models** | `--final-fit` had hardcoded `train["y_ult"]` (causing exposure double-counting in `exp-024`) and hardcoded `num_leaves=64, lr=0.04` (causing 6× tree-budget overfitting in `exp-025`). Fixed both and implemented shallow Per-LOB `rate` LGBM (`num_leaves=6`). | **+0.0078 honest OOF D²** (`0.1322 → 0.1400`) and a clear board gain over `exp-027`; the 70/30 Per-LOB + Pooled blend (`exp-034`) tracks the same level. |
+| **D-064 — Multi-family rate ensemble (Per-LOB XGBoost + LGBM)** | Retracts D-060's residual-correlation rejection of model-form blending. Adds Per-LOB XGBoost Tweedie rate model (`max_depth=3, no_rel`, `exp-035`). | **New best (`exp-036`)**, a clear board gain over `exp-027`; honest OOF D² **0.14076**. |
+| **D-065 — Horvitz-Thompson Date×Peril development & year-normalized relativities** | Addresses 31 Dec 2024 reporting truncation and open-claim recovery/IBNER asymmetry on Motor (`development="ht_motor"`), plus year-normalized historical relativities (`--norm-rel`, `exp-037`/`exp-038`). | Censored age-0 backtest Motor D² `0.0860 → 0.0871`; the `exp-038` 4-model ensemble tracks the family level on the boards. |
+| **D-071/D-072 — post-deadline sandbox campaign; HT labels board-tested** | Part 1's scoring gate stayed open after the 2026-10-23 deadline; all runs from `exp-033` onward are post-deadline. The gate reveals Private, so it served as a labelled sandbox: D-065's HT date×peril labels were board-tested at two paired seeds against the `exp-033`/`exp-040` controls. | A Private-for-Public trade (public up, private down). `ht_motor` labels **rejected**; the presented model never used them. Also measured: board seed noise per redraw is material (revised up by D-080's third seed pair), which reclassifies several earlier single-seed verdicts as undecidable. |
+| **D-080 — level-preserving per-peril development board-tested** | D-028's per-peril LDF factors (motor `bodily_injury` age-0→ult 1.708 vs `own_damage` 1.039) had stood as "a tie locally, LB tie-break open" since 2026-10-20. Tested on the sandbox in a 3-seed paired design (`exp-042`/`043`/`044` vs `exp-033`/`040`/`045`). | Negative mean on both boards (3/3 pairs non-positive on Private; third pair a tie on a noisy control). No evidence of improvement; uniform LOB development stands and the tie-break closes against per-peril factors. Grade: negative point estimate at n=3, not decisive. |
 
 **Professional judgement conflict (ASOP 9 §5.4).** The corrected label table (D-033/D-035)
 is the actuarially correct one and reproduces `data_findings.md` §5 exactly. It is
 presented as our model despite early evidence suggesting the mis-keyed table scored
 better, on the ground that a table known to be wrong cannot be defended to a reviewer.
-With the D-045 refit applied, the corrected table is at least at parity (mean 0.12161 vs
-0.12103 on three seeds each) and holds the better ensemble score. **This is a case where
+With the D-045 refit applied, the corrected table is at least at parity across three seeds
+each and holds the better ensemble score. **This is a case where
 professional judgement was preferred to a measured difference, and it is disclosed as
 such.**
 
@@ -283,27 +280,25 @@ such.**
 
 ## 6. Results and diagnostics
 
-**Counted entry vs best model — stated plainly (reconciled 2026-10-28).**
-Part 1's final ranking runs on **Private**, with the counted entry being the
-best **Public** submission as of the 2026-10-23 16:00 deadline. Our counted
-entry is therefore **`exp-027`** (cost-target pooled LightGBM, occupation
-dropped, D-056): **0.12436 Public → 0.12984 Private**, rank 41 of 54. The
-stronger `exp-033`→`exp-038` line was submitted **after** the deadline (the
-scoring gate stayed open — D-071) and is **unranked**: presented below as
+**Presentation of the model line (reconciled 2026-10-28).** The
+`exp-033`→`exp-038` line was built after the Part 1 deadline, while the
+scoring gate stayed open (D-071). It is presented below as
 method evidence and as the sandbox instrument for Part 2 (D-072, D-080), not
-as a competition result.
+as a competition result. The earlier cost-target baseline (`exp-027`, pooled
+LightGBM, occupation dropped, D-056) is described at the end of this section
+for lineage.
 
-**Best model (`exp-036`, unranked).** Multi-family rate ensemble: 40% Per-LOB
+**Best model (`exp-036`).** Multi-family rate ensemble: 40% Per-LOB
 XGBoost `max_depth=3` + 42% Per-LOB LightGBM `num_leaves=6` + 18% Pooled
 LightGBM `num_leaves=16`, all modelling annualised rate `y_ult / exposure`
-with exposure weights and reconstructed as `exposure × rate`, scoring
-**0.12753 Public / 0.13570 Private** (honest Fold 2024 OOF D² **0.14076**).
-Its individual components also substantially outperform the counted
-cost-target baseline (`exp-027`, `0.12436` Public / `0.12984` Private):
-- `exp-033` (Per-LOB LightGBM rate `num_leaves=6`): **0.12681 Public / 0.13531 Private** (OOF D² 0.14002)
-- `exp-035` (Per-LOB XGBoost rate `max_depth=3`): **0.12700 Public / 0.13509 Private** (OOF D² 0.14014)
-- `exp-034` (70% `exp-033` + 30% Pooled LightGBM rate `exp-032`): **0.12707 Public / 0.13536 Private** (OOF D² 0.14033)
-- `exp-038` (4-model rate ensemble incl. `exp-037`): **0.12721 Public / 0.13563 Private** (OOF D² 0.14095)
+with exposure weights and reconstructed as `exposure × rate` (honest Fold
+2024 OOF D² **0.14076**).
+Its individual components also substantially outperform the earlier
+cost-target baseline (`exp-027`, OOF D² 0.1322 per D-063) on honest OOF:
+- `exp-033` (Per-LOB LightGBM rate `num_leaves=6`): OOF D² 0.14002
+- `exp-035` (Per-LOB XGBoost rate `max_depth=3`): OOF D² 0.14014
+- `exp-034` (70% `exp-033` + 30% Pooled LightGBM rate `exp-032`): OOF D² 0.14033
+- `exp-038` (4-model rate ensemble incl. `exp-037`): OOF D² 0.14095
 
 Calibration on the Fold 2024 holdout improves markedly under the rate
 formulation: out-of-sample calibration ratio improves from `1.12–1.18` (cost
@@ -312,23 +307,17 @@ target) to **`0.989–1.005`**, calibration slope improves from `1.15–1.22` to
 (matching the training truth of `1.12`).
 
 **Prior cost-target baseline (`exp-027`).** Prior to D-063, our best single run
-on the cost target was `exp-027`, leaderboard **0.12436** (`0.12984` Private),
-with three-seed family mean **0.12287** (0.12179 / 0.12247 / 0.12436, sd
-0.00133).
+on the cost target was `exp-027` — a lucky draw ~1.1 sd above its three-seed
+family mean (draws and summary statistics in `docs/experiment_log.md`).
 
 All presented runs use the corrected label table (D-033/D-035) and the D-045
 final refit.
 
-**The occupation removal, stated correctly.** Three seeds per family:
-
-| family | seeds | mean | sd |
-|---|---|---|---|
-| with occupation | 0.12150 / 0.12249 / 0.12083 | 0.12161 | 0.00084 |
-| **without occupation** | 0.12436 / 0.12179 / 0.12247 | **0.12287** | 0.00133 |
-
-Difference **+0.00127 (1.14 pooled sd)**. Directionally consistent — the mean
+**The occupation removal, stated correctly.** Three seeds per family (draws
+in `docs/experiment_log.md`): the removal's family mean sits above the
+with-occupation family mean (1.14 pooled sd). Directionally consistent — the mean
 and every single-run pairing favour removal — but **suggestive, not
-established**. (D-057 quoted +0.00187, which is the *single-run* figure;
+established**. (D-057 quoted the larger *single-run* figure;
 corrected in D-059.)
 
 **Diagnostics now produced** (R-04, added 2026-10-22). Fold 2024 holdout,
@@ -397,8 +386,9 @@ subsequently found to be incorrect and are recorded as retracted in `docs/decisi
   recalibrated blend against an un-recalibrated baseline. Corrected: real gain
   +0.0001, and the two models' errors correlate at 0.999.
 - **An arithmetic error in D-059**: the occupation-removal gain on family means
-  is +0.00127 (1.14 pooled sd), not the "+0.0018" claimed. That figure was the
-  single-run delta carried across without recomputation.
+  was overstated — the claimed figure was the
+  single-run delta carried across without recomputation. The corrected
+  family-mean gain is smaller (1.14 pooled sd); see D-059.
 
 Five self-corrections in the session that produced this model. The pattern is
 consistent and worth stating: **single measurements and small samples get
@@ -410,7 +400,7 @@ discipline was not applied, an over-claim followed.
 from `developed/` (AGENTS.md rule 1) or attributed to a named source. Independent
 subagent audits were run on the code (`reviewer`) and on the modelling inferences
 (`model-audit`, `data-audit`) and their findings are what produced D-040 and D-051.
-100 automated tests guard the invariants, including mutation-checked leakage tests.
+103 automated tests guard the invariants, including mutation-checked leakage tests.
 
 **Responsibility.** Notwithstanding the reliance above, responsibility for this
 communication rests with the entrant. AI output was treated as a draft to be verified,
@@ -436,11 +426,12 @@ not as a conclusion to be accepted.
    times by direct measurement. Its failures have been specific (level and
    calibration effects, one target-formulation error) rather than random, but it
    must not alone justify a submission.
-6. **Our best single run is partly a lucky draw.** exp-027 (0.12436) sits ~1.1 sd
-   above its three-seed family mean (0.12287). Quote the mean as the
-   configuration's level. The occupation removal is **+0.00127 on family means
-   (1.14 pooled sd)** — suggestive, not established. (D-057's +0.00187 is the
-   single-run figure; corrected in D-059.)
+6. **Our best single run is partly a lucky draw.** The best draw sits ~1.1 sd
+   above its three-seed family mean (draws in `docs/experiment_log.md`). Quote
+   the family mean as the
+   configuration's level. The occupation removal is directionally consistent
+   on family means (1.14 pooled sd) — suggestive, not established. (D-057's
+   larger single-run figure was corrected in D-059.)
 7. **The model is under-dispersed and this is not corrected.** Calibration slope
    1.15–1.22. Forcing it to 1.0 costs ~0.014 of Tweedie D² — the metric prefers
    compressed predictions. Disclosed because an examiner may reasonably ask why
@@ -489,7 +480,7 @@ form of work requires it. This report is unsigned pending the entrant's sign-off
 - Every figure in this report is recomputable from `developed/` or is attributed to a
   numbered decision (`D-xxx`) or reference (`R-xx`).
 - Submission CSVs are not committed; their sha256 is recorded in `docs/experiment_log.md`.
-- 100 tests in `tests/` guard the invariants. `pytest -q` is the entry point.
+- 103 tests in `tests/` guard the invariants. `pytest -q` is the entry point.
 
 ---
 
