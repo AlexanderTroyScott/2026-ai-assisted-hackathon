@@ -3506,3 +3506,33 @@ unchanged (inertness contract). Below that: record "no measurable gain",
 keep the record untouched, no submission. Above that: report to the human
 and request explicit submission authorisation — one change per submission
 so the leaderboard movement is attributable.
+
+### D-092 results (2026-10-30, paired probe; gate FAILED — record untouched)
+
+| metric | baseline | +make_model | delta |
+|---|---|---|---|
+| d2_offset_adapted | +0.14045 | +0.13918 | **−0.00128** |
+| motor (final offset-only) | +0.07108 | +0.06828 | −0.00280 |
+| buildings | +0.10579 | +0.10579 | +0.00000 |
+| contents | +0.10433 | +0.10433 | +0.00000 |
+
+1. **The gate failed decisively** (needed +0.0005, got −0.00128). The
+   developed-book spread of `make_model` (MM040 1.30 … MM013 0.76) does
+   **not** translate into emerging OOF gain at this sample size and tree
+   budget: 300 codes over 47k motor rows (117–207/level) inside a
+   `num_leaves=3, min_leaf=600` offset layer can only enter via grouped
+   categorical splits, and what it learned was noise — classic thin-cell
+   overfitting, exactly the failure mode the pre-registration named.
+2. **The inertness contract held exactly** (buildings/contents delta
+   0.00000 to 5 dp): the field is constant there and the per-LOB
+   `nunique > 1` filter excluded it, so all measured movement is motor.
+   The probe harness is trustworthy; the negative is a real negative.
+3. **Record untouched. No submission made or warranted.** The counted
+   entry stays `emerging-exp-035` (0.17028 Public, 4th of 33). The missing-
+   field hypothesis survives in the weaker form "fields matter, but only
+   where cells are credible": `high_value_items` (D-091) and `make_model`
+   (D-092) both failed to convert measured level spreads into model gain,
+   one on noise grounds, one on thin cells. If the hypothesis has a live
+   form, it is in **model shape** (per-LOB structure, the LR>1 mispriced
+   segments `occupancy=let` / `construction_type=non_standard`, the tail
+   at Tweedie p=1.5), not in more columns.

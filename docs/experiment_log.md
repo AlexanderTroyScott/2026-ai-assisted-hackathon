@@ -207,6 +207,9 @@ trustworthy offline oracle — with the near-tie caveat of D-025.
 | 2026-10-20 | exp-010: exp-007 + address/customer block | local 0.1342 vs 0.1248 (+0.0094); occupation/region/elevation_m/energy_rating lead importance | submitted → LB 0.12113 (+0.00476) — new best |
 | 2026-10-20 | per-peril age→ultimate triangles (re-derived) | motor BI age0→ult 1.535, buildings subsidence 1.306 vs short-tail 1.01–1.05; LOB re-derivation 1.18/1.06/1.03 vs documented 1.22/1.09/1.04 (different weighting window) | D-028 factors frozen from `scripts/build_development.py`; level kept on the accepted D-005 table |
 | 2026-10-20 | **exp-011: exp-010 + denied-claim history (D-031)** | local 0.1339 vs exp-010 0.1342 (−0.0003, same seed/truth — inside the D-025 tie band) | **not submitted** — human held the last quota slot (1 of 10 left) for a change that clears the tie band; block stays opt-in |
+| 2026-10-30 | **level-vs-target audit, both parts** (categoricals + numeric bands vs `y_ult`/exp-year, recomputed via `build_frame` / `build_market_frame`) | strongest spreads: flood_zone 5.0 idx 3.04, driver_age 17–24 1.96, wp top decile 2.91; **coverage gap: `high_value_items` (0.94→1.27 monotonic) and `make_model` (MM040 1.30 … MM013 0.76) omitted from every Part 1 block**; `seats`/`days_unoccupied` audited flat | D-091/D-092 probes |
+| 2026-10-30 | **exp-055: `high_value_items` probe on Part 1** (paired seeds 0/1/2 fold 2024 + fold-2023 pair, D-091 gate) | first pairs: −0.00197 (seed 0) / +0.00094 (seed 1) — sign disagreement, noise regime; full read-out pending s2 + fold-2023 | see D-091 |
+| 2026-10-30 | **emerging-mm: `make_model` probe on Part 2** (paired OOF, `--adapt-extra-cat`, D-092 gate) | **gate FAILED**: Δ d2_offset_adapted −0.00128 (motor −0.00280; buildings/contents exactly 0 — inertness contract held). 300 codes / 47k rows overfit in the `lv=3, min_leaf=600` offset layer | record untouched, no submission; D-092 closed negative |
 
 ---
 
