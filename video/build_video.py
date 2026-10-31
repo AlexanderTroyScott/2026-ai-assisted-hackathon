@@ -75,7 +75,7 @@ SLIDES = [
             "years of history on two point four million policies. The new "
             "market gives only two thin years — and seventy-six percent of its "
             "2025 book is business you have never seen, arriving from a broker "
-            "portfolio takeover. These prices will drive renewals, price the "
+            "portfolio takeover. These prices will drive renewals, cover the "
             "incoming portfolio, and correct misalignments in your current "
             "rates."
         ),
@@ -97,8 +97,8 @@ SLIDES = [
             "The data, and what we did to it. Claim costs at the end of 2024 "
             "are unfinished — a claim reported in December is still growing — "
             "so every training label was developed to its final value. The "
-            "supplied exposure column mixed unit conventions, so exposure is "
-            "now recomputed from policy dates. Premiums were annualized and "
+            "supplied exposure column mixed unit conventions, so it is now "
+            "recomputed from policy dates. Premiums were annualized and "
             "are treated per-period. Six hundred and four duplicate claims "
             "were removed. The new market's eighty occupation spellings mapped "
             "cleanly onto twenty categories. The honest headline: your new "
@@ -192,7 +192,7 @@ SLIDES = [
             "one hundred and twenty-five currency units — while observed claim "
             "cost rises six-fold, from sixty-three units in zone one to over "
             "four hundred in zone five. Flood risk is entirely unpriced. Young "
-            "drivers carry a loss ratio of zero point nine one against zero "
+            "drivers show a loss ratio of zero point nine one against zero "
             "point six for middle ages, and male drivers carry a third more "
             "claim cost — both priced about the same today. New business is "
             "priced too cheap relative to renewals. We can conclude your prices "
@@ -222,7 +222,7 @@ SLIDES = [
             "instructed to attack the existing work adversarially, found two "
             "critical bugs and produced the largest single improvement in the "
             "project. All of it ran inside an isolated container with no access "
-            "to our machines. And trust came from guardrails, not trust: one "
+            "to our machines. And trust came from guardrails, not promises: one "
             "hundred and three automated tests, nothing committed until they "
             "pass, version control as audit evidence, and every number "
             "recomputed from source before publication."
@@ -280,13 +280,23 @@ def render_slide(spec: dict, path: Path) -> None:
         tight = len(spec["bullets"]) >= 9
         y = 0.82 if tight else 0.80
         for line in spec["bullets"]:
-            indented = line.startswith("   ")
-            fig.text(0.105 if indented else 0.075, y, line,
-                     color=MUTED if indented else INK,
-                     fontsize=27 if indented else 33,
+            stripped = line.lstrip()
+            # A genuine sub-bullet is marked with a leading em-dash. Any other
+            # indented line is just the wrapped continuation of the line above
+            # and must render as the same colour/size as its parent, not as a
+            # muted sub-bullet (D-095).
+            sub = stripped.startswith("— ")
+            cont = line.startswith("   ") and not sub
+            if sub:
+                x, colour, size = 0.105, MUTED, 27
+            elif cont:
+                x, colour, size = 0.105, INK, 33
+            else:
+                x, colour, size = 0.075, INK, 33
+            fig.text(x, y, line, color=colour, fontsize=size,
                      va="center", ha="left")
-            y -= (0.075 if not indented else 0.052) if tight else (
-                0.088 if not indented else 0.062)
+            y -= (0.075 if not (sub or cont) else 0.052) if tight else (
+                0.088 if not (sub or cont) else 0.062)
         if spec.get("footnote"):
             # kept clear of the burned-in caption band (top edge ≈ 0.13)
             fig.text(0.075, 0.225, spec["footnote"], color=ACCENT, fontsize=30,

@@ -27,7 +27,7 @@ claim cost on your policies, and turn that into prices for every 2025 policy in
 two markets. Your established market gives four years of history on two point
 four million policies. The new market gives only two thin years — and
 seventy-six percent of its 2025 book is business you have never seen, arriving
-from a broker portfolio takeover. These prices will drive renewals, price the
+from a broker portfolio takeover. These prices will drive renewals, cover the
 incoming portfolio, and correct misalignments in your current rates.
 
 **Slide 3 — Data Overview** (~40s)
@@ -39,7 +39,7 @@ vs a test book ~4× a normal year.
 *Narration:* The data, and what we did to it. Claim costs at the end of 2024
 are unfinished — a claim reported in December is still growing — so every
 training label was developed to its final value. The supplied exposure column
-mixed unit conventions, so exposure is now recomputed from policy dates.
+mixed unit conventions, so it is now recomputed from policy dates.
 Premiums were annualized and are treated per-period. Six hundred and four
 duplicate claims were removed. The new market's eighty occupation spellings
 mapped cleanly onto twenty categories. The honest headline: your new market
@@ -97,7 +97,7 @@ disparities will persist."
 new market, contents prices are flat across flood zones — around one hundred
 and twenty-five currency units — while observed claim cost rises six-fold, from
 sixty-three units in zone one to over four hundred in zone five. Flood risk is
-entirely unpriced. Young drivers carry a loss ratio of zero point nine one
+entirely unpriced. Young drivers show a loss ratio of zero point nine one
 against zero point six for middle ages, and male drivers carry a third more
 claim cost — both priced about the same today. New business is priced too
 cheap relative to renewals. We can conclude your prices are misaligned with
@@ -115,7 +115,7 @@ pipelines, running experiments — while the human held scope, judgment, and
 every authorization. A fresh AI model, instructed to attack the existing work
 adversarially, found two critical bugs and produced the largest single
 improvement in the project. All of it ran inside an isolated container with no
-access to our machines. And trust came from guardrails, not trust: one hundred
+access to our machines. And trust came from guardrails, not promises: one hundred
 and three automated tests, nothing committed until they pass, version control
 as audit evidence, and every number recomputed from source before publication.
 

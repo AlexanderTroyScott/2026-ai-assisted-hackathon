@@ -114,9 +114,12 @@ accurately predicted claim cost:
   2025 forward index adjusts for cost drift at scoring time. (How we arrived at this
   architecture is the story of §4.)
 
-The predictive power of each model was tested with 5-fold policy-grouped cross-
-validation on held-out data — training on part of the book and assessing how well the
-model predicts claim cost for unseen policies. Because our own measurements show that
+The predictive power of each model was tested on held-out data — training on part of
+the book and assessing how well the model predicts claim cost for unseen policies. The
+new market, too thin to hold out a whole year, used 5-fold policy-grouped
+cross-validation; the established market used a strict time-based split (train through
+2023, predict 2024) so no customer history could leak across the boundary. Because
+our own measurements show that
 simply re-running a model with a different random seed moves the score by a material
 amount, every idea also had to clear a pass/fail bar written down *before* the test
 (§7), and the final new-market model reproduces its predictions byte-for-byte.
@@ -153,7 +156,7 @@ book only correct it gently.**
 
 | What changed | What we did about it |
 |---|---|
-| Four years of data → two thin years | Stopped learning from scratch. Knowledge transferred from the established market as a *prior*; the new market only adjusts it. A tree trained on the thin book alone scored worse than a flat rate. |
+| Four years of data → two thin years | Stopped learning from scratch. Knowledge transferred from the established market as a *prior*; the new market only adjusts it. A tree trained on the thin book alone scored worse than scaling the current price by a loss ratio (0.107 vs 0.110). |
 | 15% new business → **76% new business** | Measured new business and renewals separately. New business was underpriced relative to renewals — our model now prices them apart. |
 | Different columns and categories (age bands, occupation free-text, construction codes) | Built a clean mapping layer between the two markets. 100% of the messy occupation strings mapped to the 20 known categories. |
 | Different cost level and trend | Set 2025 forward factors per product from careful live probes, keeping the data-based trend estimate only as a cross-check — on its own it was too noisy (and partly wrong-signed) to trust. |
@@ -221,7 +224,7 @@ available and cannot anticipate what would happen outside the ranges observed.
 **Commercial output.** For 20 reference policies we deliver a full office-premium
 build-up (risk premium + reinsurance + expenses + tax + profit margin) in
 `outputs/metrics/emerging_reference_office_premiums.csv`. Every reference policy is
-currently underpriced — the modelled fair premium runs 1.3× to 9.5× its current
+currently underpriced — the modelled fair premium runs 1.4× to 9.3× its current
 price — driven by the flood-zone, age-band and new-business mispricings above.
 
 ---

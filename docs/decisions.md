@@ -3667,3 +3667,39 @@ reproducibly by `video/build_video.py` from `video/script.md`. Decisions:
 
 Build intermediates (narration, slides, frames) live in `video/build/` and
 are gitignored; only the storyboard, build script and MP4 are committed.
+
+---
+
+## D-096 — Pre-upload review corrections (2026-10-31)
+
+Cross-checked every figure in `docs/final_writeup.md` and the video against
+`docs/actuarial_report.md`, `docs/emerging_market_report.md`,
+`docs/data_findings.md`, `docs/experiment_log.md` and
+`outputs/metrics/emerging_reference_office_premiums.csv`. Three factual
+errors found in the write-up and fixed:
+
+1. **§4 benchmark claim.** "Tree-alone prices beat a flat rate" implied the
+   tree beat the flat-rate D²; it does not (0.1073 vs 0.0804). The accurate
+   claim, now stated: the tree alone beats scaling the current price by a
+   loss ratio (0.107 vs 0.110); the full model beats both (0.139).
+2. **§3 validation wording.** The 5-fold policy-grouped CV is the new-market
+   protocol only. The established market is validated by strict time-based
+   split (train ≤2023 → predict 2024, D-006). Now stated separately.
+3. **§5 reference ratio range.** "1.3× to 9.5×" was stale; the current CSV
+   gives 1.4108–9.2530, now stated as "1.4× to 9.3×".
+
+Video renderer fix (D-095 follow-up): wrapped continuation lines were styled
+as muted sub-bullets; only lines beginning with an em-dash are sub-bullets
+now, continuations render in the parent bullet's style. Narration wording:
+removed same-word echoes ("trust came from guardrails, not promises";
+"prices will drive renewals, cover the incoming portfolio"; "Young drivers
+show… male drivers carry…"; "the supplied exposure column… so it is now
+recomputed"). `video/script.md` kept in sync.
+
+Left for human judgement (not changed): the `emerging_market_report.md` §5
+table/note still shows the older 9.50× / "1.28×–9.50×" range (stale vs the
+2026-10-30 CSV); "largest single improvement" (write-up §6, video) vs the
+report's "dominant single effect measured" (D-045) superlative; development
+factors as a lower bound (IBNER) — §2 limitation 1 could state the
+direction; gender as a rating factor is regulator-sensitive and stays
+deferred to actuarial/legal expertise before filing.
