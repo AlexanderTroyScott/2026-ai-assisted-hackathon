@@ -3596,3 +3596,35 @@ Consequences: the human will direct which experiment to run for the
 submission once the cleanup is confirmed; results and submissions are
 frozen until then, and the video is deferred to after the cleanup. No
 submission attempted, no slot spent.
+
+## D-094 (human-decided) — Final submission files confirmed and staged in `Submissions/`
+**2026-10-31 · explicit human agreement with the recommended pair ("I agree with those submissions") · documentation/artifact staging only, no slot spent**
+
+The human confirmed the final pair recommended from the record:
+
+1. **Part 1 file = `exp-054`** (D-087 human-accepted choice): the D-085
+   anchoring-convention file — exp-046 recipe+weights on the leak-free D-084
+   pipeline, `--trend flat`, blend calibrated to the AY2024 developed actual
+   ultimate total. Best Private recorded (0.13600), sitting at the measured
+   Private optimum. Board-counted Part 1 entry remains `exp-027` (best Public
+   at the Part 1 deadline) — both facts disclosed in the staged note.
+2. **Part 2 file = `emerging-exp-035`** (the board-counted entry, D-089):
+   s678 refit carrier at K=1.0 (record level, no level bet), sha256
+   `f5337d71`. D-090 closed the level axis at the Public vertex, so this is
+   the plain record level. Supersedes D-087 item 4's stale "Week 2 file
+   remains `emerging-exp-025`": exp-025 is the record *configuration*
+   (documented and byte-reproduced); exp-035 is the same config at a
+   different seed draw and is what the board counts. Mean-equal on a hidden
+   split (pure redraw, sigma_draw ~0.00029) either way.
+
+Staged (byte-identical copies of the recorded artifacts, sha256 verified):
+- `Submissions/part1/exp-054-calibrated.csv` (`6a5ea33964a4`)
+- `Submissions/part2/emerging-exp-035.csv` (`f5337d71`)
+- `Submissions/part1/NOTE.md` — states the deadline facts: exp-027 was
+  before the Part 1 deadline (hence board-counted), exp-054 was before the
+  Part 2 deadline (in-window, post-Part-1-deadline, per D-087 disclosure).
+
+Files were copied from `outputs/submissions/` and hash-checked against the
+`docs/experiment_log.md` records — not regenerated — so the audit trail
+links artifact-to-record unbroken. No leaderboard submission attempted; the
+form/upload remains the human's action.
