@@ -97,7 +97,8 @@ Equally important, the ideas we **killed with evidence** — each one logged:
 
 The AI agent did the hands-on analytical work — exploring data, writing the pipelines,
 running experiments, computing diagnostics, drafting documentation — inside a
-governance frame built by the human: authorisation gates on every submission, every
+governance frame built by the human: all work ran in an isolated Docker container
+with no access to the human's machine, authorisation gates on every submission, every
 number recomputed from source data before it could appear in a report, judgement calls
 flagged and escalated, negative results kept on the record. The full interaction trail
 (including where AI was wrong and how it was caught) is in `docs/ai_workflow_log.md`
