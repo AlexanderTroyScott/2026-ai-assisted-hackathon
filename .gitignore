@@ -17,3 +17,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ipynb_checkpoints/
+
+# video build intermediates (narration, slides, check frames, captions)
+video/build/

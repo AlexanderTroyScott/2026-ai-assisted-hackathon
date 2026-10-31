@@ -3628,3 +3628,42 @@ Files were copied from `outputs/submissions/` and hash-checked against the
 `docs/experiment_log.md` records — not regenerated — so the audit trail
 links artifact-to-record unbroken. No leaderboard submission attempted; the
 form/upload remains the human's action.
+
+## D-095 — Video deliverable: storyboard, toolchain, and caption pipeline
+**2026-10-31 · agent-executed within the D-081 deliverable spec · video production decisions**
+
+The submission video (`video/pricing_across_markets.mp4`, 5:04, 1080p) is built
+reproducibly by `video/build_video.py` from `video/script.md`. Decisions:
+
+1. **Structure mirrors the ATPA-style memo**, graded content (slides 1–8)
+   front-loaded to end ≈ 4:41 — only the first 5 minutes are graded,
+   screened first by AI review, before a panel that may include non-actuaries
+   (D-081). Plain language throughout; first-person plural voice matching
+   `docs/final_writeup.md`.
+2. **Presentation scrub applies** (D-093): no scores, ranks or standings on
+   screen. Every displayed figure is method evidence — local out-of-fold
+   scores or values recomputed from source.
+3. **Flood-zone chart recomputed, not invented.** Zones 2–4 were unverified;
+   recomputed from `src/emerging.py:build_market_frame` (undeveloped `y` per
+   exposure over earned premium per exposure) which reproduces the documented
+   zone-1/zone-5 values exactly (63.2 / 417.7 CU, flat price ≈127, 6.6×,
+   LR 0.49→3.33) — same convention as the report. Developed `y_ult` gives
+   64.3 / 423.8 and is deliberately not used for the chart.
+4. **Toolchain**: matplotlib slides → edge-tts narration (`en-US-GuyNeural`)
+   → imageio-ffmpeg assembly. All on screen/narration is AI-generated speech
+   and code-rendered graphics — consistent with the AI-workflow disclosure.
+5. **Caption pipeline** (burned in; helps accessibility and the AI screening
+   layer). Two pitfalls found and fixed:
+   - edge-tts ≥ 7 emits `SentenceBoundary` events by default — word-level
+     timing requires `boundary="WordBoundary"`; without it captions fall back
+     to sentence-length boxes.
+   - libass renders bare SRT at its default 288p PlayRes, inflating
+     `force_style` font sizes ~3.75× at 1080p; captions are now written as
+     ASS with explicit `PlayResX/Y 1920x1080` and burned from that.
+   Caption text is chunked from the narration (punctuation preserved) and
+   aligned to TTS word boundaries on punctuation-stripped tokens (TTS
+   boundaries drop punctuation); entries are clamped so never two captions
+   on screen at once.
+
+Build intermediates (narration, slides, frames) live in `video/build/` and
+are gitignored; only the storyboard, build script and MP4 are committed.
